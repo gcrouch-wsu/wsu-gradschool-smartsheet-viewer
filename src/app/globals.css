@@ -1,15 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --wsu-crimson: #a60f2d;
-  --wsu-crimson-dark: #7f0c22;
-  --wsu-ink: #231f20;
-  --wsu-stone: #f4efe9;
-  --wsu-paper: #fffdfa;
-  --wsu-border: #d8cdc3;
-  --wsu-muted: #6b625b;
-  --background: #f6f1eb;
-  --foreground: #181413;
+  --crimson: #981e32;
+  --crimson-deep: #6f1523;
+  --crimson-soft: rgba(152, 30, 50, 0.07);
+  --crimson-soft-2: rgba(152, 30, 50, 0.12);
+  --crimson-line: rgba(152, 30, 50, 0.24);
+  --ink: #211b1e;
+  --sub: #5c666d;
+  --mist: #8f979d;
+  --line: #eae6e7;
+  --line-strong: #ddd7d9;
+  --paper: #faf8f9;
+  --surface: #ffffff;
+  --grid: rgba(152, 30, 50, 0.05);
+  --shadow-sm: 0 1px 2px rgba(33, 27, 30, 0.04), 0 1px 3px rgba(33, 27, 30, 0.05);
+  --shadow-md: 0 6px 16px rgba(33, 27, 30, 0.07), 0 2px 6px rgba(33, 27, 30, 0.05);
+  --wsu-crimson: var(--crimson);
+  --wsu-crimson-dark: var(--crimson-deep);
+  --wsu-ink: var(--ink);
+  --wsu-stone: #f4f0f1;
+  --wsu-paper: var(--paper);
+  --wsu-border: var(--line-strong);
+  --wsu-muted: var(--sub);
+  --background: var(--paper);
+  --foreground: var(--ink);
   --view-surface-muted-bg: var(--wsu-stone);
   --view-control-bg: #ffffff;
   --view-control-text: var(--wsu-muted);
@@ -29,25 +44,68 @@
   --color-wsu-muted: var(--wsu-muted);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-crimson: var(--crimson);
+  --color-ink: var(--ink);
+  --color-sub: var(--sub);
+  --color-mist: var(--mist);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --font-sans: var(--font-workspace-sans);
+  --font-serif: var(--font-workspace-serif);
+  --font-mono: var(--font-workspace-mono);
 }
 
 html {
-  background:
-    radial-gradient(circle at top left, rgba(166, 15, 45, 0.1), transparent 36%),
-    linear-gradient(180deg, #f9f4ef 0%, #f2ebe3 100%);
+  background-color: var(--paper);
 }
 
 body {
   min-height: 100vh;
   background: transparent;
   color: var(--foreground);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-workspace-sans), var(--font-geist-sans), sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: 2px solid var(--crimson);
+  outline-offset: 2px;
+}
+
+.bg-canvas {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(circle at 88% -8%, var(--crimson-soft), transparent 42%),
+    radial-gradient(circle at 6% 108%, rgba(152, 30, 50, 0.04), transparent 40%),
+    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 30px),
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 30px);
+}
+
+.sheet-grid {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(152, 30, 50, 0.045) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(152, 30, 50, 0.045) 0 1px, transparent 1px 26px);
+}
+
+.sheet-grid-lg {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(152, 30, 50, 0.04) 0 1px, transparent 1px 30px),
+    repeating-linear-gradient(90deg, rgba(152, 30, 50, 0.04) 0 1px, transparent 1px 30px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 ::selection {

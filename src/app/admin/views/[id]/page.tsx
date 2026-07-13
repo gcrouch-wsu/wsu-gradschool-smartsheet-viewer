@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ViewBuilder } from "@/components/admin/ViewBuilder";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getViewConfigById, listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 
@@ -18,7 +19,12 @@ export default async function ViewEditorPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Admin builder"
+        title={view?.label ?? "New view"}
+        description={isNew ? "Choose a source and configure the fields to expose on a public route." : "Configure fields, layout, publishing, and preview behavior."}
+      />
       <ViewBuilder
         initialView={view}
         sources={sources}
@@ -31,6 +37,6 @@ export default async function ViewEditorPage({ params }: { params: Promise<{ id:
         }))}
         isNew={isNew}
       />
-    </>
+    </div>
   );
 }

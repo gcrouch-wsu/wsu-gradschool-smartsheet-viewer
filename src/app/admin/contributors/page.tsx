@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listContributorUsers } from "@/lib/contributor-auth";
@@ -17,12 +18,12 @@ export default async function AdminContributorsPage() {
 
   return (
     <>
-      <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] px-6 py-6 shadow-[0_24px_64px_rgba(35,31,32,0.07)] sm:px-8">
+      <div className="rounded-[18px] border border-line bg-surface p-5 sm:p-6">
         <div className="mb-6">
           <PageHeader
             eyebrow="Admin builder"
-            title="Contributor accounts"
-            description="Manage contributor accounts and generate one-time password reset links."
+            title="Contributors"
+            description="People who can submit and edit records through your forms, scoped by role group."
           />
         </div>
 
@@ -34,6 +35,8 @@ export default async function AdminContributorsPage() {
             <p className="font-medium">Contributor editing requires DATABASE_URL.</p>
             <p className="mt-1 text-xs">{dbError}</p>
           </div>
+        ) : users.length === 0 ? (
+          <EmptyState icon={<span className="font-serif text-lg">♙</span>} title="No contributors yet" description="Invite colleagues to submit through forms. Assign them to a role group to control what they can see and edit." action={{ href: "/forms/manage", label: "Manage forms" }} variant="panel" />
         ) : (
           <ContributorAccountsManager users={users} />
         )}

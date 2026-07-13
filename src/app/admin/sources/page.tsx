@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button, EmptyState, TableShell } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
@@ -16,29 +17,29 @@ export default async function SourcesIndexPage() {
       <PageHeader
         eyebrow="Admin builder"
         title="Sources"
-        description="Register Smartsheet sheets and reports that power workspace views."
+        description="Registered Smartsheet sheets and reports, with their connection, schema, and role groups."
         actions={
-          <Link href="/admin/sources/new" className="btn-crimson rounded-full bg-wsu-crimson px-4 py-2 text-sm font-medium hover:bg-wsu-crimson-dark">
-            Create source
-          </Link>
+          <Link href="/admin/sources/new"><Button variant="primary">New source</Button></Link>
         }
       />
-      <div className="grid gap-4 lg:grid-cols-2">
-        {sources.map((source) => (
-          <article key={source.id} className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--wsu-crimson)]">{source.sourceType}</p>
-                <h3 className="mt-2 text-2xl font-semibold text-[color:var(--wsu-ink)]">{source.label}</h3>
-                <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">ID: {source.id} · Smartsheet {source.smartsheetId}</p>
-                <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Views attached: {viewsBySource.get(source.id) ?? 0}</p>
-              </div>
-              <Link href={`/admin/sources/${source.id}`} className="inline-flex items-center rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]">Edit</Link>
-            </div>
-          </article>
-        ))}
-        {sources.length === 0 && <p className="text-sm text-[color:var(--wsu-muted)]">No sources registered.</p>}
-      </div>
+      <TableShell headers={["Source", "Connection", "Views", "Status"]}>
+        {sources.length === 0 ? (
+          <div className="p-5">
+            <EmptyState icon={<span className="font-serif text-lg">↔</span>} title="No sources registered" description="Connect a Smartsheet sheet or report to sync its columns and rows into the workspace." action={{ href: "/admin/sources/new", label: "Register your first source" }} variant="panel" />
+          </div>
+        ) : (
+          <div className="divide-y divide-line">
+            {sources.map((source) => (
+              <Link key={source.id} href={`/admin/sources/${source.id}`} className="grid grid-cols-2 gap-3 px-5 py-4 transition hover:bg-[#fdfafb] sm:grid-cols-4">
+                <div><p className="font-medium text-ink">{source.label}</p><p className="mt-1 text-xs text-sub">{source.id}</p></div>
+                <p className="text-sm text-sub">{source.sourceType} · {source.smartsheetId}</p>
+                <p className="text-sm text-sub">{viewsBySource.get(source.id) ?? 0} attached</p>
+                <p className="font-mono text-xs uppercase tracking-wide text-crimson">Configured</p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </TableShell>
     </section>
   );
 }
