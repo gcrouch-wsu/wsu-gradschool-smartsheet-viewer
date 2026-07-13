@@ -1,9 +1,25 @@
 import type { FormFieldConfig, FormFieldDefinition } from "@/lib/forms/form-field-config";
-import { normalizeFormFieldConfig } from "@/lib/forms/form-field-config";
+import {
+  isFieldFormItem,
+  isLayoutFormItem,
+  normalizeFormFieldConfig,
+} from "@/lib/forms/form-field-config";
 import type { SmartsheetColumn } from "@/lib/forms/types";
 
-export type { FormFieldConfig, FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
-export { normalizeFormFieldConfig } from "@/lib/forms/form-field-config";
+export type {
+  FormFieldConfig,
+  FormFieldDefinition,
+  FormFieldKindHint,
+  FormItemKind,
+  FormLayoutElementType,
+} from "@/lib/forms/form-field-config";
+export {
+  defaultTextForLayout,
+  isFieldFormItem,
+  isLayoutFormItem,
+  newLayoutElementId,
+  normalizeFormFieldConfig,
+} from "@/lib/forms/form-field-config";
 
 export interface FormFieldMeta {
   columnTitle: string;
@@ -19,7 +35,7 @@ export function fieldMetaFromConfig(config: FormFieldConfig | null | undefined):
   const meta: Record<string, FormFieldMeta> = {};
   if (!normalized?.fields?.length) return meta;
   for (const field of normalized.fields) {
-    if (field.hiddenOnForm) continue;
+    if (field.hiddenOnForm || isLayoutFormItem(field)) continue;
     meta[field.columnTitle.toLowerCase()] = {
       columnTitle: field.columnTitle,
       label: field.label,
@@ -39,6 +55,13 @@ export function fieldMetaForColumn(
   return meta[col.title.toLowerCase()];
 }
 
+/** Visible ordered canvas items for the public form (fields + layout). */
+export function visibleFormItems(config: FormFieldConfig | null | undefined): FormFieldDefinition[] {
+  const normalized = config ? normalizeFormFieldConfig(config) : null;
+  if (!normalized?.fields?.length) return [];
+  return normalized.fields.filter((f) => !f.hiddenOnForm);
+}
+
 /** Seed field definitions from sheet columns when no config exists yet. */
 export function seedFieldsFromColumns(columns: SmartsheetColumn[], visibleTitles?: string[]): FormFieldDefinition[] {
   const visible = visibleTitles?.length
@@ -48,23 +71,50 @@ export function seedFieldsFromColumns(columns: SmartsheetColumn[], visibleTitles
   return columns.map((col, index) => ({
     columnTitle: col.title,
     order: index,
+    itemKind: "field" as const,
     hiddenOnForm: visible ? !visible.has(col.title.toLowerCase()) : false,
   }));
 }
 
-/** Ensure every sheet column has a field entry; preserve existing metadata. */
+/** Ensure every sheet column has a field entry; preserve layout elements and field metadata. */
 export function mergeFieldsWithColumns(
   columns: SmartsheetColumn[],
   config: FormFieldConfig | null,
 ): FormFieldDefinition[] {
-  const existing = config?.fields ?? [];
-  const byTitle = new Map(existing.map((f) => [f.columnTitle.toLowerCase(), f]));
+  const existing = [...(config?.fields ?? [])].sort((a, b) => a.order - b.order);
+  const layoutItems = existing.filter(isLayoutFormItem);
+  const existingFields = existing.filter(isFieldFormItem);
+  const byTitle = new Map(existingFields.map((f) => [f.columnTitle.toLowerCase(), f]));
   const used = new Set<string>();
   const result: FormFieldDefinition[] = [];
   const hasConfig = Boolean(config?.fields?.length || config?.columns?.length);
 
-  const orderedTitles =
-    config?.columns?.length ? config.columns : existing.sort((a, b) => a.order - b.order).map((f) => f.columnTitle);
+  const orderedTitles = config?.columns?.length
+    ? config.columns
+    : existingFields.map((f) => f.columnTitle);
+
+  // Rebuild in saved order, inserting layout items relative to neighboring fields.
+  const layoutByAfterKey = new Map<string, FormFieldDefinition[]>();
+  const leadingLayout: FormFieldDefinition[] = [];
+  {
+    let lastFieldKey: string | null = null;
+    for (const item of existing) {
+      if (isLayoutFormItem(item)) {
+        if (lastFieldKey == null) leadingLayout.push(item);
+        else {
+          const list = layoutByAfterKey.get(lastFieldKey) ?? [];
+          list.push(item);
+          layoutByAfterKey.set(lastFieldKey, list);
+        }
+      } else {
+        lastFieldKey = item.columnTitle.toLowerCase();
+      }
+    }
+  }
+
+  for (const item of leadingLayout) {
+    result.push({ ...item, order: result.length, itemKind: item.itemKind ?? "heading" });
+  }
 
   for (const title of orderedTitles) {
     const col = columns.find((c) => c.title.toLowerCase() === title.toLowerCase());
@@ -76,12 +126,16 @@ export function mergeFieldsWithColumns(
     result.push({
       columnTitle: col.title,
       order: result.length,
+      itemKind: "field",
       hiddenOnForm: prev?.hiddenOnForm ?? false,
       label: prev?.label,
       helpText: prev?.helpText,
       required: prev?.required,
       kindHint: prev?.kindHint,
     });
+    for (const layout of layoutByAfterKey.get(key) ?? []) {
+      result.push({ ...layout, order: result.length, itemKind: layout.itemKind ?? "heading" });
+    }
   }
 
   for (const col of columns) {
@@ -92,13 +146,19 @@ export function mergeFieldsWithColumns(
     result.push({
       columnTitle: col.title,
       order: result.length,
-      // Without saved config, show all columns; with config, new columns default off the form.
+      itemKind: "field",
       hiddenOnForm: prev?.hiddenOnForm ?? (hasConfig ? true : false),
       label: prev?.label,
       helpText: prev?.helpText,
       required: prev?.required,
       kindHint: prev?.kindHint,
     });
+  }
+
+  // Preserve any layout that sat after removed columns (append).
+  for (const item of layoutItems) {
+    if (result.some((r) => r.columnTitle === item.columnTitle)) continue;
+    result.push({ ...item, order: result.length, itemKind: item.itemKind ?? "heading" });
   }
 
   return result;

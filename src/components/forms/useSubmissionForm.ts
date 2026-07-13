@@ -37,6 +37,7 @@ export function useSubmissionForm() {
         formTitle: typeof d.formTitle === "string" ? d.formTitle : "",
         formDescription: typeof d.formDescription === "string" ? d.formDescription : "",
         columns: (d.columns as FormSchema["columns"]) ?? [],
+        formItems: Array.isArray(d.formItems) ? (d.formItems as FormSchema["formItems"]) : [],
         formColumnSource: d.formColumnSource as FormSchema["formColumnSource"],
         fieldMeta: (d.fieldMeta as FormSchema["fieldMeta"]) ?? {},
         conditionalLogic: (d.conditionalLogic as FormSchema["conditionalLogic"]) ?? [],

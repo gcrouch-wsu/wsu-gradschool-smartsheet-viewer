@@ -1,10 +1,24 @@
 export type FormFieldKindHint = "text" | "textarea" | "email" | "phone" | "number";
 
-/** Per-field presentation metadata for the public form builder. */
+/** Display-only form elements (not Smartsheet columns). */
+export type FormLayoutElementType = "heading" | "description" | "divider";
+
+/** Canvas item kind: data field or layout/content element. */
+export type FormItemKind = "field" | FormLayoutElementType;
+
+/** Per-field / layout presentation metadata for the public form builder. */
 export interface FormFieldDefinition {
+  /**
+   * For fields: Smartsheet column title.
+   * For layout elements: stable synthetic id (e.g. `__heading:abc`).
+   */
   columnTitle: string;
   order: number;
   hiddenOnForm?: boolean;
+  /** Defaults to `"field"` when omitted. */
+  itemKind?: FormItemKind;
+  /** Heading / description body text. */
+  text?: string;
   label?: string;
   helpText?: string;
   required?: boolean;
@@ -12,7 +26,7 @@ export interface FormFieldDefinition {
 }
 
 export interface FormFieldConfig {
-  /** Ordered column titles visible on the public form (derived from `fields` when present). */
+  /** Ordered column titles visible on the public form (derived from field items only). */
   columns: string[];
   /** Richer per-field layout and presentation; preferred when present. */
   fields?: FormFieldDefinition[];
@@ -28,17 +42,41 @@ function optionalTrimmed(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
-/** Normalize config so `columns` always matches visible ordered fields. */
+export function isLayoutFormItem(field: Pick<FormFieldDefinition, "itemKind">): boolean {
+  return field.itemKind === "heading" || field.itemKind === "description" || field.itemKind === "divider";
+}
+
+export function isFieldFormItem(field: Pick<FormFieldDefinition, "itemKind">): boolean {
+  return !isLayoutFormItem(field);
+}
+
+export function newLayoutElementId(type: FormLayoutElementType): string {
+  const suffix =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().slice(0, 8)
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  return `__${type}:${suffix}`;
+}
+
+export function defaultTextForLayout(type: FormLayoutElementType): string {
+  if (type === "heading") return "Section heading";
+  if (type === "description") return "Add supporting instructions for this section.";
+  return "";
+}
+
+/** Normalize config so `columns` always matches visible ordered data fields. */
 export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConfig {
   const formTitle = optionalTrimmed(config.formTitle);
   const formDescription = optionalTrimmed(config.formDescription);
 
   if (Array.isArray(config.fields) && config.fields.length > 0) {
     const sorted = [...config.fields].sort((a, b) => a.order - b.order);
-    const columns = sorted.filter((f) => !f.hiddenOnForm).map((f) => f.columnTitle);
+    const columns = sorted
+      .filter((f) => isFieldFormItem(f) && !f.hiddenOnForm)
+      .map((f) => f.columnTitle);
     return {
       columns,
-      fields: sorted.map((f, i) => ({ ...f, order: i })),
+      fields: sorted.map((f, i) => ({ ...f, order: i, itemKind: f.itemKind ?? "field" })),
       formTitle,
       formDescription,
     };

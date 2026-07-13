@@ -157,9 +157,24 @@ export function formColumns(cols: SmartsheetColumn[], exclude: Set<string> = new
 
 export async function addRow(
   sheetId: string | number,
-  cells: { columnId: number; value: string | boolean }[],
+  cells: (
+    | { columnId: number; value: string | boolean }
+    | { columnId: number; objectValue: unknown }
+  )[],
 ): Promise<unknown> {
-  if (config.demo) return mock.mockAddRow(sheetId, cells);
+  if (config.demo) {
+    return mock.mockAddRow(
+      sheetId,
+      cells.map((c) =>
+        "value" in c
+          ? c
+          : {
+              columnId: c.columnId,
+              value: JSON.stringify((c as { objectValue: unknown }).objectValue),
+            },
+      ),
+    );
+  }
   return api(`/sheets/${sheetId}/rows`, {
     method: "POST",
     body: JSON.stringify([{ toBottom: true, cells }]),

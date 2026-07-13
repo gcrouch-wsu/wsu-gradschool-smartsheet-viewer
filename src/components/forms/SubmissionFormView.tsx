@@ -11,10 +11,11 @@ import {
   fieldLabel,
   hiddenColumnTitles,
   isFieldRequired,
-  isFieldVisible,
+  resolveFormRenderItems,
   validateFormClient,
   type FormSchema,
 } from "@/lib/forms/form-ui";
+import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import type { SmartsheetColumn } from "@/lib/forms/types";
 
 type FormValues = Record<string, string>;
@@ -120,6 +121,41 @@ function FormField({
     );
   }
 
+  if (kind === "multiselect") {
+    const selected = new Set(
+      watchValue
+        .split(/;|,|\n/)
+        .map((v) => v.trim())
+        .filter(Boolean),
+    );
+    return (
+      <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
+        <div className="space-y-2 rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-3 py-3">
+          {(col.options ?? []).map((option) => {
+            const optionId = `${id}_${option}`;
+            return (
+              <label key={option} htmlFor={optionId} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+                <input
+                  id={optionId}
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
+                  checked={selected.has(option)}
+                  onChange={(e) => {
+                    const next = new Set(selected);
+                    if (e.target.checked) next.add(option);
+                    else next.delete(option);
+                    setValue(String(col.id), [...next].join(";"), { shouldDirty: true });
+                  }}
+                />
+                {option}
+              </label>
+            );
+          })}
+        </div>
+      </FieldShell>
+    );
+  }
+
   if (kind === "textarea") {
     return (
       <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
@@ -148,6 +184,16 @@ function FormField({
       />
     </FieldShell>
   );
+}
+
+function LayoutBlock({ item }: { item: FormFieldDefinition }) {
+  if (item.itemKind === "divider") {
+    return <hr className="border-[color:var(--wsu-border)]" />;
+  }
+  if (item.itemKind === "heading") {
+    return <h2 className="text-lg font-medium text-[color:var(--wsu-ink)]">{item.text?.trim() || "Section"}</h2>;
+  }
+  return <p className="text-sm leading-6 text-[color:var(--wsu-muted)]">{item.text?.trim() || ""}</p>;
 }
 
 function FileUploadZone({
@@ -251,7 +297,8 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
     [schema.conditionalLogic],
   );
 
-  const visibleColumns = schema.columns.filter((col) => isFieldVisible(col, hidden));
+  const visibleColumns = schema.columns.filter((col) => !hidden.has(col.title.toLowerCase()));
+  const renderItems = useMemo(() => resolveFormRenderItems(schema, hidden), [schema, hidden]);
 
   const formTitle = schema.formTitle?.trim() || schema.sheetName;
   const formDescription = schema.formDescription?.trim() || "";
@@ -322,23 +369,26 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
         </div>
 
         <div className="space-y-5 px-5 py-6">
-          {visibleColumns.length === 0 ? (
+          {renderItems.length === 0 ? (
             <p className="text-sm text-[color:var(--wsu-muted)]">No fields are visible for the current selections.</p>
           ) : (
-            visibleColumns.map((col) => {
-              const meta = schema.fieldMeta?.[col.title.toLowerCase()];
+            renderItems.map((entry) => {
+              if (entry.kind === "layout") {
+                return <LayoutBlock key={entry.item.columnTitle} item={entry.item} />;
+              }
+              const meta = schema.fieldMeta?.[entry.col.title.toLowerCase()];
               return (
                 <FormField
-                  key={col.id}
-                  col={col}
-                  label={fieldLabel(col, meta)}
+                  key={entry.col.id}
+                  col={entry.col}
+                  label={fieldLabel(entry.col, meta)}
                   helpText={meta?.helpText}
-                  kind={fieldKind(col, meta)}
-                  required={isFieldRequired(col, conditionalTargets, hidden, meta)}
+                  kind={fieldKind(entry.col, meta)}
+                  required={isFieldRequired(entry.col, conditionalTargets, hidden, meta)}
                   register={register}
-                  error={fieldErrors[String(col.id)] ?? formState.errors[String(col.id)]?.message}
+                  error={fieldErrors[String(entry.col.id)] ?? formState.errors[String(entry.col.id)]?.message}
                   setValue={setValue}
-                  watchValue={values[String(col.id)] ?? ""}
+                  watchValue={values[String(entry.col.id)] ?? ""}
                 />
               );
             })

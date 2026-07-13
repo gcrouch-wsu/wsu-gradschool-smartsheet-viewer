@@ -1,12 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
+import type {
+  FormFieldDefinition,
+  FormFieldKindHint,
+  FormLayoutElementType,
+} from "@/lib/forms/form-field-config";
+import {
+  defaultTextForLayout,
+  isFieldFormItem,
+  isLayoutFormItem,
+  newLayoutElementId,
+} from "@/lib/forms/form-field-config";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 import { deriveFormFieldConfig, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
 import type { FormSchema } from "@/lib/forms/form-ui";
 
-export type BuilderFieldType = "text" | "textarea" | "email" | "phone" | "number" | "dropdown" | "checkbox" | "date";
+export type BuilderFieldType =
+  | "text"
+  | "textarea"
+  | "email"
+  | "phone"
+  | "number"
+  | "dropdown"
+  | "multiselect"
+  | "contact"
+  | "checkbox"
+  | "date";
+
+export type BuilderElementType = BuilderFieldType | FormLayoutElementType;
 
 export interface BuilderState {
   sheetId: string;
@@ -46,9 +68,13 @@ export function defaultTitleForType(type: BuilderFieldType, existing: string[]):
               ? "Number"
               : type === "dropdown"
                 ? "Dropdown"
-                : type === "checkbox"
-                  ? "Checkbox"
-                  : "Date";
+                : type === "multiselect"
+                  ? "Multi-select"
+                  : type === "contact"
+                    ? "Contact"
+                    : type === "checkbox"
+                      ? "Checkbox"
+                      : "Date";
   const titles = new Set(existing.map((t) => t.toLowerCase()));
   if (!titles.has(base.toLowerCase())) return base;
   let i = 2;
@@ -60,6 +86,10 @@ export function columnPayloadForType(type: BuilderFieldType, title: string) {
   switch (type) {
     case "dropdown":
       return { title, type: "PICKLIST", options: ["Option 1", "Option 2", "Option 3"] };
+    case "multiselect":
+      return { title, type: "MULTI_PICKLIST", options: ["Option 1", "Option 2", "Option 3"] };
+    case "contact":
+      return { title, type: "CONTACT_LIST" };
     case "checkbox":
       return { title, type: "CHECKBOX" };
     case "date":
@@ -82,6 +112,10 @@ export function kindHintForType(type: BuilderFieldType): FormFieldKindHint | und
   if (type === "number") return "number";
   if (type === "text") return "text";
   return undefined;
+}
+
+function isLayoutPaletteType(type: BuilderElementType): type is FormLayoutElementType {
+  return type === "heading" || type === "description" || type === "divider";
 }
 
 export function useFormBuilder() {
@@ -155,23 +189,28 @@ export function useFormBuilder() {
     );
   }
 
+  async function persist(fields: FormFieldDefinition[], conditionalLogic: ConditionalRule[], presentation?: { formTitle: string; formDescription: string }) {
+    if (!state) return;
+    const r = await fetch("/api/forms/builder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fields,
+        conditionalLogic,
+        formTitle: presentation?.formTitle ?? state.formTitle,
+        formDescription: presentation?.formDescription ?? state.formDescription,
+      }),
+    });
+    const d = await parseJson(r);
+    if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || (typeof d.message === "string" && d.message) || "Save failed.");
+  }
+
   async function save() {
     if (!state) return;
     setSaving(true);
     setMessage(null);
     try {
-      const r = await fetch("/api/forms/builder", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fields: state.fields,
-          conditionalLogic: state.conditionalLogic,
-          formTitle: state.formTitle,
-          formDescription: state.formDescription,
-        }),
-      });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || (typeof d.message === "string" && d.message) || "Save failed.");
+      await persist(state.fields, state.conditionalLogic);
       setDirty(false);
       setMessage({ ok: true, text: "Form layout saved." });
       await load();
@@ -182,12 +221,41 @@ export function useFormBuilder() {
     }
   }
 
+  async function addLayoutElement(type: FormLayoutElementType) {
+    if (!state) return;
+    const id = newLayoutElementId(type);
+    const nextFields: FormFieldDefinition[] = [
+      ...state.fields,
+      {
+        columnTitle: id,
+        order: state.fields.length,
+        itemKind: type,
+        text: defaultTextForLayout(type),
+        hiddenOnForm: false,
+      },
+    ];
+    setState({ ...state, fields: nextFields });
+    setSelectedTitle(id);
+    setDirty(true);
+    try {
+      await persist(nextFields, state.conditionalLogic);
+      setDirty(false);
+      setMessage({
+        ok: true,
+        text: type === "divider" ? "Added divider." : `Added ${type}.`,
+      });
+      await load();
+    } catch (e: unknown) {
+      setMessage({ ok: false, text: e instanceof Error ? e.message : "Could not add element." });
+    }
+  }
+
   async function addField(type: BuilderFieldType) {
     if (!state) return;
     setMessage(null);
     const title = defaultTitleForType(
       type,
-      state.fields.map((f) => f.columnTitle),
+      state.fields.filter(isFieldFormItem).map((f) => f.columnTitle),
     );
     const payload = columnPayloadForType(type, title);
     try {
@@ -212,6 +280,7 @@ export function useFormBuilder() {
         {
           columnTitle: created.title,
           order: state.fields.length,
+          itemKind: "field",
           hiddenOnForm: false,
           kindHint: hint,
           required: type !== "checkbox",
@@ -221,22 +290,18 @@ export function useFormBuilder() {
       setSelectedTitle(created.title);
       setDirty(true);
 
-      await fetch("/api/forms/builder", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fields: nextFields,
-          conditionalLogic: state.conditionalLogic,
-          formTitle: state.formTitle,
-          formDescription: state.formDescription,
-        }),
-      });
+      await persist(nextFields, state.conditionalLogic);
       setDirty(false);
       setMessage({ ok: true, text: `Added “${created.title}”.` });
       await load();
     } catch (e: unknown) {
       setMessage({ ok: false, text: e instanceof Error ? e.message : "Could not add field." });
     }
+  }
+
+  async function addElement(type: BuilderElementType) {
+    if (isLayoutPaletteType(type)) return addLayoutElement(type);
+    return addField(type);
   }
 
   async function renameColumn(columnId: number, title: string) {
@@ -250,12 +315,12 @@ export function useFormBuilder() {
     if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || "Rename failed.");
   }
 
-  async function updatePicklistOptions(columnId: number, options: string[]) {
+  async function updatePicklistOptions(columnId: number, options: string[], columnType: "PICKLIST" | "MULTI_PICKLIST" = "PICKLIST") {
     if (!state) return;
     const r = await fetch(`/api/forms/platform/sheets/${state.sheetId}/columns/${columnId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "PICKLIST", options }),
+      body: JSON.stringify({ type: columnType, options }),
     });
     const d = await parseJson(r);
     if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || "Could not update options.");
@@ -263,6 +328,24 @@ export function useFormBuilder() {
 
   async function deleteField(columnTitle: string) {
     if (!state) return;
+    const item = state.fields.find((f) => f.columnTitle === columnTitle);
+    if (!item) return;
+
+    if (isLayoutFormItem(item)) {
+      const nextFields = state.fields.filter((f) => f.columnTitle !== columnTitle);
+      setState({ ...state, fields: nextFields });
+      setSelectedTitle(nextFields[0]?.columnTitle ?? null);
+      try {
+        await persist(nextFields, state.conditionalLogic);
+        setDirty(false);
+        setMessage({ ok: true, text: "Removed form element." });
+        await load();
+      } catch (e: unknown) {
+        setMessage({ ok: false, text: e instanceof Error ? e.message : "Delete failed." });
+      }
+      return;
+    }
+
     if (lockedSet.has(columnTitle.toLowerCase())) {
       setMessage({ ok: false, text: "This column is locked and cannot be deleted from the form builder." });
       return;
@@ -290,16 +373,7 @@ export function useFormBuilder() {
         conditionalLogic: nextLogic,
       });
       setSelectedTitle(nextFields[0]?.columnTitle ?? null);
-      await fetch("/api/forms/builder", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fields: nextFields,
-          conditionalLogic: nextLogic,
-          formTitle: state.formTitle,
-          formDescription: state.formDescription,
-        }),
-      });
+      await persist(nextFields, nextLogic);
       setDirty(false);
       setMessage({ ok: true, text: `Deleted “${columnTitle}”.` });
       await load();
@@ -333,6 +407,7 @@ export function useFormBuilder() {
       formTitle: state.formTitle,
       formDescription: state.formDescription,
       columns,
+      formItems: config.fields?.filter((f) => !f.hiddenOnForm) ?? [],
       formColumnSource: "smartsheet-config",
       fieldMeta: fieldMetaFromConfig(config),
       conditionalLogic: state.conditionalLogic,
@@ -355,6 +430,7 @@ export function useFormBuilder() {
     load,
     save,
     addField,
+    addElement,
     updateField,
     updateFields,
     renameColumn,

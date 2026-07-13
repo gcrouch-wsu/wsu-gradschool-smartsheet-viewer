@@ -10,7 +10,8 @@ import {
   fieldMetaFromConfig,
   mergeFieldsWithColumns,
 } from "@/lib/forms/form-field-meta";
-import type { FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
+import type { FormFieldDefinition, FormFieldKindHint, FormItemKind } from "@/lib/forms/form-field-config";
+import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import * as registry from "@/lib/forms/registry";
@@ -23,6 +24,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const KIND_HINTS = new Set<FormFieldKindHint>(["text", "textarea", "email", "phone", "number"]);
+const ITEM_KINDS = new Set<FormItemKind>(["field", "heading", "description", "divider"]);
 
 function asOptionalString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -125,16 +127,20 @@ export async function PUT(request: Request) {
       const sanitized = sourceFields
         .map((f, index) => {
           const title = String(f.columnTitle ?? "").trim();
-          const lockedField = locked.has(title.toLowerCase());
+          const itemKind = ITEM_KINDS.has(f.itemKind as FormItemKind) ? (f.itemKind as FormItemKind) : "field";
+          const layout = isLayoutFormItem({ itemKind });
+          const lockedField = !layout && locked.has(title.toLowerCase());
           const kindHint = KIND_HINTS.has(f.kindHint as FormFieldKindHint) ? (f.kindHint as FormFieldKindHint) : undefined;
           return {
             columnTitle: title,
             order: typeof f.order === "number" ? f.order : index,
+            itemKind,
+            text: typeof f.text === "string" ? f.text : undefined,
             hiddenOnForm: lockedField ? true : Boolean(f.hiddenOnForm),
             label: typeof f.label === "string" ? f.label : undefined,
             helpText: typeof f.helpText === "string" ? f.helpText : undefined,
-            required: typeof f.required === "boolean" ? f.required : undefined,
-            kindHint,
+            required: layout ? undefined : typeof f.required === "boolean" ? f.required : undefined,
+            kindHint: layout ? undefined : kindHint,
           } satisfies FormFieldDefinition;
         })
         .filter((f) => f.columnTitle);

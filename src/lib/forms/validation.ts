@@ -2,13 +2,33 @@ import { config } from "@/lib/forms/config";
 import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
+export type SubmissionCell =
+  | { columnId: number; value: string | boolean }
+  | {
+      columnId: number;
+      objectValue:
+        | { objectType: "CONTACT"; email: string }
+        | { objectType: "MULTI_PICKLIST"; values: string[] };
+    };
+
 export interface ValidationOutput {
   ok: boolean;
   errors: string[];
-  cells: { columnId: number; value: string | boolean }[];
+  cells: SubmissionCell[];
 }
 
 const MAX_LEN = 4000;
+
+function isEmail(v: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function splitMultiValues(raw: string): string[] {
+  return raw
+    .split(/\n|;|,/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
 
 /**
  * The authoritative check. The browser does friendly checks for UX, but nothing
@@ -21,7 +41,7 @@ export function validateSubmission(
   fieldMeta?: Record<string, FormFieldMeta>,
 ): ValidationOutput {
   const errors: string[] = [];
-  const cells: { columnId: number; value: string | boolean }[] = [];
+  const cells: SubmissionCell[] = [];
 
   const conditionalTargets = new Set<string>();
   for (const rule of conditional) {
@@ -34,7 +54,10 @@ export function validateSubmission(
     const label = meta?.label?.trim() || col.title;
     const optional =
       typeof meta?.required === "boolean" ? !meta.required : conditionalTargets.has(col.title.toLowerCase());
-    const treatAsEmail = meta?.kindHint === "email" || /e-?mail/i.test(col.title) || col.type === "CONTACT_LIST";
+    const treatAsEmail =
+      meta?.kindHint === "email" ||
+      (/e-?mail/i.test(col.title) && col.type !== "MULTI_PICKLIST") ||
+      col.type === "CONTACT_LIST";
 
     if (col.type === "CHECKBOX") {
       cells.push({ columnId: col.id, value: raw === "true" });
@@ -48,6 +71,41 @@ export function validateSubmission(
 
     if (raw.length > MAX_LEN) {
       errors.push(`${label} is too long.`);
+      continue;
+    }
+
+    if (col.type === "MULTI_PICKLIST") {
+      const selected = splitMultiValues(raw);
+      if (!selected.length) {
+        if (!optional) errors.push(`${label} is required.`);
+        continue;
+      }
+      const options = col.options ?? [];
+      if (options.length && selected.some((v) => !options.includes(v))) {
+        errors.push(`${label} must be chosen from the listed options.`);
+        continue;
+      }
+      cells.push({
+        columnId: col.id,
+        objectValue: { objectType: "MULTI_PICKLIST", values: selected },
+      });
+      continue;
+    }
+
+    if (col.type === "CONTACT_LIST") {
+      if (!isEmail(raw)) {
+        errors.push("Enter a valid email address.");
+        continue;
+      }
+      const domain = raw.split("@")[1]?.toLowerCase() ?? "";
+      if (!config.allowedDomains.includes(domain)) {
+        errors.push(`Email must be from: ${config.allowedDomains.join(", ")}.`);
+        continue;
+      }
+      cells.push({
+        columnId: col.id,
+        objectValue: { objectType: "CONTACT", email: raw },
+      });
       continue;
     }
 
@@ -77,8 +135,4 @@ export function validateSubmission(
   }
 
   return { ok: errors.length === 0, errors, cells };
-}
-
-function isEmail(v: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }

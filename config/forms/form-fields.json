@@ -55,15 +55,17 @@
         "hiddenOnForm": false
       },
       {
-        "columnTitle": "Status",
+        "columnTitle": "Added Field",
         "order": 4,
-        "hiddenOnForm": true
+        "hiddenOnForm": false
       },
       {
-        "columnTitle": "Added Field",
+        "columnTitle": "Status",
         "order": 5,
-        "hiddenOnForm": false
+        "hiddenOnForm": true
       }
-    ]
+    ],
+    "formTitle": "This is the title fo the form",
+    "formDescription": "Example descritpn and desctipn and descritption Example descritpn and desctipn and descritption Example descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritption Example descritpn and desctipn and descritption Example descritpn and desctipn and descritption Example descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritptionExample descritpn and desctipn and descritption"
   }
 }

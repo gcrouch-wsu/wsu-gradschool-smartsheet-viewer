@@ -1,7 +1,18 @@
+import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
+import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
-export type FormFieldKind = "checkbox" | "select" | "date" | "email" | "textarea" | "text" | "phone" | "number";
+export type FormFieldKind =
+  | "checkbox"
+  | "select"
+  | "multiselect"
+  | "date"
+  | "email"
+  | "textarea"
+  | "text"
+  | "phone"
+  | "number";
 
 export interface FormSchema {
   sheetName: string;
@@ -10,6 +21,8 @@ export interface FormSchema {
   /** Supporting copy under the form title (viewer-style description). */
   formDescription?: string;
   columns: SmartsheetColumn[];
+  /** Ordered visible canvas items (data fields + layout elements). */
+  formItems?: FormFieldDefinition[];
   formColumnSource?: "smartsheet-config" | "auto";
   fieldMeta?: Record<string, FormFieldMeta>;
   conditionalLogic: ConditionalRule[];
@@ -22,7 +35,8 @@ const MAX_LEN = 4000;
 
 export function fieldKind(col: SmartsheetColumn, meta?: FormFieldMeta): FormFieldKind {
   if (col.type === "CHECKBOX") return "checkbox";
-  if (col.options && col.options.length) return "select";
+  if (col.type === "MULTI_PICKLIST") return "multiselect";
+  if (col.type === "PICKLIST" || (col.options && col.options.length)) return "select";
   if (col.type === "DATE" || col.type === "ABSTRACT_DATETIME") return "date";
   if (col.type === "PHONE" || meta?.kindHint === "phone") return "phone";
   if (meta?.kindHint === "number") return "number";
@@ -84,6 +98,13 @@ function isEmail(v: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+function splitMultiValues(raw: string): string[] {
+  return raw
+    .split(/\n|;|,/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 /** Client-side validation aligned with server validateSubmission rules. */
 export function validateFormClient(
   columns: SmartsheetColumn[],
@@ -125,7 +146,18 @@ export function validateFormClient(
       continue;
     }
 
-    if (kind === "email" || /e-?mail/i.test(col.title)) {
+    if (kind === "multiselect") {
+      const selected = splitMultiValues(raw);
+      const options = col.options ?? [];
+      if (options.length && selected.some((v) => !options.includes(v))) {
+        const msg = `${label} must be chosen from the listed options.`;
+        errors.push(msg);
+        fieldErrors[key] = msg;
+      }
+      continue;
+    }
+
+    if (kind === "email" || col.type === "CONTACT_LIST" || /e-?mail/i.test(col.title)) {
       if (!isEmail(raw)) {
         const msg = "Enter a valid email address.";
         errors.push(msg);
@@ -141,7 +173,7 @@ export function validateFormClient(
       }
     }
 
-    if (col.options && col.options.length && !col.options.includes(raw)) {
+    if (kind === "select" && col.options && col.options.length && !col.options.includes(raw)) {
       const msg = `${label} must be one of: ${col.options.join(", ")}.`;
       errors.push(msg);
       fieldErrors[key] = msg;
@@ -169,4 +201,38 @@ export function buildSubmitPayload(
     payload[col.id] = values[String(col.id)] ?? (col.type === "CHECKBOX" ? "false" : "");
   }
   return payload;
+}
+
+/** Resolve ordered render list: layout items interleaved with visible columns. */
+export function resolveFormRenderItems(
+  schema: FormSchema,
+  hidden: Set<string>,
+): Array<
+  | { kind: "layout"; item: FormFieldDefinition }
+  | { kind: "field"; col: SmartsheetColumn; item?: FormFieldDefinition }
+> {
+  const byTitle = new Map(schema.columns.map((c) => [c.title.toLowerCase(), c]));
+  const items = schema.formItems;
+
+  if (items?.length) {
+    const out: Array<
+      | { kind: "layout"; item: FormFieldDefinition }
+      | { kind: "field"; col: SmartsheetColumn; item?: FormFieldDefinition }
+    > = [];
+    for (const item of items) {
+      if (item.hiddenOnForm) continue;
+      if (isLayoutFormItem(item)) {
+        out.push({ kind: "layout", item });
+        continue;
+      }
+      const col = byTitle.get(item.columnTitle.toLowerCase());
+      if (!col || !isFieldVisible(col, hidden)) continue;
+      out.push({ kind: "field", col, item });
+    }
+    return out;
+  }
+
+  return schema.columns
+    .filter((col) => isFieldVisible(col, hidden))
+    .map((col) => ({ kind: "field" as const, col }));
 }

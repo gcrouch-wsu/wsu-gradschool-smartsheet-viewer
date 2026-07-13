@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { SubmissionFormView } from "@/components/forms/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
+import { isFieldFormItem, isLayoutFormItem } from "@/lib/forms/form-field-config";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 import {
+  type BuilderElementType,
   type BuilderFieldType,
   useFormBuilder,
 } from "@/components/forms/builder/useFormBuilder";
@@ -20,15 +22,23 @@ const secondaryBtn =
 const primaryBtn =
   "rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson-dark disabled:opacity-60";
 
-const PALETTE: { type: BuilderFieldType; label: string; hint: string }[] = [
+const FIELD_PALETTE: { type: BuilderFieldType; label: string; hint: string }[] = [
   { type: "text", label: "Short text", hint: "Single-line answer" },
   { type: "textarea", label: "Long text", hint: "Multi-line answer" },
   { type: "email", label: "Email", hint: "Validated email" },
   { type: "phone", label: "Phone", hint: "Phone number" },
   { type: "number", label: "Number", hint: "Numeric value" },
-  { type: "dropdown", label: "Dropdown", hint: "Picklist options" },
+  { type: "dropdown", label: "Dropdown", hint: "Single picklist" },
+  { type: "multiselect", label: "Multi-select", hint: "Choose multiple" },
+  { type: "contact", label: "Contact", hint: "Person email" },
   { type: "checkbox", label: "Checkbox", hint: "Yes / no" },
   { type: "date", label: "Date", hint: "Date picker" },
+];
+
+const ELEMENT_PALETTE: { type: BuilderElementType; label: string; hint: string }[] = [
+  { type: "heading", label: "Heading", hint: "Section title" },
+  { type: "description", label: "Description", hint: "Instruction text" },
+  { type: "divider", label: "Divider", hint: "Visual separator" },
 ];
 
 function FormPresentationEditor({
@@ -72,13 +82,33 @@ function FormPresentationEditor({
   );
 }
 
-function FieldPalette({ onAdd }: { onAdd: (type: BuilderFieldType) => void }) {
+function FieldPalette({ onAdd }: { onAdd: (type: BuilderElementType) => void }) {
   return (
     <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
-      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Add field</h2>
-      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Creates a Smartsheet column on the active form.</p>
-      <div className="mt-3 space-y-2">
-        {PALETTE.map((item) => (
+      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form elements</h2>
+      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Layout blocks and Smartsheet input fields.</p>
+
+      <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Layout</h3>
+      <div className="mt-2 space-y-2">
+        {ELEMENT_PALETTE.map((item) => (
+          <button
+            key={item.type}
+            type="button"
+            onClick={() => onAdd(item.type)}
+            className="flex w-full items-start gap-2 rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-left hover:border-wsu-crimson/40 hover:bg-[color:var(--wsu-stone)]/50"
+          >
+            <IconPlus className="mt-0.5 h-4 w-4 shrink-0 text-wsu-crimson" />
+            <span>
+              <span className="block text-sm font-medium text-[color:var(--wsu-ink)]">{item.label}</span>
+              <span className="block text-xs text-[color:var(--wsu-muted)]">{item.hint}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Fields</h3>
+      <div className="mt-2 space-y-2">
+        {FIELD_PALETTE.map((item) => (
           <button
             key={item.type}
             type="button"
@@ -117,8 +147,8 @@ function FieldCanvas({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const byTitle = useMemo(() => new Map(columns.map((c) => [c.title.toLowerCase(), c])), [columns]);
 
-  const formFields = fields.filter((f) => !lockedSet.has(f.columnTitle.toLowerCase()) || !f.hiddenOnForm);
-  const lockedHidden = fields.filter((f) => lockedSet.has(f.columnTitle.toLowerCase()) && f.hiddenOnForm);
+  const formFields = fields.filter((f) => !lockedSet.has(f.columnTitle.toLowerCase()) || !f.hiddenOnForm || isLayoutFormItem(f));
+  const lockedHidden = fields.filter((f) => isFieldFormItem(f) && lockedSet.has(f.columnTitle.toLowerCase()) && f.hiddenOnForm);
 
   return (
     <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
@@ -127,9 +157,15 @@ function FieldCanvas({
       <ul className="mt-3 space-y-2">
         {formFields.map((field) => {
           const index = fields.findIndex((f) => f.columnTitle === field.columnTitle);
-          const col = byTitle.get(field.columnTitle.toLowerCase());
-          const locked = lockedSet.has(field.columnTitle.toLowerCase());
+          const layout = isLayoutFormItem(field);
+          const col = layout ? null : byTitle.get(field.columnTitle.toLowerCase());
+          const locked = !layout && lockedSet.has(field.columnTitle.toLowerCase());
           const selected = selectedTitle === field.columnTitle;
+          const label = layout
+            ? field.itemKind === "divider"
+              ? "Divider"
+              : field.text?.trim() || (field.itemKind === "heading" ? "Heading" : "Description")
+            : field.label || field.columnTitle;
           return (
             <li
               key={field.columnTitle}
@@ -151,10 +187,9 @@ function FieldCanvas({
                 ≡
               </button>
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onSelect(field.columnTitle)}>
-                <span className="block truncate text-sm font-medium text-[color:var(--wsu-ink)]">{field.label || field.columnTitle}</span>
+                <span className="block truncate text-sm font-medium text-[color:var(--wsu-ink)]">{label}</span>
                 <span className="block text-xs text-[color:var(--wsu-muted)]">
-                  {col?.type ?? "Column"}
-                  {field.kindHint ? ` · ${field.kindHint}` : ""}
+                  {layout ? `Element · ${field.itemKind}` : `${col?.type ?? "Column"}${field.kindHint ? ` · ${field.kindHint}` : ""}`}
                   {locked ? " · locked" : ""}
                 </span>
               </button>
@@ -213,11 +248,50 @@ function FieldInspector({
     setLocalError("");
   }, [field?.columnTitle, column?.id, column?.options]);
 
-  if (!field || !column) {
+  if (!field) {
+    return (
+      <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+        <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Element properties</h2>
+        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Select a field or layout element on the canvas.</p>
+      </section>
+    );
+  }
+
+  if (isLayoutFormItem(field)) {
+    return (
+      <section className="space-y-4 rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+        <div>
+          <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Element properties</h2>
+          <p className="mt-1 text-xs text-[color:var(--wsu-muted)] capitalize">{field.itemKind}</p>
+        </div>
+
+        {field.itemKind !== "divider" ? (
+          <div>
+            <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+              {field.itemKind === "heading" ? "Heading text" : "Description text"}
+            </label>
+            <textarea
+              className={`${inputClass} min-h-[5rem]`}
+              value={field.text ?? ""}
+              onChange={(e) => onChange({ text: e.target.value })}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-[color:var(--wsu-muted)]">Dividers have no text. Drag to place them between fields.</p>
+        )}
+
+        <button type="button" onClick={onDelete} className="text-sm font-medium text-red-700 hover:underline">
+          Remove element
+        </button>
+      </section>
+    );
+  }
+
+  if (!column) {
     return (
       <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
         <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Field properties</h2>
-        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Select a field on the canvas.</p>
+        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Column not found on the sheet.</p>
       </section>
     );
   }
@@ -288,7 +362,7 @@ function FieldInspector({
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Input kind</label>
           <select
             className={inputClass}
-            value={field.kindHint ?? (column.type === "PHONE" ? "phone" : "text")}
+            value={field.kindHint ?? (column.type === "PHONE" ? "phone" : column.type === "CONTACT_LIST" ? "email" : "text")}
             disabled={locked}
             onChange={(e) => onChange({ kindHint: e.target.value as FormFieldDefinition["kindHint"] })}
           >
@@ -313,7 +387,7 @@ function FieldInspector({
         </label>
       ) : null}
 
-      {column.type === "PICKLIST" ? (
+      {column.type === "PICKLIST" || column.type === "MULTI_PICKLIST" ? (
         <div>
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Options (one per line)</label>
           <textarea
@@ -369,7 +443,7 @@ function ConditionalRulesEditor({
   fields: FormFieldDefinition[];
   onChange: (rules: ConditionalRule[]) => void;
 }) {
-  const titles = fields.filter((f) => !f.hiddenOnForm).map((f) => f.columnTitle);
+  const titles = fields.filter((f) => isFieldFormItem(f) && !f.hiddenOnForm).map((f) => f.columnTitle);
 
   function updateRule(index: number, patch: Partial<ConditionalRule>) {
     onChange(rules.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)));
@@ -499,9 +573,11 @@ export function FormBuilderView() {
 
   const selectedField = builder.state.fields.find((f) => f.columnTitle === builder.selectedTitle) ?? null;
   const selectedColumn =
-    builder.state.columns.find((c) => c.title === builder.selectedTitle) ??
-    builder.state.columns.find((c) => c.title.toLowerCase() === builder.selectedTitle?.toLowerCase()) ??
-    null;
+    selectedField && isFieldFormItem(selectedField)
+      ? builder.state.columns.find((c) => c.title === builder.selectedTitle) ??
+        builder.state.columns.find((c) => c.title.toLowerCase() === builder.selectedTitle?.toLowerCase()) ??
+        null
+      : null;
 
   return (
     <div className="space-y-4">
@@ -541,7 +617,7 @@ export function FormBuilderView() {
             formDescription={builder.state.formDescription}
             onChange={builder.setFormPresentation}
           />
-          <FieldPalette onAdd={(type) => void builder.addField(type)} />
+          <FieldPalette onAdd={(type) => void builder.addElement(type)} />
         </div>
 
         <div className="space-y-4">
@@ -594,7 +670,8 @@ export function FormBuilderView() {
             }}
             onOptions={async (options) => {
               if (!selectedColumn) return;
-              await builder.updatePicklistOptions(selectedColumn.id, options);
+              const type = selectedColumn.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST";
+              await builder.updatePicklistOptions(selectedColumn.id, options, type);
               await builder.load();
             }}
             onDelete={() => {

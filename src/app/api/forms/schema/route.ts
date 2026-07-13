@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       sheetName: sheet.name,
       formTitle: fieldConfig?.formTitle ?? "",
       formDescription: fieldConfig?.formDescription ?? "",
+      formItems: (fieldConfig?.fields ?? []).filter((f) => !f.hiddenOnForm),
       columns,
       formColumnSource,
       fieldMeta,
