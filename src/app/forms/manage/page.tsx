@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
@@ -555,6 +556,9 @@ export default function ManagePage() {
 
       {tab === "schema" ? (
         <Card title="Column schema" description="Add columns to the active sheet. Changes affect the live form immediately.">
+          <Link href="/forms/builder" className="inline-flex text-sm font-medium text-wsu-crimson hover:underline">
+            Open form builder →
+          </Link>
           <button type="button" onClick={loadSchema} className={secondaryBtnClass}>
             Refresh columns
           </button>

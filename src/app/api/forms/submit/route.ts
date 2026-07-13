@@ -3,6 +3,8 @@ import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import { validateSubmission } from "@/lib/forms/validation";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
+import { fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
+import { loadFormFields } from "@/lib/forms/store/field-config";
 import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAccess } from "@/lib/forms/forms-api";
@@ -72,7 +74,9 @@ export async function POST(request: Request) {
     const sheet = await ss.getSheet(active);
     const { columns } = await resolveFormColumns(sheet, ss.extractColumns(sheet));
     const conditionalLogic = await loadConditionalLogic(active);
-    const result = validateSubmission(columns, values, conditionalLogic);
+    const fieldConfig = await loadFormFields(active);
+    const fieldMeta = fieldMetaFromConfig(fieldConfig);
+    const result = validateSubmission(columns, values, conditionalLogic, fieldMeta);
     if (!result.ok) return Response.json({ errors: result.errors }, { status: 422 });
 
     const addResult = (await ss.addRow(active, result.cells)) as { result?: { id?: number } | { id?: number }[] };

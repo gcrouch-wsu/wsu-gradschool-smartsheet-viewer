@@ -2,6 +2,8 @@ import { config, loadConditionalLogic } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
+import { fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
+import { loadFormFields } from "@/lib/forms/store/field-config";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAccess } from "@/lib/forms/forms-api";
 
@@ -22,11 +24,14 @@ export async function GET(request: Request) {
     const sheet = await ss.getSheet(active);
     const extracted = ss.extractColumns(sheet);
     const { columns, source: formColumnSource } = await resolveFormColumns(sheet, extracted);
+    const fieldConfig = await loadFormFields(active);
+    const fieldMeta = fieldMetaFromConfig(fieldConfig);
     const conditionalLogic = await loadConditionalLogic(active);
     return Response.json({
       sheetName: sheet.name,
       columns,
       formColumnSource,
+      fieldMeta,
       conditionalLogic,
       allowedDomains: config.allowedDomains,
       demo: config.demo,

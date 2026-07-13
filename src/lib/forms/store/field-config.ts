@@ -1,11 +1,9 @@
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
-import {
-  readFormFieldsForSheet,
-  writeFormFieldsForSheet,
-  type FormFieldConfig,
-} from "@/lib/forms/store/file-store";
+import { normalizeFormFieldConfig, type FormFieldConfig } from "@/lib/forms/form-field-config";
+import { readFormFieldsForSheet, writeFormFieldsForSheet } from "@/lib/forms/store/file-store";
 
-export type { FormFieldConfig };
+export type { FormFieldConfig, FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
+export { normalizeFormFieldConfig };
 
 export async function loadFormFields(sheetId: string): Promise<FormFieldConfig | null> {
   if (!sheetId.trim()) {
@@ -19,10 +17,11 @@ export async function loadFormFields(sheetId: string): Promise<FormFieldConfig |
       [sheetId.trim()],
     );
     const row = rows[0];
-    return row?.data ?? null;
+    return row?.data ? normalizeFormFieldConfig(row.data) : null;
   }
 
-  return readFormFieldsForSheet(sheetId.trim());
+  const fromFile = await readFormFieldsForSheet(sheetId.trim());
+  return fromFile ? normalizeFormFieldConfig(fromFile) : null;
 }
 
 export async function saveFormFields(sheetId: string, fieldConfig: FormFieldConfig): Promise<void> {
@@ -30,15 +29,17 @@ export async function saveFormFields(sheetId: string, fieldConfig: FormFieldConf
     throw new Error("Sheet id is required.");
   }
 
+  const normalized = normalizeFormFieldConfig(fieldConfig);
+
   if (isFormsDatabaseEnabled()) {
     await ensureFormsTables();
     await queryFormsDb(
       `INSERT INTO form_field_config (sheet_id, data) VALUES ($1, $2)
        ON CONFLICT (sheet_id) DO UPDATE SET data = $2`,
-      [sheetId.trim(), JSON.stringify(fieldConfig)],
+      [sheetId.trim(), JSON.stringify(normalized)],
     );
     return;
   }
 
-  await writeFormFieldsForSheet(sheetId.trim(), fieldConfig);
+  await writeFormFieldsForSheet(sheetId.trim(), normalized);
 }

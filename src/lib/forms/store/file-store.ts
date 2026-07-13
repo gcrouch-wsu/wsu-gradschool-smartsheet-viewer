@@ -1,7 +1,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import type { FormFieldConfig } from "@/lib/forms/form-field-config";
 import type { ConditionalRule } from "@/lib/forms/types";
 import type { Workflow } from "@/lib/forms/config";
+
+export type { FormFieldConfig, FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
+export { normalizeFormFieldConfig } from "@/lib/forms/form-field-config";
 
 const FORMS_CONFIG_ROOT = path.join(process.cwd(), "config", "forms");
 
@@ -67,10 +71,6 @@ export interface FormEntry {
 export interface RegistryShape {
   activeSheetId: string;
   forms: FormEntry[];
-}
-
-export interface FormFieldConfig {
-  columns: string[];
 }
 
 export type FormFieldsFile = Record<string, FormFieldConfig>;

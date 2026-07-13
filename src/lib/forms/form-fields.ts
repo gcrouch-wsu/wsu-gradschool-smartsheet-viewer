@@ -33,6 +33,22 @@ function isSystemColumn(col: SmartsheetColumn): boolean {
   return Boolean(col.systemColumnType) || SYSTEM_TYPES.has(col.type);
 }
 
+export function isSystemFormColumn(col: SmartsheetColumn): boolean {
+  return isSystemColumn(col);
+}
+
+/** Titles that should never appear on the public form (workflow + internals). */
+export async function workflowExcludedTitles(
+  sheet: { id?: string | number; columns?: unknown[] },
+): Promise<Set<string>> {
+  const wf = await resolveWorkflow(sheet);
+  return new Set(
+    [...wf.approvalStages, wf.overallColumn, ...wf.excludeFromForm]
+      .filter(Boolean)
+      .map((s) => titleKey(s)),
+  );
+}
+
 export type FormColumnSource = "smartsheet-config" | "auto";
 
 /**
@@ -46,9 +62,16 @@ export async function resolveFormColumns(
 ): Promise<{ columns: SmartsheetColumn[]; source: FormColumnSource }> {
   const sheetId = String(sheet?.id ?? "");
   const configured = sheetId ? await loadFormFields(sheetId) : null;
-  if (configured?.columns?.length) {
+  if (configured?.fields?.length || configured?.columns?.length) {
     const byTitle = new Map(columns.map((c) => [titleKey(c.title), c]));
-    const picked = configured.columns
+    const titles =
+      configured.fields?.length
+        ? [...configured.fields]
+            .filter((f) => !f.hiddenOnForm)
+            .sort((a, b) => a.order - b.order)
+            .map((f) => f.columnTitle)
+        : configured.columns;
+    const picked = (titles ?? [])
       .map((title) => byTitle.get(titleKey(title)))
       .filter((c): c is SmartsheetColumn => Boolean(c));
     if (picked.length) return { columns: picked, source: "smartsheet-config" };

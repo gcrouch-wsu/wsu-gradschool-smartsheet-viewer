@@ -77,6 +77,12 @@ function NavIcon({ name, className = "h-[15px] w-[15px]" }: { name: ProductNavIc
         <circle cx="12" cy="12" r="3" />
       </>
     ),
+    builder: (
+      <>
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
+      </>
+    ),
   };
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

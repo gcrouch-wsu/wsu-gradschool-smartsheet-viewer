@@ -1,3 +1,4 @@
+import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
 export type FormFieldKind = "checkbox" | "select" | "date" | "email" | "textarea" | "text";
@@ -6,6 +7,7 @@ export interface FormSchema {
   sheetName: string;
   columns: SmartsheetColumn[];
   formColumnSource?: "smartsheet-config" | "auto";
+  fieldMeta?: Record<string, FormFieldMeta>;
   conditionalLogic: ConditionalRule[];
   allowedDomains: string[];
   demo: boolean;
@@ -14,13 +16,20 @@ export interface FormSchema {
 
 const MAX_LEN = 4000;
 
-export function fieldKind(col: SmartsheetColumn): FormFieldKind {
+export function fieldKind(col: SmartsheetColumn, meta?: FormFieldMeta): FormFieldKind {
   if (col.type === "CHECKBOX") return "checkbox";
   if (col.options && col.options.length) return "select";
   if (col.type === "DATE" || col.type === "ABSTRACT_DATETIME") return "date";
+  if (meta?.kindHint === "textarea") return "textarea";
+  if (meta?.kindHint === "email") return "email";
+  if (meta?.kindHint === "text") return "text";
   if (/e-?mail/i.test(col.title) || col.type === "CONTACT_LIST") return "email";
   if (/message|comment|description|notes?|details?/i.test(col.title)) return "textarea";
   return "text";
+}
+
+export function fieldLabel(col: SmartsheetColumn, meta?: FormFieldMeta): string {
+  return meta?.label?.trim() || col.title;
 }
 
 export function conditionalTargetTitles(rules: ConditionalRule[]): Set<string> {
@@ -52,9 +61,15 @@ export function isFieldVisible(col: SmartsheetColumn, hidden: Set<string>): bool
   return !hidden.has(col.title.toLowerCase());
 }
 
-export function isFieldRequired(col: SmartsheetColumn, conditionalTargets: Set<string>, hidden: Set<string>): boolean {
+export function isFieldRequired(
+  col: SmartsheetColumn,
+  conditionalTargets: Set<string>,
+  hidden: Set<string>,
+  meta?: FormFieldMeta,
+): boolean {
   if (col.type === "CHECKBOX") return false;
   if (hidden.has(col.title.toLowerCase())) return false;
+  if (typeof meta?.required === "boolean") return meta.required;
   return !conditionalTargets.has(col.title.toLowerCase());
 }
 
@@ -68,6 +83,7 @@ export function validateFormClient(
   values: Record<string, string>,
   conditional: ConditionalRule[],
   allowedDomains: string[],
+  fieldMeta?: Record<string, FormFieldMeta>,
 ): { ok: boolean; errors: string[]; fieldErrors: Record<string, string> } {
   const errors: string[] = [];
   const fieldErrors: Record<string, string> = {};
@@ -78,14 +94,17 @@ export function validateFormClient(
     if (!isFieldVisible(col, hidden)) continue;
 
     const key = String(col.id);
+    const meta = fieldMeta?.[col.title.toLowerCase()];
+    const label = fieldLabel(col, meta);
     const raw = (values[key] ?? "").toString().trim();
-    const optional = conditionalTargets.has(col.title.toLowerCase());
+    const required = isFieldRequired(col, conditionalTargets, hidden, meta);
+    const kind = fieldKind(col, meta);
 
     if (col.type === "CHECKBOX") continue;
 
     if (!raw) {
-      if (!optional) {
-        const msg = `${col.title} is required.`;
+      if (required) {
+        const msg = `${label} is required.`;
         errors.push(msg);
         fieldErrors[key] = msg;
       }
@@ -93,13 +112,13 @@ export function validateFormClient(
     }
 
     if (raw.length > MAX_LEN) {
-      const msg = `${col.title} is too long.`;
+      const msg = `${label} is too long.`;
       errors.push(msg);
       fieldErrors[key] = msg;
       continue;
     }
 
-    if (/e-?mail/i.test(col.title)) {
+    if (kind === "email" || /e-?mail/i.test(col.title)) {
       if (!isEmail(raw)) {
         const msg = "Enter a valid email address.";
         errors.push(msg);
@@ -116,7 +135,7 @@ export function validateFormClient(
     }
 
     if (col.options && col.options.length && !col.options.includes(raw)) {
-      const msg = `${col.title} must be one of: ${col.options.join(", ")}.`;
+      const msg = `${label} must be one of: ${col.options.join(", ")}.`;
       errors.push(msg);
       fieldErrors[key] = msg;
     }

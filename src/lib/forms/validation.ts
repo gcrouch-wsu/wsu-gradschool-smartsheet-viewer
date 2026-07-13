@@ -1,4 +1,5 @@
 import { config } from "@/lib/forms/config";
+import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
 export interface ValidationOutput {
@@ -17,6 +18,7 @@ export function validateSubmission(
   columns: SmartsheetColumn[],
   values: Record<string, string>,
   conditional: ConditionalRule[],
+  fieldMeta?: Record<string, FormFieldMeta>,
 ): ValidationOutput {
   const errors: string[] = [];
   const cells: { columnId: number; value: string | boolean }[] = [];
@@ -28,7 +30,11 @@ export function validateSubmission(
 
   for (const col of columns) {
     const raw = (values[String(col.id)] ?? "").toString().trim();
-    const optional = conditionalTargets.has(col.title.toLowerCase());
+    const meta = fieldMeta?.[col.title.toLowerCase()];
+    const label = meta?.label?.trim() || col.title;
+    const optional =
+      typeof meta?.required === "boolean" ? !meta.required : conditionalTargets.has(col.title.toLowerCase());
+    const treatAsEmail = meta?.kindHint === "email" || /e-?mail/i.test(col.title) || col.type === "CONTACT_LIST";
 
     if (col.type === "CHECKBOX") {
       cells.push({ columnId: col.id, value: raw === "true" });
@@ -36,21 +42,21 @@ export function validateSubmission(
     }
 
     if (!raw) {
-      if (!optional) errors.push(`${col.title} is required.`);
+      if (!optional) errors.push(`${label} is required.`);
       continue;
     }
 
     if (raw.length > MAX_LEN) {
-      errors.push(`${col.title} is too long.`);
+      errors.push(`${label} is too long.`);
       continue;
     }
 
-    if (/e-?mail/i.test(col.title)) {
+    if (treatAsEmail) {
       if (!isEmail(raw)) {
         errors.push("Enter a valid email address.");
         continue;
       }
-      const domain = raw.split("@")[1].toLowerCase();
+      const domain = raw.split("@")[1]?.toLowerCase() ?? "";
       if (!config.allowedDomains.includes(domain)) {
         errors.push(`Email must be from: ${config.allowedDomains.join(", ")}.`);
         continue;
@@ -58,7 +64,7 @@ export function validateSubmission(
     }
 
     if (col.options && col.options.length && !col.options.includes(raw)) {
-      errors.push(`${col.title} must be one of: ${col.options.join(", ")}.`);
+      errors.push(`${label} must be one of: ${col.options.join(", ")}.`);
       continue;
     }
 

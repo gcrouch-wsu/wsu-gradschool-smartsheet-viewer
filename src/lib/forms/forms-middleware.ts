@@ -23,6 +23,9 @@ function isFormsAdminPath(pathname: string) {
   return (
     pathname === "/forms/manage" ||
     pathname.startsWith("/forms/manage/") ||
+    pathname === "/forms/builder" ||
+    pathname.startsWith("/forms/builder/") ||
+    pathname.startsWith("/api/forms/builder") ||
     pathname.startsWith("/api/forms/registry") ||
     pathname.startsWith("/api/forms/platform") ||
     (pathname.startsWith("/api/forms/webhooks") && !pathname.startsWith("/api/forms/webhooks/smartsheet"))

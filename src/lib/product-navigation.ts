@@ -8,7 +8,8 @@ export type ProductNavIcon =
   | "form"
   | "tracker"
   | "grid"
-  | "manage";
+  | "manage"
+  | "builder";
 
 export interface ProductNavItem {
   href: string;
@@ -25,7 +26,11 @@ export const formsWorkspaceNav: ProductNavItem[] = [
 
 export function formsContextNav(isAdmin: boolean): ProductNavItem[] {
   return isAdmin
-    ? [...formsWorkspaceNav, { href: "/forms/manage", label: "Manage", icon: "manage" }]
+    ? [
+        ...formsWorkspaceNav,
+        { href: "/forms/manage", label: "Manage", icon: "manage" },
+        { href: "/forms/builder", label: "Builder", icon: "builder" },
+      ]
     : formsWorkspaceNav;
 }
 

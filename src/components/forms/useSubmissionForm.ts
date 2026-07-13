@@ -36,6 +36,7 @@ export function useSubmissionForm() {
         sheetName: String(d.sheetName ?? "Form"),
         columns: (d.columns as FormSchema["columns"]) ?? [],
         formColumnSource: d.formColumnSource as FormSchema["formColumnSource"],
+        fieldMeta: (d.fieldMeta as FormSchema["fieldMeta"]) ?? {},
         conditionalLogic: (d.conditionalLogic as FormSchema["conditionalLogic"]) ?? [],
         allowedDomains: Array.isArray(d.allowedDomains) ? (d.allowedDomains as string[]) : [],
         demo: Boolean(d.demo),

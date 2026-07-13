@@ -8,6 +8,7 @@ import {
   buildSubmitPayload,
   conditionalTargetTitles,
   fieldKind,
+  fieldLabel,
   hiddenColumnTitles,
   isFieldRequired,
   isFieldVisible,
@@ -22,6 +23,8 @@ interface SubmissionFormViewProps {
   schema: FormSchema;
   serverErrors: string[];
   onSubmit: (values: Record<string, string>, files: FileList | null) => Promise<{ ok: boolean }>;
+  /** When true, hide the submit button (builder preview). */
+  preview?: boolean;
 }
 
 const inputClass =
@@ -60,6 +63,9 @@ function FieldShell({
 function FormField({
   col,
   required,
+  label,
+  helpText,
+  kind,
   register,
   error,
   setValue,
@@ -67,13 +73,15 @@ function FormField({
 }: {
   col: SmartsheetColumn;
   required: boolean;
+  label: string;
+  helpText?: string;
+  kind: ReturnType<typeof fieldKind>;
   register: ReturnType<typeof useForm<FormValues>>["register"];
   error?: string;
   setValue: ReturnType<typeof useForm<FormValues>>["setValue"];
   watchValue: string;
 }) {
   const id = `field_${col.id}`;
-  const kind = fieldKind(col);
   const hasError = Boolean(error);
 
   if (kind === "checkbox") {
@@ -87,7 +95,7 @@ function FormField({
           onChange={(e) => setValue(String(col.id), e.target.checked ? "true" : "false", { shouldDirty: true })}
         />
         <label htmlFor={id} className="text-sm text-[color:var(--wsu-ink)]">
-          {col.title}
+          {label}
         </label>
       </div>
     );
@@ -95,11 +103,11 @@ function FormField({
 
   if (kind === "select") {
     return (
-      <FieldShell id={id} label={col.title} required={required} error={error}>
+      <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
         <select
           id={id}
           className={`${inputClass} ${hasError ? inputErrorClass : ""}`}
-          {...register(String(col.id), { required: required ? `${col.title} is required.` : false })}
+          {...register(String(col.id), { required: required ? `${label} is required.` : false })}
         >
           <option value="">Select…</option>
           {col.options!.map((o) => (
@@ -114,28 +122,27 @@ function FormField({
 
   if (kind === "textarea") {
     return (
-      <FieldShell id={id} label={col.title} required={required} error={error}>
+      <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
         <textarea
           id={id}
           rows={4}
           className={`${inputClass} resize-y min-h-[6rem] ${hasError ? inputErrorClass : ""}`}
-          {...register(String(col.id), { required: required ? `${col.title} is required.` : false })}
+          {...register(String(col.id), { required: required ? `${label} is required.` : false })}
         />
       </FieldShell>
     );
   }
 
-  const emailHint =
-    kind === "email" ? "Use your institutional email address." : undefined;
+  const emailHint = kind === "email" ? helpText || "Use your institutional email address." : helpText;
 
   return (
-    <FieldShell id={id} label={col.title} required={required} hint={emailHint} error={error}>
+    <FieldShell id={id} label={label} required={required} hint={emailHint} error={error}>
       <input
         id={id}
         type={kind}
         className={`${inputClass} ${hasError ? inputErrorClass : ""}`}
         autoComplete={kind === "email" ? "email" : undefined}
-        {...register(String(col.id), { required: required ? `${col.title} is required.` : false })}
+        {...register(String(col.id), { required: required ? `${label} is required.` : false })}
       />
     </FieldShell>
   );
@@ -209,7 +216,7 @@ function FileUploadZone({
   );
 }
 
-export function SubmissionFormView({ schema, serverErrors, onSubmit }: SubmissionFormViewProps) {
+export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = false }: SubmissionFormViewProps) {
   const [files, setFiles] = useState<FileList | null>(null);
   const [clientErrors, setClientErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -263,6 +270,7 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit }: Submissio
       data,
       schema.conditionalLogic,
       schema.allowedDomains,
+      schema.fieldMeta,
     );
     if (!validation.ok) {
       setClientErrors(validation.errors);
@@ -316,17 +324,23 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit }: Submissio
           {visibleColumns.length === 0 ? (
             <p className="text-sm text-[color:var(--wsu-muted)]">No fields are visible for the current selections.</p>
           ) : (
-            visibleColumns.map((col) => (
-              <FormField
-                key={col.id}
-                col={col}
-                required={isFieldRequired(col, conditionalTargets, hidden)}
-                register={register}
-                error={fieldErrors[String(col.id)] ?? formState.errors[String(col.id)]?.message}
-                setValue={setValue}
-                watchValue={values[String(col.id)] ?? ""}
-              />
-            ))
+            visibleColumns.map((col) => {
+              const meta = schema.fieldMeta?.[col.title.toLowerCase()];
+              return (
+                <FormField
+                  key={col.id}
+                  col={col}
+                  label={fieldLabel(col, meta)}
+                  helpText={meta?.helpText}
+                  kind={fieldKind(col, meta)}
+                  required={isFieldRequired(col, conditionalTargets, hidden, meta)}
+                  register={register}
+                  error={fieldErrors[String(col.id)] ?? formState.errors[String(col.id)]?.message}
+                  setValue={setValue}
+                  watchValue={values[String(col.id)] ?? ""}
+                />
+              );
+            })
           )}
 
           {schema.attachmentsEnabled !== false ? (
@@ -334,18 +348,24 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit }: Submissio
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-[color:var(--wsu-muted)]">
-            <span className="text-wsu-crimson">*</span> Required field
-          </p>
-          <button
-            type="submit"
-            disabled={submitting || visibleColumns.length === 0}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-wsu-crimson px-5 py-2.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50 sm:w-auto"
-          >
-            {submitting ? "Submitting…" : "Submit"}
-          </button>
-        </div>
+        {!preview ? (
+          <div className="flex flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[color:var(--wsu-muted)]">
+              <span className="text-wsu-crimson">*</span> Required field
+            </p>
+            <button
+              type="submit"
+              disabled={submitting || visibleColumns.length === 0}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-wsu-crimson px-5 py-2.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50 sm:w-auto"
+            >
+              {submitting ? "Submitting…" : "Submit"}
+            </button>
+          </div>
+        ) : (
+          <div className="border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-5 py-3">
+            <p className="text-xs text-[color:var(--wsu-muted)]">Preview only — submissions are disabled.</p>
+          </div>
+        )}
       </form>
     </div>
   );
