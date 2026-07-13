@@ -177,7 +177,7 @@ export function useFormBuilder() {
       const r = await fetch(`/api/forms/platform/sheets/${state.sheetId}/columns`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns: [payload] }),
+        body: JSON.stringify({ columns: [payload], index: state.columns.length }),
       });
       const d = await parseJson(r);
       if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || (typeof d.message === "string" && d.message) || "Could not add column.");

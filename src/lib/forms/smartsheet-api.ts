@@ -406,8 +406,21 @@ export async function listColumns(sheetId: string | number): Promise<unknown[]> 
 
 export async function addColumns(sheetId: string | number, columns: unknown[], index?: number): Promise<unknown> {
   if (config.demo) return mock.mockAddColumns(sheetId, columns as { title: string; type: string; primary?: boolean; options?: string[] }[]);
-  const q = index !== undefined ? `?index=${index}` : "";
-  return api(`/sheets/${sheetId}/columns${q}`, { method: "POST", body: JSON.stringify(columns) });
+
+  // Smartsheet requires `index` on each column object (insert position).
+  let startIndex = index;
+  if (startIndex === undefined) {
+    const existing = await listColumns(sheetId);
+    startIndex = existing.length;
+  }
+
+  const payload = columns.map((column, offset) => {
+    const col = column as Record<string, unknown>;
+    const resolvedIndex = typeof col.index === "number" ? col.index : startIndex + offset;
+    return { ...col, index: resolvedIndex };
+  });
+
+  return api(`/sheets/${sheetId}/columns`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function updateColumn(sheetId: string | number, columnId: number, updates: unknown): Promise<unknown> {

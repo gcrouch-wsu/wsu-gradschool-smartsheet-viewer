@@ -342,7 +342,7 @@ export default function ManagePage() {
     const r = await fetch(`/api/forms/platform/sheets/${activeId}/columns`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ columns: [{ title: newColTitle.trim(), type: "TEXT_NUMBER" }] }),
+      body: JSON.stringify({ columns: [{ title: newColTitle.trim(), type: "TEXT_NUMBER", index: columns.length }], index: columns.length }),
     });
     const d = await r.json();
     if (!r.ok) setFormsError(d.error || d.message || "Could not add column.");

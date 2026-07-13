@@ -24,5 +24,48 @@
       "CHKBOX_08",
       "OTHER REASON"
     ]
+  },
+  "3361171036917636": {
+    "columns": [
+      "Full Name",
+      "Email",
+      "Department",
+      "Message",
+      "Email 2"
+    ],
+    "fields": [
+      {
+        "columnTitle": "Full Name",
+        "order": 0,
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Email",
+        "order": 1,
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Department",
+        "order": 2,
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Message",
+        "order": 3,
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Status",
+        "order": 4,
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Email 2",
+        "order": 5,
+        "hiddenOnForm": false,
+        "required": true,
+        "kindHint": "email"
+      }
+    ]
   }
 }
