@@ -6,11 +6,13 @@ import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 import { deriveFormFieldConfig, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
 import type { FormSchema } from "@/lib/forms/form-ui";
 
-export type BuilderFieldType = "text" | "textarea" | "email" | "dropdown" | "checkbox" | "date";
+export type BuilderFieldType = "text" | "textarea" | "email" | "phone" | "number" | "dropdown" | "checkbox" | "date";
 
 export interface BuilderState {
   sheetId: string;
   sheetName: string;
+  formTitle: string;
+  formDescription: string;
   columns: SmartsheetColumn[];
   fields: FormFieldDefinition[];
   conditionalLogic: ConditionalRule[];
@@ -38,11 +40,15 @@ export function defaultTitleForType(type: BuilderFieldType, existing: string[]):
         ? "Long text"
         : type === "email"
           ? "Email"
-          : type === "dropdown"
-            ? "Dropdown"
-            : type === "checkbox"
-              ? "Checkbox"
-              : "Date";
+          : type === "phone"
+            ? "Phone"
+            : type === "number"
+              ? "Number"
+              : type === "dropdown"
+                ? "Dropdown"
+                : type === "checkbox"
+                  ? "Checkbox"
+                  : "Date";
   const titles = new Set(existing.map((t) => t.toLowerCase()));
   if (!titles.has(base.toLowerCase())) return base;
   let i = 2;
@@ -58,8 +64,10 @@ export function columnPayloadForType(type: BuilderFieldType, title: string) {
       return { title, type: "CHECKBOX" };
     case "date":
       return { title, type: "DATE" };
+    case "phone":
+      return { title, type: "PHONE" };
     case "email":
-      return { title, type: "TEXT_NUMBER" };
+    case "number":
     case "textarea":
     case "text":
     default:
@@ -70,6 +78,8 @@ export function columnPayloadForType(type: BuilderFieldType, title: string) {
 export function kindHintForType(type: BuilderFieldType): FormFieldKindHint | undefined {
   if (type === "textarea") return "textarea";
   if (type === "email") return "email";
+  if (type === "phone") return "phone";
+  if (type === "number") return "number";
   if (type === "text") return "text";
   return undefined;
 }
@@ -99,6 +109,8 @@ export function useFormBuilder() {
       const next: BuilderState = {
         sheetId: String(d.sheetId ?? ""),
         sheetName: String(d.sheetName ?? "Form"),
+        formTitle: typeof d.formTitle === "string" ? d.formTitle : "",
+        formDescription: typeof d.formDescription === "string" ? d.formDescription : "",
         columns: (d.columns as SmartsheetColumn[]) ?? [],
         fields: (d.fields as FormFieldDefinition[]) ?? [],
         conditionalLogic: (d.conditionalLogic as ConditionalRule[]) ?? [],
@@ -151,7 +163,12 @@ export function useFormBuilder() {
       const r = await fetch("/api/forms/builder", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: state.fields, conditionalLogic: state.conditionalLogic }),
+        body: JSON.stringify({
+          fields: state.fields,
+          conditionalLogic: state.conditionalLogic,
+          formTitle: state.formTitle,
+          formDescription: state.formDescription,
+        }),
       });
       const d = await parseJson(r);
       if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || (typeof d.message === "string" && d.message) || "Save failed.");
@@ -207,7 +224,12 @@ export function useFormBuilder() {
       await fetch("/api/forms/builder", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: nextFields, conditionalLogic: state.conditionalLogic }),
+        body: JSON.stringify({
+          fields: nextFields,
+          conditionalLogic: state.conditionalLogic,
+          formTitle: state.formTitle,
+          formDescription: state.formDescription,
+        }),
       });
       setDirty(false);
       setMessage({ ok: true, text: `Added “${created.title}”.` });
@@ -271,7 +293,12 @@ export function useFormBuilder() {
       await fetch("/api/forms/builder", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: nextFields, conditionalLogic: nextLogic }),
+        body: JSON.stringify({
+          fields: nextFields,
+          conditionalLogic: nextLogic,
+          formTitle: state.formTitle,
+          formDescription: state.formDescription,
+        }),
       });
       setDirty(false);
       setMessage({ ok: true, text: `Deleted “${columnTitle}”.` });
@@ -279,6 +306,12 @@ export function useFormBuilder() {
     } catch (e: unknown) {
       setMessage({ ok: false, text: e instanceof Error ? e.message : "Delete failed." });
     }
+  }
+
+  function setFormPresentation(patch: { formTitle?: string; formDescription?: string }) {
+    setState((prev) => (prev ? { ...prev, ...patch } : prev));
+    setDirty(true);
+    setMessage(null);
   }
 
   function setConditionalLogic(rules: ConditionalRule[]) {
@@ -289,11 +322,16 @@ export function useFormBuilder() {
 
   const previewSchema: FormSchema | null = useMemo(() => {
     if (!state) return null;
-    const config = deriveFormFieldConfig(state.fields);
+    const config = deriveFormFieldConfig(state.fields, {
+      formTitle: state.formTitle,
+      formDescription: state.formDescription,
+    });
     const byTitle = new Map(state.columns.map((c) => [c.title.toLowerCase(), c]));
     const columns = config.columns.map((t) => byTitle.get(t.toLowerCase())).filter((c): c is SmartsheetColumn => Boolean(c));
     return {
       sheetName: state.sheetName,
+      formTitle: state.formTitle,
+      formDescription: state.formDescription,
       columns,
       formColumnSource: "smartsheet-config",
       fieldMeta: fieldMetaFromConfig(config),
@@ -322,6 +360,7 @@ export function useFormBuilder() {
     renameColumn,
     updatePicklistOptions,
     deleteField,
+    setFormPresentation,
     setConditionalLogic,
     previewSchema,
   };

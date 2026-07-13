@@ -24,10 +24,53 @@ const PALETTE: { type: BuilderFieldType; label: string; hint: string }[] = [
   { type: "text", label: "Short text", hint: "Single-line answer" },
   { type: "textarea", label: "Long text", hint: "Multi-line answer" },
   { type: "email", label: "Email", hint: "Validated email" },
+  { type: "phone", label: "Phone", hint: "Phone number" },
+  { type: "number", label: "Number", hint: "Numeric value" },
   { type: "dropdown", label: "Dropdown", hint: "Picklist options" },
   { type: "checkbox", label: "Checkbox", hint: "Yes / no" },
   { type: "date", label: "Date", hint: "Date picker" },
 ];
+
+function FormPresentationEditor({
+  sheetName,
+  formTitle,
+  formDescription,
+  onChange,
+}: {
+  sheetName: string;
+  formTitle: string;
+  formDescription: string;
+  onChange: (patch: { formTitle?: string; formDescription?: string }) => void;
+}) {
+  return (
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form title & description</h2>
+      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
+        Shown at the top of the public form, like view title and description on Smartsheet Viewer.
+      </p>
+      <div className="mt-3 space-y-3">
+        <div>
+          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Title</label>
+          <input
+            className={inputClass}
+            value={formTitle}
+            placeholder={sheetName}
+            onChange={(e) => onChange({ formTitle: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Description</label>
+          <textarea
+            className={`${inputClass} min-h-[4.5rem]`}
+            value={formDescription}
+            placeholder="Optional supporting text for submitters"
+            onChange={(e) => onChange({ formDescription: e.target.value })}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function FieldPalette({ onAdd }: { onAdd: (type: BuilderFieldType) => void }) {
   return (
@@ -240,18 +283,20 @@ function FieldInspector({
         />
       </div>
 
-      {column.type === "TEXT_NUMBER" || column.type === "CONTACT_LIST" ? (
+      {column.type === "TEXT_NUMBER" || column.type === "CONTACT_LIST" || column.type === "PHONE" ? (
         <div>
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Input kind</label>
           <select
             className={inputClass}
-            value={field.kindHint ?? "text"}
+            value={field.kindHint ?? (column.type === "PHONE" ? "phone" : "text")}
             disabled={locked}
             onChange={(e) => onChange({ kindHint: e.target.value as FormFieldDefinition["kindHint"] })}
           >
             <option value="text">Short text</option>
             <option value="textarea">Long text</option>
             <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="number">Number</option>
           </select>
         </div>
       ) : null}
@@ -489,7 +534,15 @@ export function FormBuilderView() {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_300px]">
-        <FieldPalette onAdd={(type) => void builder.addField(type)} />
+        <div className="space-y-4">
+          <FormPresentationEditor
+            sheetName={builder.state.sheetName}
+            formTitle={builder.state.formTitle}
+            formDescription={builder.state.formDescription}
+            onChange={builder.setFormPresentation}
+          />
+          <FieldPalette onAdd={(type) => void builder.addField(type)} />
+        </div>
 
         <div className="space-y-4">
           <FieldCanvas

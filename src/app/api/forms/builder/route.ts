@@ -1,5 +1,4 @@
-import { config } from "@/lib/forms/config";
-import { loadConditionalLogic } from "@/lib/forms/config";
+import { config, loadConditionalLogic } from "@/lib/forms/config";
 import {
   isInternalFormColumn,
   isSystemFormColumn,
@@ -11,17 +10,24 @@ import {
   fieldMetaFromConfig,
   mergeFieldsWithColumns,
 } from "@/lib/forms/form-field-meta";
+import type { FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import * as registry from "@/lib/forms/registry";
 import { saveConditionalRules } from "@/lib/forms/store/conditional-rules";
 import { loadFormFields, saveFormFields } from "@/lib/forms/store/field-config";
-import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import type { ConditionalRule } from "@/lib/forms/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const KIND_HINTS = new Set<FormFieldKindHint>(["text", "textarea", "email", "phone", "number"]);
+
+function asOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value;
+}
 
 async function resolveSheetId(request: Request): Promise<string | null> {
   const url = new URL(request.url);
@@ -54,14 +60,20 @@ export async function GET(request: Request) {
     );
     const conditionalLogic = await loadConditionalLogic(sheetId);
     const { columns: formColumns, source } = await resolveFormColumns(sheet, columns);
+    const derived = deriveFormFieldConfig(fields, {
+      formTitle: fieldConfig?.formTitle,
+      formDescription: fieldConfig?.formDescription,
+    });
 
     return Response.json({
       sheetId: String(sheet.id ?? sheetId),
       sheetName: sheet.name,
+      formTitle: derived.formTitle ?? "",
+      formDescription: derived.formDescription ?? "",
       columns,
       fields,
-      fieldConfig: deriveFormFieldConfig(fields),
-      fieldMeta: fieldMetaFromConfig(deriveFormFieldConfig(fields)),
+      fieldConfig: derived,
+      fieldMeta: fieldMetaFromConfig(derived),
       formColumns,
       formColumnSource: source,
       conditionalLogic,
@@ -89,13 +101,19 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => ({}));
   const fields = Array.isArray(body.fields) ? (body.fields as FormFieldDefinition[]) : null;
   const conditionalLogic = Array.isArray(body.conditionalLogic) ? (body.conditionalLogic as ConditionalRule[]) : null;
+  const hasFormTitle = Object.prototype.hasOwnProperty.call(body, "formTitle");
+  const hasFormDescription = Object.prototype.hasOwnProperty.call(body, "formDescription");
+  const formTitle = hasFormTitle ? asOptionalString(body.formTitle) : undefined;
+  const formDescription = hasFormDescription ? asOptionalString(body.formDescription) : undefined;
 
-  if (!fields && !conditionalLogic) {
-    return Response.json({ error: "Provide fields and/or conditionalLogic." }, { status: 400 });
+  if (!fields && !conditionalLogic && !hasFormTitle && !hasFormDescription) {
+    return Response.json({ error: "Provide fields, form title/description, and/or conditionalLogic." }, { status: 400 });
   }
 
   try {
-    if (fields) {
+    const existing = await loadFormFields(sheetId);
+
+    if (fields || hasFormTitle || hasFormDescription) {
       const sheet = await ss.getSheet(sheetId);
       const columns = ss.extractColumns(sheet);
       const locked = new Set([
@@ -103,21 +121,31 @@ export async function PUT(request: Request) {
         ...columns.filter((c) => isSystemFormColumn(c) || isInternalFormColumn(c.title)).map((c) => c.title.toLowerCase()),
       ]);
 
-      const sanitized = fields.map((f, index) => {
-        const title = String(f.columnTitle ?? "").trim();
-        const lockedField = locked.has(title.toLowerCase());
-        return {
-          columnTitle: title,
-          order: typeof f.order === "number" ? f.order : index,
-          hiddenOnForm: lockedField ? true : Boolean(f.hiddenOnForm),
-          label: typeof f.label === "string" ? f.label : undefined,
-          helpText: typeof f.helpText === "string" ? f.helpText : undefined,
-          required: typeof f.required === "boolean" ? f.required : undefined,
-          kindHint: f.kindHint === "text" || f.kindHint === "textarea" || f.kindHint === "email" ? f.kindHint : undefined,
-        } satisfies FormFieldDefinition;
-      }).filter((f) => f.columnTitle);
+      const sourceFields = fields ?? mergeFieldsWithColumns(columns, existing);
+      const sanitized = sourceFields
+        .map((f, index) => {
+          const title = String(f.columnTitle ?? "").trim();
+          const lockedField = locked.has(title.toLowerCase());
+          const kindHint = KIND_HINTS.has(f.kindHint as FormFieldKindHint) ? (f.kindHint as FormFieldKindHint) : undefined;
+          return {
+            columnTitle: title,
+            order: typeof f.order === "number" ? f.order : index,
+            hiddenOnForm: lockedField ? true : Boolean(f.hiddenOnForm),
+            label: typeof f.label === "string" ? f.label : undefined,
+            helpText: typeof f.helpText === "string" ? f.helpText : undefined,
+            required: typeof f.required === "boolean" ? f.required : undefined,
+            kindHint,
+          } satisfies FormFieldDefinition;
+        })
+        .filter((f) => f.columnTitle);
 
-      await saveFormFields(sheetId, deriveFormFieldConfig(sanitized));
+      await saveFormFields(
+        sheetId,
+        deriveFormFieldConfig(sanitized, {
+          formTitle: hasFormTitle ? formTitle : existing?.formTitle,
+          formDescription: hasFormDescription ? formDescription : existing?.formDescription,
+        }),
+      );
     }
 
     if (conditionalLogic) {

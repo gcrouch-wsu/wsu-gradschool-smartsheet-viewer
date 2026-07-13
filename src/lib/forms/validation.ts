@@ -68,6 +68,11 @@ export function validateSubmission(
       continue;
     }
 
+    if (meta?.kindHint === "number" && Number.isNaN(Number(raw))) {
+      errors.push(`${label} must be a number.`);
+      continue;
+    }
+
     cells.push({ columnId: col.id, value: raw });
   }
 

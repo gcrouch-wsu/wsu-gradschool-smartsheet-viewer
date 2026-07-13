@@ -34,6 +34,8 @@ export function useSubmissionForm() {
       }
       setSchema({
         sheetName: String(d.sheetName ?? "Form"),
+        formTitle: typeof d.formTitle === "string" ? d.formTitle : "",
+        formDescription: typeof d.formDescription === "string" ? d.formDescription : "",
         columns: (d.columns as FormSchema["columns"]) ?? [],
         formColumnSource: d.formColumnSource as FormSchema["formColumnSource"],
         fieldMeta: (d.fieldMeta as FormSchema["fieldMeta"]) ?? {},

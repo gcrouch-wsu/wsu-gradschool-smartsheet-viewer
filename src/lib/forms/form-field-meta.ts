@@ -10,7 +10,7 @@ export interface FormFieldMeta {
   label?: string;
   helpText?: string;
   required?: boolean;
-  kindHint?: "text" | "textarea" | "email";
+  kindHint?: FormFieldDefinition["kindHint"];
 }
 
 /** Build fieldMeta map keyed by column title (lowercase) for the public schema. */
@@ -104,6 +104,14 @@ export function mergeFieldsWithColumns(
   return result;
 }
 
-export function deriveFormFieldConfig(fields: FormFieldDefinition[]): FormFieldConfig {
-  return normalizeFormFieldConfig({ columns: [], fields });
+export function deriveFormFieldConfig(
+  fields: FormFieldDefinition[],
+  presentation?: { formTitle?: string; formDescription?: string },
+): FormFieldConfig {
+  return normalizeFormFieldConfig({
+    columns: [],
+    fields,
+    formTitle: presentation?.formTitle,
+    formDescription: presentation?.formDescription,
+  });
 }

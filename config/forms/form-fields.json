@@ -31,7 +31,7 @@
       "Email",
       "Department",
       "Message",
-      "Email 2"
+      "Added Field"
     ],
     "fields": [
       {
@@ -60,11 +60,9 @@
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "Email 2",
+        "columnTitle": "Added Field",
         "order": 5,
-        "hiddenOnForm": false,
-        "required": true,
-        "kindHint": "email"
+        "hiddenOnForm": false
       }
     ]
   }

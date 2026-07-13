@@ -1,10 +1,14 @@
 import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
-export type FormFieldKind = "checkbox" | "select" | "date" | "email" | "textarea" | "text";
+export type FormFieldKind = "checkbox" | "select" | "date" | "email" | "textarea" | "text" | "phone" | "number";
 
 export interface FormSchema {
   sheetName: string;
+  /** Public form heading; falls back to sheetName when unset. */
+  formTitle?: string;
+  /** Supporting copy under the form title (viewer-style description). */
+  formDescription?: string;
   columns: SmartsheetColumn[];
   formColumnSource?: "smartsheet-config" | "auto";
   fieldMeta?: Record<string, FormFieldMeta>;
@@ -20,10 +24,13 @@ export function fieldKind(col: SmartsheetColumn, meta?: FormFieldMeta): FormFiel
   if (col.type === "CHECKBOX") return "checkbox";
   if (col.options && col.options.length) return "select";
   if (col.type === "DATE" || col.type === "ABSTRACT_DATETIME") return "date";
+  if (col.type === "PHONE" || meta?.kindHint === "phone") return "phone";
+  if (meta?.kindHint === "number") return "number";
   if (meta?.kindHint === "textarea") return "textarea";
   if (meta?.kindHint === "email") return "email";
   if (meta?.kindHint === "text") return "text";
   if (/e-?mail/i.test(col.title) || col.type === "CONTACT_LIST") return "email";
+  if (/phone|mobile|cell/i.test(col.title)) return "phone";
   if (/message|comment|description|notes?|details?/i.test(col.title)) return "textarea";
   return "text";
 }
@@ -136,6 +143,12 @@ export function validateFormClient(
 
     if (col.options && col.options.length && !col.options.includes(raw)) {
       const msg = `${label} must be one of: ${col.options.join(", ")}.`;
+      errors.push(msg);
+      fieldErrors[key] = msg;
+    }
+
+    if (kind === "number" && Number.isNaN(Number(raw))) {
+      const msg = `${label} must be a number.`;
       errors.push(msg);
       fieldErrors[key] = msg;
     }

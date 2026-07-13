@@ -29,6 +29,8 @@ export async function GET(request: Request) {
     const conditionalLogic = await loadConditionalLogic(active);
     return Response.json({
       sheetName: sheet.name,
+      formTitle: fieldConfig?.formTitle ?? "",
+      formDescription: fieldConfig?.formDescription ?? "",
       columns,
       formColumnSource,
       fieldMeta,

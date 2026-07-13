@@ -134,14 +134,16 @@ function FormField({
   }
 
   const emailHint = kind === "email" ? helpText || "Use your institutional email address." : helpText;
+  const inputType = kind === "phone" ? "tel" : kind === "number" ? "number" : kind === "email" ? "email" : "text";
 
   return (
     <FieldShell id={id} label={label} required={required} hint={emailHint} error={error}>
       <input
         id={id}
-        type={kind}
+        type={inputType}
+        inputMode={kind === "number" ? "decimal" : kind === "phone" ? "tel" : undefined}
         className={`${inputClass} ${hasError ? inputErrorClass : ""}`}
-        autoComplete={kind === "email" ? "email" : undefined}
+        autoComplete={kind === "email" ? "email" : kind === "phone" ? "tel" : undefined}
         {...register(String(col.id), { required: required ? `${label} is required.` : false })}
       />
     </FieldShell>
@@ -251,15 +253,8 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
 
   const visibleColumns = schema.columns.filter((col) => isFieldVisible(col, hidden));
 
-  const subtitleParts = [
-    schema.allowedDomains.length ? `Open to @${schema.allowedDomains.join(", @")} email addresses.` : "",
-    schema.formColumnSource === "smartsheet-config"
-      ? `${schema.columns.length} fields from your Smartsheet form configuration.`
-      : schema.formColumnSource === "auto"
-        ? `${schema.columns.length} submitter fields (workflow columns hidden).`
-        : "",
-    schema.demo ? "Demo mode." : "",
-  ].filter(Boolean);
+  const formTitle = schema.formTitle?.trim() || schema.sheetName;
+  const formDescription = schema.formDescription?.trim() || "";
 
   async function processSubmit(data: FormValues) {
     setClientErrors([]);
@@ -292,9 +287,15 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">{schema.sheetName}</h1>
-        {subtitleParts.length ? (
-          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">{subtitleParts.join(" ")}</p>
+        <h1 className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]">{formTitle}</h1>
+        {formDescription ? <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">{formDescription}</p> : null}
+        {!formDescription && schema.allowedDomains.length ? (
+          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+            Open to @{schema.allowedDomains.join(", @")} email addresses.
+            {schema.demo ? " Demo mode." : ""}
+          </p>
+        ) : schema.demo ? (
+          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
         ) : null}
       </div>
 
