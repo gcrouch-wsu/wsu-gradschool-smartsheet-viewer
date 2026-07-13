@@ -5,6 +5,7 @@ import {
   authorizeAdminSession,
   normalizeAdminNextPath,
 } from "@/lib/admin-auth";
+import { handleFormsMiddleware } from "@/lib/forms/forms-middleware";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/sign-in",
@@ -50,6 +51,11 @@ async function adminPrincipalOk(request: NextRequest): Promise<{ ok: boolean; st
 }
 
 export async function middleware(request: NextRequest) {
+  const formsResult = await handleFormsMiddleware(request);
+  if (formsResult) {
+    return formsResult;
+  }
+
   const { pathname, search } = request.nextUrl;
   const isAdminApiRequest = pathname === "/api/admin" || pathname.startsWith("/api/admin/");
   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.has(pathname);
@@ -86,6 +92,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/forms",
+    "/forms/:path*",
+    "/api/forms",
+    "/api/forms/:path*",
     "/admin",
     "/admin/",
     "/admin/:path*",

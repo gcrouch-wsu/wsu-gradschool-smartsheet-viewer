@@ -10,6 +10,7 @@ const BASE_NAV_ITEMS = [
   { href: "/admin/sources", label: "Sources" },
   { href: "/admin/views", label: "Views" },
   { href: "/admin/contributors", label: "Contributors" },
+  { href: "/forms/manage", label: "Forms" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

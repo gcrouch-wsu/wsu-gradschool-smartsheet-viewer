@@ -1,0 +1,88 @@
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import {
+  ADMIN_SESSION_COOKIE_NAME,
+  authorizeAdminSession,
+} from "@/lib/admin-auth";
+import {
+  FORM_APPROVER_SESSION_COOKIE_NAME,
+  readFormApproverSessionToken,
+} from "@/lib/forms/approver-auth";
+import { validateWebhookSecret } from "@/lib/forms/webhook-auth";
+
+const FORMS_PUBLIC_PATHS = new Set([
+  "/forms/approver/sign-in",
+  "/api/forms/approver/session",
+]);
+
+function isFormsPath(pathname: string) {
+  return pathname === "/forms" || pathname.startsWith("/forms/") || pathname === "/api/forms" || pathname.startsWith("/api/forms/");
+}
+
+function isFormsAdminPath(pathname: string) {
+  return (
+    pathname === "/forms/manage" ||
+    pathname.startsWith("/forms/manage/") ||
+    pathname.startsWith("/api/forms/registry") ||
+    pathname.startsWith("/api/forms/platform") ||
+    (pathname.startsWith("/api/forms/webhooks") && !pathname.startsWith("/api/forms/webhooks/smartsheet"))
+  );
+}
+
+function normalizeFormsNextPath(pathname: string, search: string) {
+  const next = `${pathname}${search}`;
+  if (!next.startsWith("/forms")) return "/forms";
+  return next;
+}
+
+async function hasAdminSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+  const result = await authorizeAdminSession(token ?? null);
+  return result.ok;
+}
+
+async function hasApproverSession(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value;
+  if (!token) return false;
+  const result = await readFormApproverSessionToken(token);
+  return result.ok;
+}
+
+export async function handleFormsMiddleware(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname, search } = request.nextUrl;
+  if (!isFormsPath(pathname)) return null;
+
+  if (pathname === "/api/forms/webhooks/smartsheet" && request.method === "POST") {
+    if (validateWebhookSecret(request)) return NextResponse.next();
+    return NextResponse.json({ message: "Invalid webhook secret." }, { status: 401 });
+  }
+
+  if (FORMS_PUBLIC_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  const adminOk = await hasAdminSession(request);
+  const approverOk = await hasApproverSession(request);
+
+  if (isFormsAdminPath(pathname)) {
+    if (adminOk) return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ message: "Admin authentication required." }, { status: 401 });
+    }
+    const signInUrl = new URL("/admin/sign-in", request.url);
+    signInUrl.searchParams.set("next", normalizeFormsNextPath(pathname, search));
+    return NextResponse.redirect(signInUrl);
+  }
+
+  if (adminOk || approverOk) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+  }
+
+  const signInUrl = new URL("/forms/approver/sign-in", request.url);
+  signInUrl.searchParams.set("next", normalizeFormsNextPath(pathname, search));
+  return NextResponse.redirect(signInUrl);
+}
