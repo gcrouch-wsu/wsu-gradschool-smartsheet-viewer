@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Result {
   objectId: number;
@@ -29,19 +30,22 @@ function SearchContent() {
   }, [q]);
 
   return (
-    <section className="card">
-      <h2>Results for “{q}”</h2>
-      {error ? <div className="note note--err">{error}</div> : null}
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-5 shadow-sm">
+      <h2 className="text-base font-medium text-[color:var(--wsu-ink)]">Results for “{q}”</h2>
+      {error ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
       {!results ? (
-        <p className="spinner">Searching…</p>
+        <p className="mt-4 text-sm text-[color:var(--wsu-muted)]">Searching…</p>
       ) : results.length === 0 ? (
-        <p className="muted">No matches found.</p>
+        <p className="mt-4 text-sm text-[color:var(--wsu-muted)]">No matches found.</p>
       ) : (
-        <ul className="search-results">
+        <ul className="mt-4 divide-y divide-[color:var(--wsu-border)]">
           {results.map((r, i) => (
-            <li key={`${r.objectType}-${r.objectId}-${i}`}>
-              <span className="tag">{r.objectType}</span> <strong>{r.text}</strong>
-              {r.parentObjectName ? <span className="muted"> · in {r.parentObjectName}</span> : null}
+            <li key={`${r.objectType}-${r.objectId}-${i}`} className="py-3 text-sm">
+              <span className="mr-2 inline-flex rounded-full bg-[color:var(--wsu-stone)] px-2 py-0.5 text-xs font-medium text-[color:var(--wsu-muted)]">
+                {r.objectType}
+              </span>
+              <strong className="text-[color:var(--wsu-ink)]">{r.text}</strong>
+              {r.parentObjectName ? <span className="text-[color:var(--wsu-muted)]"> · in {r.parentObjectName}</span> : null}
             </li>
           ))}
         </ul>
@@ -52,15 +56,16 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <div className="forms-wrap">
-      <div className="mb-5">
-        <h2 className="forms-page-title">Search</h2>
-        <p className="forms-page-subtitle">Find submissions and sheets across your Smartsheet account.</p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="Forms workspace"
+        title="Search"
+        description="Find submissions and sheets across your Smartsheet account."
+      />
       <Suspense
         fallback={
-          <section className="card">
-            <p className="spinner">Loading…</p>
+          <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-5 text-sm text-[color:var(--wsu-muted)]">
+            Loading…
           </section>
         }
       >

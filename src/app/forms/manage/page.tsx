@@ -9,6 +9,7 @@ import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { IconPlus } from "@/components/forms/icons";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface FormEntry {
   id: string;
@@ -437,18 +438,17 @@ export default function ManagePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">Form admin</h1>
-          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-            Manage forms, sync, schema, platform assets, and approver accounts.
-          </p>
-        </div>
-        <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
-          <IconPlus className="h-4 w-4" />
-          Create form
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Forms workspace"
+        title="Form administration"
+        description="Manage forms, sync, schema, platform assets, and approver accounts."
+        actions={
+          <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
+            <IconPlus className="h-4 w-4" />
+            Create form
+          </button>
+        }
+      />
 
       <AdminSectionNav active={tab} onSelect={handleSectionSelect} />
 

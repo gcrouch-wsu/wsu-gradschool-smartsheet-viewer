@@ -98,7 +98,7 @@ describe("admin auth helpers", () => {
     await expect(readAdminSessionToken(sessionToken)).resolves.toMatchObject({ ok: true });
   });
 
-  it("returns safe cookie settings and admin-only redirect paths", () => {
+  it("returns safe cookie settings and workspace redirect paths", () => {
     expect(getAdminSessionCookieSettings()).toMatchObject({
       httpOnly: true,
       maxAge: expect.any(Number),
@@ -107,7 +107,9 @@ describe("admin auth helpers", () => {
     });
     expect(ADMIN_SESSION_COOKIE_NAME).toBe("smartsheets_view_admin_session");
     expect(normalizeAdminNextPath("/admin/views")).toBe("/admin/views");
+    expect(normalizeAdminNextPath("/forms/manage")).toBe("/forms/manage");
     expect(normalizeAdminNextPath("/admin/sign-in")).toBe("/admin");
+    expect(normalizeAdminNextPath("/forms/approver/sign-in")).toBe("/admin");
     expect(normalizeAdminNextPath("/view/test")).toBe("/admin");
   });
 });

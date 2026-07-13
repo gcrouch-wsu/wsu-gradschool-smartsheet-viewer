@@ -1,4 +1,4 @@
-import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listContributorUsers } from "@/lib/contributor-auth";
 import { ContributorAccountsManager } from "./ContributorAccountsManager";
@@ -17,22 +17,13 @@ export default async function AdminContributorsPage() {
 
   return (
     <>
-      <AdminBreadcrumbs
-        items={[
-          { href: "/admin", label: "Dashboard" },
-          { href: null, label: "Contributors" },
-        ]}
-      />
-
       <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] px-6 py-6 shadow-[0_24px_64px_rgba(35,31,32,0.07)] sm:px-8">
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--wsu-ink)]">
-            Contributor accounts
-          </h2>
-          <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">
-            Manage contributor accounts. Use &ldquo;Generate reset link&rdquo; to create a one-time password reset URL
-            and send it manually to the contributor.
-          </p>
+          <PageHeader
+            eyebrow="Admin builder"
+            title="Contributor accounts"
+            description="Manage contributor accounts and generate one-time password reset links."
+          />
         </div>
 
         {dbError ? (

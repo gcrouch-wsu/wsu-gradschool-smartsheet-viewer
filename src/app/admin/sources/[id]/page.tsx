@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { SourceForm } from "@/components/admin/SourceForm";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getSourceConfigById } from "@/lib/config/store";
@@ -17,13 +16,6 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
 
   return (
     <>
-      <AdminBreadcrumbs
-        items={[
-          { href: "/admin", label: "Dashboard" },
-          { href: "/admin/sources", label: "Sources" },
-          { href: null, label: source?.label ?? "New source" },
-        ]}
-      />
       <SourceForm initialSource={source} connectionKeys={listConfiguredConnectionKeys()} isNew={isNew} />
     </>
   );

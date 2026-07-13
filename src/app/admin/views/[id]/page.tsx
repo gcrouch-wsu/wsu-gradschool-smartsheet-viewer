@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { ViewBuilder } from "@/components/admin/ViewBuilder";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getViewConfigById, listSourceConfigs, listViewConfigs } from "@/lib/config/store";
@@ -20,13 +19,6 @@ export default async function ViewEditorPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <AdminBreadcrumbs
-        items={[
-          { href: "/admin", label: "Dashboard" },
-          { href: "/admin/views", label: "Views" },
-          { href: null, label: view?.label ?? "New view" },
-        ]}
-      />
       <ViewBuilder
         initialView={view}
         sources={sources}

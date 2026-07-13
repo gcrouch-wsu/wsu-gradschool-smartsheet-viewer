@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 
@@ -13,19 +13,16 @@ export default async function SourcesIndexPage() {
 
   return (
     <section className="space-y-4">
-      <AdminBreadcrumbs
-        items={[
-          { href: "/admin", label: "Dashboard" },
-          { href: null, label: "Sources" },
-        ]}
+      <PageHeader
+        eyebrow="Admin builder"
+        title="Sources"
+        description="Register Smartsheet sheets and reports that power workspace views."
+        actions={
+          <Link href="/admin/sources/new" className="btn-crimson rounded-full bg-wsu-crimson px-4 py-2 text-sm font-medium hover:bg-wsu-crimson-dark">
+            Create source
+          </Link>
+        }
       />
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-[color:var(--wsu-muted)]">Admin routes</p>
-          <h2 className="mt-1 text-2xl font-semibold text-[color:var(--wsu-ink)]">Sources</h2>
-        </div>
-        <Link href="/admin/sources/new" className="btn-crimson rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--wsu-crimson-dark)]">Create source</Link>
-      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {sources.map((source) => (
           <article key={source.id} className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
