@@ -13,7 +13,6 @@
   --line-strong: #ddd7d9;
   --paper: #faf8f9;
   --surface: #ffffff;
-  --grid: rgba(152, 30, 50, 0.05);
   --shadow-sm: 0 1px 2px rgba(33, 27, 30, 0.04), 0 1px 3px rgba(33, 27, 30, 0.05);
   --shadow-md: 0 6px 16px rgba(33, 27, 30, 0.07), 0 2px 6px rgba(33, 27, 30, 0.05);
   --wsu-crimson: var(--crimson);
@@ -78,23 +77,6 @@ body {
 
 .bg-canvas {
   background-color: var(--paper);
-  background-image:
-    radial-gradient(circle at 88% -8%, var(--crimson-soft), transparent 42%),
-    radial-gradient(circle at 6% 108%, rgba(152, 30, 50, 0.04), transparent 40%),
-    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 30px),
-    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 30px);
-}
-
-.sheet-grid {
-  background-image:
-    repeating-linear-gradient(0deg, rgba(152, 30, 50, 0.045) 0 1px, transparent 1px 26px),
-    repeating-linear-gradient(90deg, rgba(152, 30, 50, 0.045) 0 1px, transparent 1px 26px);
-}
-
-.sheet-grid-lg {
-  background-image:
-    repeating-linear-gradient(0deg, rgba(152, 30, 50, 0.04) 0 1px, transparent 1px 30px),
-    repeating-linear-gradient(90deg, rgba(152, 30, 50, 0.04) 0 1px, transparent 1px 30px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -205,11 +187,15 @@ a {
 
 /* Crimson primary buttons: white text for contrast (overrides a { color: inherit }) */
 .btn-crimson,
-.bg-\[color\:var\(--wsu-crimson\)\] {
+.bg-\[color\:var\(--wsu-crimson\)\],
+.bg-crimson,
+.bg-wsu-crimson {
   color: white !important;
 }
 .btn-crimson:hover,
-.bg-\[color\:var\(--wsu-crimson\)\]:hover {
+.bg-\[color\:var\(--wsu-crimson\)\]:hover,
+.bg-crimson:hover,
+.bg-wsu-crimson:hover {
   color: white !important;
 }
 

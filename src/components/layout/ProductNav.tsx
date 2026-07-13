@@ -129,7 +129,7 @@ export function ProductNav({ items, variant = "global", label }: ProductNavProps
             className={[
               "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-medium transition",
               active
-                ? "bg-crimson text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)]"
+                ? "bg-crimson !text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)]"
                 : "text-sub hover:bg-[#f4f0f1] hover:text-ink",
             ].join(" ")}
           >

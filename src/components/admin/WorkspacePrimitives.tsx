@@ -146,7 +146,7 @@ export function EmptyState({
 }) {
   const panel = variant === "panel";
   return (
-    <div className={`sheet-grid rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] text-center ${panel ? "px-5 py-12" : "px-5 py-7"}`}>
+    <div className={`rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] text-center ${panel ? "px-5 py-12" : "px-5 py-7"}`}>
       <div className={`mx-auto flex items-center justify-center rounded-xl border border-[var(--crimson-line)] bg-white text-crimson shadow-[var(--shadow-sm)] ${panel ? "h-12 w-12" : "h-10 w-10"}`}>
         {icon}
       </div>
