@@ -2,6 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
+import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
+import { AdminSectionNav, type AdminTab } from "@/components/forms/admin/AdminSectionNav";
+import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
+import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
+import { FormsTable } from "@/components/forms/admin/FormsTable";
+import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
+import { IconPlus } from "@/components/forms/icons";
 
 interface FormEntry {
   id: string;
@@ -31,16 +38,35 @@ interface ApproverSummary {
   updatedAt: string;
 }
 
-type AdminTab = "forms" | "org" | "webhooks" | "schema" | "platform" | "approvers";
+const inputClass =
+  "w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson";
 
-const SOURCE_LABEL: Record<FormEntry["source"], string> = {
-  template: "Cloned",
-  scratch: "From scratch",
-  imported: "Added",
-  sample: "Sample",
-};
+const secondaryBtnClass =
+  "rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50";
+
+const primaryBtnClass =
+  "rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson-dark disabled:opacity-60";
+
+function Alert({ ok, text }: { ok?: boolean; text: string }) {
+  return (
+    <p className={`rounded-lg px-3 py-2 text-xs ${ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
+      {text}
+    </p>
+  );
+}
+
+function Card({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">{title}</h2>
+      {description ? <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">{description}</p> : null}
+      <div className="mt-4 space-y-4">{children}</div>
+    </section>
+  );
+}
 
 export default function ManagePage() {
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tab, setTab] = useState<AdminTab>("forms");
   const [forms, setForms] = useState<FormEntry[]>([]);
   const [activeId, setActiveId] = useState("");
@@ -109,9 +135,22 @@ export default function ManagePage() {
     }
   }
 
+  async function loadApprovers() {
+    setApproverMsg(null);
+    try {
+      const r = await fetch("/api/forms/registry/approvers");
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Could not load approvers.");
+      setApprovers(d.approvers ?? []);
+    } catch (e: unknown) {
+      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Could not load approvers." });
+    }
+  }
+
   useEffect(() => {
     loadForms();
     loadSheets();
+    loadApprovers();
   }, []);
 
   useEffect(() => {
@@ -138,6 +177,26 @@ export default function ManagePage() {
     () => sheets.filter((s) => !registeredIds.has(String(s.id))),
     [sheets, registeredIds],
   );
+
+  function handleSectionSelect(id: AdminTab) {
+    setTab(id);
+    if (id === "org") loadOrg();
+    if (id === "webhooks") loadWebhooks();
+    if (id === "schema") loadSchema();
+    if (id === "platform") loadPlatform();
+    if (id === "approvers") loadApprovers();
+  }
+
+  function openCreateModal() {
+    setCreateMsg(null);
+    setCreateModalOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (creating) return;
+    setCreateModalOpen(false);
+    setCreateMsg(null);
+  }
 
   async function useForm(id: string) {
     try {
@@ -196,6 +255,7 @@ export default function ManagePage() {
       setShareEmail("");
       setCreateMsg({ ok: true, text: `Created "${d.sheet.name}" and set it active.${d.note ? " " + d.note : ""}` });
       await loadForms();
+      setCreateModalOpen(false);
     } catch (e: unknown) {
       setCreateMsg({ ok: false, text: e instanceof Error ? e.message : "Create failed." });
     } finally {
@@ -319,18 +379,6 @@ export default function ManagePage() {
     }
   }
 
-  async function loadApprovers() {
-    setApproverMsg(null);
-    try {
-      const r = await fetch("/api/forms/registry/approvers");
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not load approvers.");
-      setApprovers(d.approvers ?? []);
-    } catch (e: unknown) {
-      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Could not load approvers." });
-    }
-  }
-
   async function createApprover() {
     setApproverMsg(null);
     if (!approverEmail.trim() || !approverPassword) {
@@ -387,368 +435,346 @@ export default function ManagePage() {
     }
   }
 
-  const tabBtn = (id: AdminTab, label: string) => (
-    <button
-      key={id}
-      type="button"
-      className={`tab-btn ${tab === id ? "is-active" : ""}`}
-      onClick={() => {
-        setTab(id);
-        if (id === "org") loadOrg();
-        if (id === "webhooks") loadWebhooks();
-        if (id === "schema") loadSchema();
-        if (id === "platform") loadPlatform();
-        if (id === "approvers") loadApprovers();
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div className="forms-wrap">
-      <div className="mb-5">
-        <h2 className="forms-page-title">Form admin</h2>
-        <p className="forms-page-subtitle">Manage forms, sync, schema, platform assets, and approver accounts.</p>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">Form admin</h1>
+          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+            Manage forms, sync, schema, platform assets, and approver accounts.
+          </p>
+        </div>
+        <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
+          <IconPlus className="h-4 w-4" />
+          Create form
+        </button>
       </div>
 
-      <div className="tabs">
-        {tabBtn("forms", "Forms")}
-        {tabBtn("org", "Org")}
-        {tabBtn("webhooks", "Webhooks")}
-        {tabBtn("schema", "Schema")}
-        {tabBtn("platform", "Platform")}
-        {tabBtn("approvers", "Approvers")}
-      </div>
+      <AdminSectionNav active={tab} onSelect={handleSectionSelect} />
 
-      {formsError ? <div className="note note--err">{formsError}</div> : null}
+      {formsError ? <Alert text={formsError} /> : null}
 
       {tab === "forms" ? (
-        <>
-          <section className="card">
-            <h2>Your forms</h2>
-            <p className="hint">Every form you create, clone, or add lives here. Active form path: {paths[activeId] ?? "—"}</p>
-            <div className="toolbar">
-              <input className="search" type="text" placeholder="Search by name or sheet ID…" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
-            <div className="table-wrap">
-              {filtered.length === 0 ? (
-                <p className="empty">No forms yet.</p>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Source</th>
-                      <th>Sheet ID</th>
-                      <th>Created</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((f) => {
-                      const isActive = String(f.id) === activeId;
-                      return (
-                        <tr key={f.id} className={isActive ? "is-active" : ""}>
-                          <td className="name">{f.name}</td>
-                          <td>{SOURCE_LABEL[f.source]}</td>
-                          <td className="id">{f.id}</td>
-                          <td>{f.createdAt ? new Date(f.createdAt).toLocaleDateString() : ""}</td>
-                          <td style={{ textAlign: "right" }}>
-                            {isActive ? (
-                              <span className="tag tag--on">Active</span>
-                            ) : (
-                              <button className="btn btn--ghost btn--sm" onClick={() => useForm(f.id)}>
-                                Use
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="field" style={{ marginTop: 12 }}>
-              <label htmlFor="addSheet">Add an existing sheet</label>
-              <p className="hint" style={{ marginBottom: 8 }}>
-                {sheetsLive
-                  ? `${addableSheets.length} sheet${addableSheets.length === 1 ? "" : "s"} available to add.`
-                  : "Demo mode — showing sample sheets only."}
-              </p>
-              <div className="add-row">
-                <select id="addSheet" value={addId} onChange={(e) => setAddId(e.target.value)}>
-                  <option value="">Select a sheet…</option>
-                  {addableSheets.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} (ID {s.id})
-                    </option>
-                  ))}
-                </select>
-                <button className="btn btn--ghost" onClick={addExisting} disabled={!addId}>
-                  Add
-                </button>
-              </div>
-              {sheetsError ? <div className="note note--err" style={{ marginTop: 8 }}>{sheetsError}</div> : null}
-              {!sheetsError && sheets.length > 0 && addableSheets.length === 0 ? (
-                <p className="hint" style={{ marginTop: 8 }}>All available sheets are already in your forms list.</p>
-              ) : null}
-            </div>
-            {addMsg ? <div className={`note ${addMsg.ok ? "note--ok" : "note--err"}`}>{addMsg.text}</div> : null}
-          </section>
+        <div className="space-y-4">
+          <MetricsStrip
+            activeForms={forms.length}
+            sheetsAvailable={sheets.length}
+            approvers={approvers.length}
+          />
 
-          <section className="card">
-            <h2>Create a form</h2>
-            <div className="radios">
-              <label className={mode === "template" ? "checked" : ""}>
-                <input type="radio" name="mode" checked={mode === "template"} onChange={() => setMode("template")} /> From a template
-              </label>
-              <label className={mode === "scratch" ? "checked" : ""}>
-                <input type="radio" name="mode" checked={mode === "scratch"} onChange={() => setMode("scratch")} /> From scratch
-              </label>
-            </div>
-            {mode === "template" ? (
-              <div className="field">
-                <label htmlFor="template">Template sheet</label>
-                <select id="template" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                  <option value="">Select a sheet…</option>
-                  {sheets.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                {sheetsError ? <div className="note note--err" style={{ marginTop: 8 }}>{sheetsError}</div> : null}
-              </div>
-            ) : null}
-            <div className="field">
-              <label htmlFor="newName">New form name</label>
-              <input id="newName" type="text" placeholder="e.g. Parking Permit Request" value={newName} onChange={(e) => setNewName(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="folderId">Destination folder ID (optional)</label>
-              <input id="folderId" type="text" value={destinationFolderId} onChange={(e) => setDestinationFolderId(e.target.value)} placeholder="Smartsheet folder ID" />
-            </div>
-            <div className="field">
-              <label htmlFor="shareOnCreate">Share with email on create (optional)</label>
-              <input id="shareOnCreate" type="email" value={shareEmail} onChange={(e) => setShareEmail(e.target.value)} placeholder="approver@wsu.edu" />
-            </div>
-            <button className="btn" onClick={createForm} disabled={creating}>
-              {creating ? "Creating…" : "Create form"}
-            </button>
-            {createMsg ? <div className={`note ${createMsg.ok ? "note--ok" : "note--err"}`}>{createMsg.text}</div> : null}
-          </section>
+          <FormsTable
+            forms={filtered}
+            activeId={activeId}
+            activePath={paths[activeId] ?? ""}
+            query={query}
+            onQueryChange={setQuery}
+            onUseForm={useForm}
+          />
 
-          <section className="card">
-            <h2>Automations</h2>
-            <button className="btn btn--ghost" onClick={loadAutomations} disabled={autoLoading}>
-              {autoLoading ? "Loading…" : "Load automations"}
-            </button>
-            {rules?.map((rule, i) => (
-              <div className="rule" key={i}>
-                <div className="rule__top">
-                  <span className="rule__name">{rule.name || "(unnamed rule)"}</span>
-                  <span className={`tag ${rule.enabled !== false ? "tag--on" : ""}`}>{rule.enabled !== false ? "Enabled" : "Disabled"}</span>
-                </div>
-              </div>
-            ))}
-            {autoNotice ? <div className="note" style={{ marginTop: 12 }}>{autoNotice}</div> : null}
-          </section>
-        </>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <AddSheetCard
+              sheetsLive={sheetsLive}
+              addableCount={addableSheets.length}
+              sheets={addableSheets}
+              addId={addId}
+              onAddIdChange={setAddId}
+              onAdd={addExisting}
+              sheetsError={sheetsError}
+              addMsg={addMsg}
+              allSheetsRegistered={!sheetsError && sheets.length > 0 && addableSheets.length === 0}
+            />
+            <AutomationsCard
+              rules={rules}
+              autoNotice={autoNotice}
+              autoLoading={autoLoading}
+              onLoad={loadAutomations}
+            />
+          </div>
+        </div>
       ) : null}
 
       {tab === "org" ? (
-        <section className="card">
-          <h2>Organization & sharing</h2>
-          <p className="hint">Workspaces and folder placement for cloned forms.</p>
-          <h3>Workspaces</h3>
-          <ul>
-            {workspaces.map((w) => (
-              <li key={w.id}>
-                {w.name} (ID {w.id})
-              </li>
-            ))}
-          </ul>
+        <Card title="Organization & sharing" description="Workspaces and folder placement for cloned forms.">
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Workspaces</h3>
+            <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
+              {workspaces.map((w) => (
+                <li key={w.id}>
+                  {w.name} (ID {w.id})
+                </li>
+              ))}
+            </ul>
+          </div>
           {folderChildren.length ? (
-            <>
-              <h3>Folder contents</h3>
-              <ul>
+            <div>
+              <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Folder contents</h3>
+              <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
                 {folderChildren.map((c) => (
                   <li key={c.id}>
                     {c.name} — {c.type} (ID {c.id})
                   </li>
                 ))}
               </ul>
-            </>
+            </div>
           ) : null}
-          <h3>Share active sheet</h3>
-          <div className="add-row">
-            <input type="email" placeholder="user@wsu.edu" value={shareSheetEmail} onChange={(e) => setShareSheetEmail(e.target.value)} />
-            <button className="btn btn--ghost" onClick={shareActiveSheet}>
-              Share
-            </button>
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Share active sheet</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                type="email"
+                placeholder="user@wsu.edu"
+                value={shareSheetEmail}
+                onChange={(e) => setShareSheetEmail(e.target.value)}
+                className={`min-w-0 flex-1 ${inputClass}`}
+              />
+              <button type="button" onClick={shareActiveSheet} className={secondaryBtnClass}>
+                Share
+              </button>
+            </div>
+            {shareMsg ? <p className="mt-2 text-xs text-[color:var(--wsu-muted)]">{shareMsg}</p> : null}
           </div>
-          {shareMsg ? <div className="note">{shareMsg}</div> : null}
-        </section>
+        </Card>
       ) : null}
 
       {tab === "webhooks" ? (
-        <section className="card">
-          <h2>Live sync (webhooks)</h2>
-          <p className="hint">Register a webhook so the tracker refreshes when Smartsheet changes. Set WEBHOOK_CALLBACK_URL in .env for production.</p>
-          <button className="btn btn--ghost" onClick={registerWebhook}>
+        <Card
+          title="Live sync (webhooks)"
+          description="Register a webhook so the tracker refreshes when Smartsheet changes. Set WEBHOOK_CALLBACK_URL in .env for production."
+        >
+          <button type="button" onClick={registerWebhook} className={secondaryBtnClass}>
             Register webhook for active sheet
           </button>
           {webhookInfo ? (
-            <div style={{ marginTop: 12 }}>
+            <div className="text-sm text-[color:var(--wsu-muted)]">
               <p>Registered webhooks: {webhookInfo.webhooks?.length ?? 0}</p>
-              <p className="muted">Last webhook: {webhookInfo.state?.lastWebhookAt ?? "none"}</p>
+              <p>Last webhook: {webhookInfo.state?.lastWebhookAt ?? "none"}</p>
             </div>
           ) : null}
-        </section>
+        </Card>
       ) : null}
 
       {tab === "schema" ? (
-        <section className="card">
-          <h2>Column schema</h2>
-          <p className="hint">Add columns to the active sheet. Changes affect the live form immediately.</p>
-          <button className="btn btn--ghost" onClick={loadSchema}>
+        <Card title="Column schema" description="Add columns to the active sheet. Changes affect the live form immediately.">
+          <button type="button" onClick={loadSchema} className={secondaryBtnClass}>
             Refresh columns
           </button>
-          <ul>
+          <ul className="space-y-1 text-sm text-[color:var(--wsu-ink)]">
             {columns.map((c) => (
               <li key={c.id}>
                 {c.title} ({c.type}) — ID {c.id}
               </li>
             ))}
           </ul>
-          <div className="add-row">
-            <input type="text" placeholder="New column title" value={newColTitle} onChange={(e) => setNewColTitle(e.target.value)} />
-            <button className="btn btn--ghost" onClick={addColumn}>
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="text"
+              placeholder="New column title"
+              value={newColTitle}
+              onChange={(e) => setNewColTitle(e.target.value)}
+              className={`min-w-0 flex-1 ${inputClass}`}
+            />
+            <button type="button" onClick={addColumn} className={secondaryBtnClass}>
               Add column
             </button>
           </div>
-        </section>
+        </Card>
       ) : null}
 
       {tab === "platform" ? (
-        <section className="card">
-          <h2>Reports, dashboards & native forms</h2>
-          <button className="btn btn--ghost" onClick={loadPlatform}>
+        <Card title="Reports, dashboards & native forms">
+          <button type="button" onClick={loadPlatform} className={secondaryBtnClass}>
             Load platform assets
           </button>
-          <h3>Reports</h3>
-          <ul>
-            {reports.map((r) => (
-              <li key={r.id}>
-                <a href={r.permalink || "#"} target="_blank" rel="noreferrer">
-                  {r.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <h3>Dashboards</h3>
-          <ul>
-            {dashboards.map((d) => (
-              <li key={d.id}>
-                <a href={d.permalink || "#"} target="_blank" rel="noreferrer">
-                  {d.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <h3>Native Smartsheet forms</h3>
-          <ul>
-            {nativeForms.map((f) => (
-              <li key={f.id}>
-                {f.name}{" "}
-                {f.url ? (
-                  <a href={f.url} target="_blank" rel="noreferrer">
-                    Open
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Reports</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {reports.map((r) => (
+                <li key={r.id}>
+                  <a href={r.permalink || "#"} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
+                    {r.name}
                   </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          <h3>Row tools</h3>
-          <div className="add-row">
-            <input type="text" placeholder="Row ID" value={rowToolRowId} onChange={(e) => setRowToolRowId(e.target.value)} />
-            <input type="text" placeholder="Target sheet ID" value={rowToolSheetId} onChange={(e) => setRowToolSheetId(e.target.value)} />
-            <button className="btn btn--ghost" onClick={copyRowTool}>
-              Copy row
-            </button>
+                </li>
+              ))}
+            </ul>
           </div>
-          {rowToolMsg ? <div className="note">{rowToolMsg}</div> : null}
-        </section>
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Dashboards</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {dashboards.map((d) => (
+                <li key={d.id}>
+                  <a href={d.permalink || "#"} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
+                    {d.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Native Smartsheet forms</h3>
+            <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
+              {nativeForms.map((f) => (
+                <li key={f.id}>
+                  {f.name}{" "}
+                  {f.url ? (
+                    <a href={f.url} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
+                      Open
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Row tools</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                type="text"
+                placeholder="Row ID"
+                value={rowToolRowId}
+                onChange={(e) => setRowToolRowId(e.target.value)}
+                className={`min-w-[8rem] flex-1 ${inputClass}`}
+              />
+              <input
+                type="text"
+                placeholder="Target sheet ID"
+                value={rowToolSheetId}
+                onChange={(e) => setRowToolSheetId(e.target.value)}
+                className={`min-w-[8rem] flex-1 ${inputClass}`}
+              />
+              <button type="button" onClick={copyRowTool} className={secondaryBtnClass}>
+                Copy row
+              </button>
+            </div>
+            {rowToolMsg ? <p className="text-xs text-[color:var(--wsu-muted)]">{rowToolMsg}</p> : null}
+          </div>
+        </Card>
       ) : null}
 
       {tab === "approvers" ? (
-        <section className="card">
-          <h2>Approver accounts</h2>
-          <p className="hint">
-            Create email/password accounts for approvers who need tracker access without admin credentials. Password requirement:{" "}
-            {ADMIN_PASSWORD_POLICY_MESSAGE.replace("Admin password must be ", "")}
-          </p>
-          <button className="btn btn--ghost" onClick={loadApprovers}>
+        <Card
+          title="Approver accounts"
+          description={`Create email/password accounts for approvers who need tracker access without admin credentials. Password requirement: ${ADMIN_PASSWORD_POLICY_MESSAGE.replace("Admin password must be ", "")}`}
+        >
+          <button type="button" onClick={loadApprovers} className={secondaryBtnClass}>
             Refresh list
           </button>
           {approvers.length === 0 ? (
-            <p className="empty">No approver accounts yet.</p>
+            <p className="text-sm text-[color:var(--wsu-muted)]">No approver accounts yet.</p>
           ) : (
-            <table className="table" style={{ marginTop: 12 }}>
-              <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Created</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {approvers.map((a) => (
-                  <tr key={a.id}>
-                    <td className="name">{a.email}</td>
-                    <td>{new Date(a.createdAt).toLocaleDateString()}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <button className="btn btn--ghost btn--sm btn--danger" onClick={() => deleteApprover(a.id)}>
-                        Delete
-                      </button>
-                    </td>
+            <div className="overflow-x-auto rounded-lg border border-[color:var(--wsu-border)]">
+              <table className="w-full min-w-[400px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[color:var(--wsu-border)] text-xs text-[color:var(--wsu-muted)]">
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">Created</th>
+                    <th className="px-3 py-2 font-medium">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {approvers.map((a) => (
+                    <tr key={a.id} className="border-b border-[color:var(--wsu-border)] last:border-0 hover:bg-[color:var(--wsu-stone)]/60">
+                      <td className="px-3 py-2 font-medium text-[color:var(--wsu-ink)]">{a.email}</td>
+                      <td className="px-3 py-2 text-[color:var(--wsu-muted)]">{new Date(a.createdAt).toLocaleDateString()}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => deleteApprover(a.id)}
+                          className="text-xs font-medium text-red-700 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          <h3 style={{ marginTop: 20 }}>Create approver</h3>
-          <div className="field">
-            <label htmlFor="approverEmail">Email</label>
-            <input id="approverEmail" type="email" value={approverEmail} onChange={(e) => setApproverEmail(e.target.value)} placeholder="approver@wsu.edu" />
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Create approver</h3>
+            <div className="mt-2 space-y-3">
+              <div>
+                <label htmlFor="approverEmail" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+                  Email
+                </label>
+                <input
+                  id="approverEmail"
+                  type="email"
+                  value={approverEmail}
+                  onChange={(e) => setApproverEmail(e.target.value)}
+                  placeholder="approver@wsu.edu"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="approverPassword" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+                  Password
+                </label>
+                <input
+                  id="approverPassword"
+                  type="password"
+                  value={approverPassword}
+                  onChange={(e) => setApproverPassword(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <button type="button" onClick={createApprover} className={primaryBtnClass}>
+                Create approver
+              </button>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="approverPassword">Password</label>
-            <input id="approverPassword" type="password" value={approverPassword} onChange={(e) => setApproverPassword(e.target.value)} />
+          <div>
+            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Reset password</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <select
+                value={resetPasswordId}
+                onChange={(e) => setResetPasswordId(e.target.value)}
+                className={`min-w-[10rem] flex-1 ${inputClass}`}
+              >
+                <option value="">Select approver…</option>
+                {approvers.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.email}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="password"
+                placeholder="New password"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                className={`min-w-[10rem] flex-1 ${inputClass}`}
+              />
+              <button type="button" onClick={resetApproverPassword} className={secondaryBtnClass}>
+                Reset
+              </button>
+            </div>
           </div>
-          <button className="btn" onClick={createApprover}>
-            Create approver
-          </button>
-          <h3 style={{ marginTop: 20 }}>Reset password</h3>
-          <div className="add-row">
-            <select value={resetPasswordId} onChange={(e) => setResetPasswordId(e.target.value)}>
-              <option value="">Select approver…</option>
-              {approvers.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.email}
-                </option>
-              ))}
-            </select>
-            <input type="password" placeholder="New password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} />
-            <button className="btn btn--ghost" onClick={resetApproverPassword}>
-              Reset
-            </button>
-          </div>
-          {approverMsg ? <div className={`note ${approverMsg.ok ? "note--ok" : "note--err"}`}>{approverMsg.text}</div> : null}
-        </section>
+          {approverMsg ? <Alert ok={approverMsg.ok} text={approverMsg.text} /> : null}
+        </Card>
       ) : null}
+
+      <CreateFormModal
+        open={createModalOpen}
+        onClose={closeCreateModal}
+        mode={mode}
+        onModeChange={setMode}
+        templateId={templateId}
+        onTemplateIdChange={setTemplateId}
+        sheets={sheets}
+        sheetsError={sheetsError}
+        newName={newName}
+        onNewNameChange={setNewName}
+        destinationFolderId={destinationFolderId}
+        onDestinationFolderIdChange={setDestinationFolderId}
+        shareEmail={shareEmail}
+        onShareEmailChange={setShareEmail}
+        creating={creating}
+        onCreate={createForm}
+        createMsg={createMsg}
+      />
     </div>
   );
 }

@@ -31,6 +31,7 @@
     "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-hook-form": "^7.81.0",
     "sanitize-html": "^2.17.2"
   },
   "devDependencies": {
