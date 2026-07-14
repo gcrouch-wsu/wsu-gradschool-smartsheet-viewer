@@ -112,12 +112,12 @@ function SmartsheetResourcePicker({
 
   if (manualMode) {
     return (
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2" ref={rootRef}>
+        <div className="flex h-6 items-center justify-between gap-2">
           <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
           <button
             type="button"
-            className="text-xs font-medium text-wsu-crimson hover:underline"
+            className="shrink-0 whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
             onClick={() => setManualMode(false)}
           >
             Use searchable list
@@ -137,7 +137,7 @@ function SmartsheetResourcePicker({
           placeholder="From sheet/report URL"
           className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
         />
-        <p className="text-xs text-[color:var(--wsu-muted)]">
+        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
           Numeric ID from the Smartsheet URL when the resource isn&apos;t in the list.
         </p>
       </div>
@@ -145,15 +145,15 @@ function SmartsheetResourcePicker({
   }
 
   return (
-    <div className="space-y-2" ref={rootRef}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium text-[color:var(--wsu-ink)]">
+    <div className="flex flex-col gap-2" ref={rootRef}>
+      <div className="flex h-6 items-center justify-between gap-2">
+        <span className="truncate text-sm font-medium text-[color:var(--wsu-ink)]">
           {sourceType === "report" ? "Smartsheet report" : "Smartsheet sheet"}
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
-            className="text-xs font-medium text-[color:var(--wsu-muted)] hover:text-wsu-crimson hover:underline disabled:opacity-50"
+            className="whitespace-nowrap text-xs font-medium text-[color:var(--wsu-muted)] hover:text-wsu-crimson hover:underline disabled:opacity-50"
             onClick={() => void loadCatalog()}
             disabled={loading}
           >
@@ -161,7 +161,7 @@ function SmartsheetResourcePicker({
           </button>
           <button
             type="button"
-            className="text-xs font-medium text-wsu-crimson hover:underline"
+            className="whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
             onClick={() => {
               setManualMode(true);
               setOpen(false);
@@ -237,9 +237,9 @@ function SmartsheetResourcePicker({
       </div>
 
       {error && !loading ? (
-        <p className="text-xs text-amber-800">{error}</p>
+        <p className="min-h-4 text-xs text-amber-800">{error}</p>
       ) : (
-        <p className="text-xs text-[color:var(--wsu-muted)]">
+        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
           {items.length
             ? `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
             : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
@@ -833,28 +833,30 @@ export function SourceForm({
             />
             <p className="text-xs text-[color:var(--wsu-muted)]">Display name shown in the admin UI. Editable anytime.</p>
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Source type</span>
-            <select
-              value={form.sourceType}
-              onChange={(event) => {
-                const sourceType = event.target.value as SourceConfig["sourceType"];
-                setForm((current) => ({
-                  ...current,
-                  sourceType,
-                  // Clear selection when switching sheet ↔ report to avoid mismatched IDs.
-                  smartsheetId: 0,
-                }));
-                setSchema(null);
-                setSchemaError("");
-              }}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
-            >
-              <option value="sheet">Sheet</option>
-              <option value="report">Report</option>
-            </select>
-          </label>
-          <div className="space-y-2 text-sm md:col-span-2">
+          <div className="contents">
+            <div className="flex flex-col gap-2">
+              <div className="flex h-6 items-center">
+                <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Source type</span>
+              </div>
+              <select
+                value={form.sourceType}
+                onChange={(event) => {
+                  const sourceType = event.target.value as SourceConfig["sourceType"];
+                  setForm((current) => ({
+                    ...current,
+                    sourceType,
+                    // Clear selection when switching sheet ↔ report to avoid mismatched IDs.
+                    smartsheetId: 0,
+                  }));
+                  setSchema(null);
+                  setSchemaError("");
+                }}
+                className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+              >
+                <option value="sheet">Sheet</option>
+                <option value="report">Report</option>
+              </select>
+            </div>
             <SmartsheetResourcePicker
               sourceType={form.sourceType}
               connectionKey={form.connectionKey}
