@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useToast } from "@/components/admin/Toast";
 import {
   countDelimitedRoleAttributes,
@@ -13,6 +13,241 @@ import {
 import type { SmartsheetSchemaSummary } from "@/lib/smartsheet";
 import type { FieldSourceSelector, SmartsheetColumn, SourceConfig, SourceRoleGroupConfig } from "@/lib/config/types";
 import { slugify } from "@/lib/utils";
+
+type CatalogItem = { id: number; name: string };
+
+function SmartsheetResourcePicker({
+  sourceType,
+  connectionKey,
+  apiBaseUrl,
+  smartsheetId,
+  onSelect,
+}: {
+  sourceType: SourceConfig["sourceType"];
+  connectionKey?: string;
+  apiBaseUrl?: string;
+  smartsheetId: number;
+  onSelect: (item: CatalogItem) => void;
+}) {
+  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualId, setManualId] = useState(smartsheetId > 0 ? String(smartsheetId) : "");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const selected = useMemo(
+    () => items.find((item) => item.id === smartsheetId) ?? null,
+    [items, smartsheetId],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (item) => item.name.toLowerCase().includes(q) || String(item.id).includes(q),
+    );
+  }, [items, query]);
+
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ type: sourceType });
+      if (connectionKey?.trim()) params.set("connectionKey", connectionKey.trim());
+      if (apiBaseUrl?.trim()) params.set("apiBaseUrl", apiBaseUrl.trim());
+      const response = await fetch(`/api/admin/smartsheet/catalog?${params}`, {
+        credentials: "include",
+      });
+      const payload = (await response.json()) as { items?: CatalogItem[]; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || `Could not load ${sourceType}s (${response.status}).`);
+      }
+      setItems(Array.isArray(payload.items) ? payload.items : []);
+    } catch (e: unknown) {
+      setItems([]);
+      setError(e instanceof Error ? e.message : `Could not load ${sourceType}s.`);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBaseUrl, connectionKey, sourceType]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadCatalog();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [loadCatalog]);
+
+  useEffect(() => {
+    setQuery("");
+    setOpen(false);
+    setManualMode(false);
+    setManualId(smartsheetId > 0 ? String(smartsheetId) : "");
+  }, [sourceType]);
+
+  useEffect(() => {
+    setManualId(smartsheetId > 0 ? String(smartsheetId) : "");
+  }, [smartsheetId]);
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, []);
+
+  const displayValue = open
+    ? query
+    : selected
+      ? `${selected.name} (ID ${selected.id})`
+      : smartsheetId > 0
+        ? `ID ${smartsheetId}`
+        : "";
+
+  if (manualMode) {
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
+          <button
+            type="button"
+            className="text-xs font-medium text-wsu-crimson hover:underline"
+            onClick={() => setManualMode(false)}
+          >
+            Use searchable list
+          </button>
+        </div>
+        <input
+          type="number"
+          value={manualId}
+          onChange={(event) => {
+            const next = event.target.value;
+            setManualId(next);
+            const id = Number(next);
+            if (Number.isFinite(id) && id > 0) {
+              onSelect({ id, name: selected?.name ?? "" });
+            }
+          }}
+          placeholder="From sheet/report URL"
+          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+        />
+        <p className="text-xs text-[color:var(--wsu-muted)]">
+          Numeric ID from the Smartsheet URL when the resource isn&apos;t in the list.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2" ref={rootRef}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium text-[color:var(--wsu-ink)]">
+          {sourceType === "report" ? "Smartsheet report" : "Smartsheet sheet"}
+        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="text-xs font-medium text-[color:var(--wsu-muted)] hover:text-wsu-crimson hover:underline disabled:opacity-50"
+            onClick={() => void loadCatalog()}
+            disabled={loading}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="text-xs font-medium text-wsu-crimson hover:underline"
+            onClick={() => {
+              setManualMode(true);
+              setOpen(false);
+            }}
+          >
+            Enter ID manually
+          </button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <input
+          role="combobox"
+          aria-expanded={open}
+          aria-controls="smartsheet-catalog-listbox"
+          aria-autocomplete="list"
+          value={displayValue}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+            if (selected) setQuery("");
+          }}
+          placeholder={loading ? `Loading ${sourceType}s…` : `Search ${sourceType}s by name or ID…`}
+          disabled={loading && items.length === 0}
+          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+        />
+
+        {open ? (
+          <ul
+            id="smartsheet-catalog-listbox"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[color:var(--wsu-border)] bg-white py-1 shadow-lg"
+          >
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
+                {loading ? "Loading…" : error || `No matching ${sourceType}s.`}
+              </li>
+            ) : (
+              filtered.slice(0, 100).map((item) => {
+                const isActive = item.id === smartsheetId;
+                return (
+                  <li key={item.id} role="option" aria-selected={isActive}>
+                    <button
+                      type="button"
+                      className={[
+                        "flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-[color:var(--wsu-stone)]",
+                        isActive ? "bg-wsu-crimson/5 text-wsu-crimson" : "text-[color:var(--wsu-ink)]",
+                      ].join(" ")}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onSelect(item);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
+                      <span className="shrink-0 text-xs text-[color:var(--wsu-muted)]">ID {item.id}</span>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+            {filtered.length > 100 ? (
+              <li className="border-t border-[color:var(--wsu-border)] px-4 py-2 text-xs text-[color:var(--wsu-muted)]">
+                Showing first 100 matches — type to narrow the list.
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+      </div>
+
+      {error && !loading ? (
+        <p className="text-xs text-amber-800">{error}</p>
+      ) : (
+        <p className="text-xs text-[color:var(--wsu-muted)]">
+          {items.length
+            ? `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
+            : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function buildInitialState(source: SourceConfig | null, connectionKeys: string[]): SourceConfig {
   return (
@@ -602,24 +837,49 @@ export function SourceForm({
             <span className="font-medium text-[color:var(--wsu-ink)]">Source type</span>
             <select
               value={form.sourceType}
-              onChange={(event) => update("sourceType", event.target.value as SourceConfig["sourceType"])}
+              onChange={(event) => {
+                const sourceType = event.target.value as SourceConfig["sourceType"];
+                setForm((current) => ({
+                  ...current,
+                  sourceType,
+                  // Clear selection when switching sheet ↔ report to avoid mismatched IDs.
+                  smartsheetId: 0,
+                }));
+                setSchema(null);
+                setSchemaError("");
+              }}
               className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
             >
               <option value="sheet">Sheet</option>
               <option value="report">Report</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
-            <input
-              type="number"
-              value={form.smartsheetId || ""}
-              onChange={(event) => update("smartsheetId", Number(event.target.value) || 0)}
-              placeholder="From sheet/report URL"
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+          <div className="space-y-2 text-sm md:col-span-2">
+            <SmartsheetResourcePicker
+              sourceType={form.sourceType}
+              connectionKey={form.connectionKey}
+              apiBaseUrl={form.apiBaseUrl}
+              smartsheetId={form.smartsheetId}
+              onSelect={(item) => {
+                setForm((current) => {
+                  const canAutofillName = Boolean(item.name?.trim()) && !/^Smartsheet \d+$/i.test(item.name.trim());
+                  const nextLabel = current.label.trim() || (canAutofillName ? item.name.trim() : current.label);
+                  const nextId =
+                    isNew && !current.id.trim() && canAutofillName
+                      ? slugify(item.name) || current.id
+                      : current.id;
+                  return {
+                    ...current,
+                    smartsheetId: item.id,
+                    label: nextLabel,
+                    id: nextId,
+                  };
+                });
+                setSchema(null);
+                setSchemaError("");
+              }}
             />
-            <p className="text-xs text-[color:var(--wsu-muted)]">Numeric ID from the Smartsheet URL: app.smartsheet.com/sheets/XXXXXXXX or .../reports/XXXXXXXX</p>
-          </label>
+          </div>
           <label className="space-y-2 text-sm">
             <span className="font-medium text-[color:var(--wsu-ink)]">Connection key</span>
             <input

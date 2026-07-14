@@ -733,6 +733,55 @@ export async function testSourceConnection(source: SourceConfig): Promise<{ ok: 
   }
 }
 
+export interface SmartsheetCatalogItem {
+  id: number;
+  name: string;
+}
+
+/**
+ * Lists sheets or reports visible to a connection — for admin source pickers.
+ */
+export async function listSmartsheetCatalog(
+  kind: "sheet" | "report",
+  options?: { connectionKey?: string; apiBaseUrl?: string },
+): Promise<SmartsheetCatalogItem[]> {
+  const { token, apiBaseUrl } = resolveConnection(options?.connectionKey, options?.apiBaseUrl);
+  const base = apiBaseUrl.replace(/\/$/, "");
+  const path = kind === "report" ? "reports" : "sheets";
+  const items: SmartsheetCatalogItem[] = [];
+  let page = 1;
+  const pageSize = 100;
+
+  while (true) {
+    const url = new URL(`${base}/${path}`);
+    url.searchParams.set("pageSize", String(pageSize));
+    url.searchParams.set("page", String(page));
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new SmartsheetRequestError(response.status, body);
+    }
+    const data = (await response.json()) as {
+      data?: Array<{ id?: number; name?: string }>;
+      totalPages?: number;
+    };
+    for (const row of data.data ?? []) {
+      if (typeof row.id === "number" && typeof row.name === "string" && row.name.trim()) {
+        items.push({ id: row.id, name: row.name.trim() });
+      }
+    }
+    const totalPages = data.totalPages ?? 1;
+    if (page >= totalPages) break;
+    page += 1;
+  }
+
+  return items.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
 /**
  * Verifies that the default Smartsheet connection can reach the API.
  * Returns true if the token is valid, false otherwise (never throws).
