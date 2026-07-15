@@ -23,9 +23,18 @@ type FormValues = Record<string, string>;
 interface SubmissionFormViewProps {
   schema: FormSchema;
   serverErrors: string[];
-  onSubmit: (values: Record<string, string>, files: FileList | null) => Promise<{ ok: boolean }>;
+  onSubmit: (
+    values: Record<string, string>,
+    files: FileList | null,
+    extras?: { website?: string; turnstileToken?: string; renderedAt?: number },
+  ) => Promise<{ ok: boolean }>;
   /** When true, hide the submit button (builder preview). */
   preview?: boolean;
+  /** Public published form — enables honeypot + optional Turnstile. */
+  publicMode?: boolean;
+  turnstileSiteKey?: string;
+  turnstileRequired?: boolean;
+  renderedAt?: number;
 }
 
 const inputClass =
@@ -264,11 +273,23 @@ function FileUploadZone({
   );
 }
 
-export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = false }: SubmissionFormViewProps) {
+export function SubmissionFormView({
+  schema,
+  serverErrors,
+  onSubmit,
+  preview = false,
+  publicMode = false,
+  turnstileSiteKey = "",
+  turnstileRequired = false,
+  renderedAt,
+}: SubmissionFormViewProps) {
   const [files, setFiles] = useState<FileList | null>(null);
   const [clientErrors, setClientErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<HTMLDivElement | null>(null);
 
   const defaultValues = useMemo(() => {
     const vals: FormValues = {};
@@ -303,9 +324,65 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
   const formTitle = schema.formTitle?.trim() || schema.sheetName;
   const formDescription = schema.formDescription?.trim() || "";
 
+  useEffect(() => {
+    if (!publicMode || !turnstileSiteKey || preview) return;
+    const existing = document.querySelector('script[data-forms-turnstile="1"]');
+    if (existing) return;
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.dataset.formsTurnstile = "1";
+    document.body.appendChild(script);
+  }, [publicMode, turnstileSiteKey, preview]);
+
+  useEffect(() => {
+    if (!publicMode || !turnstileSiteKey || preview || !turnstileRef.current) return;
+    type TurnstileApi = {
+      render: (
+        el: HTMLElement,
+        opts: { sitekey: string; callback: (token: string) => void; "expired-callback"?: () => void },
+      ) => string;
+      remove?: (id: string) => void;
+    };
+    const w = window as unknown as { turnstile?: TurnstileApi };
+    let widgetId: string | null = null;
+    let cancelled = false;
+
+    function tryRender() {
+      if (cancelled || !turnstileRef.current || !w.turnstile) return false;
+      widgetId = w.turnstile.render(turnstileRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token: string) => setTurnstileToken(token),
+        "expired-callback": () => setTurnstileToken(""),
+      });
+      return true;
+    }
+
+    if (!tryRender()) {
+      const timer = window.setInterval(() => {
+        if (tryRender()) window.clearInterval(timer);
+      }, 200);
+      return () => {
+        cancelled = true;
+        window.clearInterval(timer);
+        if (widgetId && w.turnstile?.remove) w.turnstile.remove(widgetId);
+      };
+    }
+
+    return () => {
+      cancelled = true;
+      if (widgetId && w.turnstile?.remove) w.turnstile.remove(widgetId);
+    };
+  }, [publicMode, turnstileSiteKey, preview]);
+
   async function processSubmit(data: FormValues) {
     setClientErrors([]);
     setFieldErrors({});
+
+    if (publicMode && turnstileRequired && !turnstileToken.trim()) {
+      setClientErrors(["Please complete the captcha challenge."]);
+      return;
+    }
 
     const validation = validateFormClient(
       schema.columns,
@@ -323,7 +400,13 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
     const payload = buildSubmitPayload(schema.columns, data, schema.conditionalLogic);
     setSubmitting(true);
     try {
-      await onSubmit(payload, files);
+      await onSubmit(payload, files, publicMode
+        ? {
+            website: honeypot,
+            turnstileToken: turnstileToken || undefined,
+            renderedAt: renderedAt ?? Date.now(),
+          }
+        : undefined);
     } finally {
       setSubmitting(false);
     }
@@ -360,7 +443,7 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
       <form
         onSubmit={handleSubmit(processSubmit)}
         noValidate
-        className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-sm"
+        className="relative overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-sm"
       >
         <div className="border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">
@@ -397,6 +480,24 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
           {schema.attachmentsEnabled !== false ? (
             <FileUploadZone files={files} onChange={setFiles} disabled={submitting} />
           ) : null}
+
+          {publicMode ? (
+            <>
+              <div className="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+                <label htmlFor="website">Website</label>
+                <input
+                  id="website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                />
+              </div>
+              {turnstileSiteKey ? <div ref={turnstileRef} className="cf-turnstile" /> : null}
+            </>
+          ) : null}
         </div>
 
         {!preview ? (
@@ -425,9 +526,11 @@ export function SubmissionFormView({ schema, serverErrors, onSubmit, preview = f
 export function SubmissionSuccessView({
   message,
   onSubmitAnother,
+  showTrackerLink = true,
 }: {
   message: string;
   onSubmitAnother: () => void;
+  showTrackerLink?: boolean;
 }) {
   return (
     <div className="mx-auto max-w-lg rounded-xl border border-emerald-200 bg-emerald-50/80 px-6 py-10 text-center">
@@ -444,28 +547,40 @@ export function SubmissionSuccessView({
         >
           Submit another
         </button>
-        <Link
-          href="/forms/tracker"
-          className="rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson/90"
-        >
-          View tracker
-        </Link>
+        {showTrackerLink ? (
+          <Link
+            href="/forms/tracker"
+            className="rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson/90"
+          >
+            View tracker
+          </Link>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export function SubmissionFormEmptyState({ error, onRetry }: { error: string; onRetry?: () => void }) {
+export function SubmissionFormEmptyState({
+  error,
+  onRetry,
+  hideManageLink = false,
+}: {
+  error: string;
+  onRetry?: () => void;
+  hideManageLink?: boolean;
+}) {
   return (
     <div className="mx-auto max-w-lg rounded-xl border border-[color:var(--wsu-border)] bg-white px-6 py-10 text-center">
       <p className="text-sm text-red-700">{error}</p>
-      <p className="mt-3 text-sm text-[color:var(--wsu-muted)]">
-        Set up a form on the{" "}
-        <Link href="/forms/manage" className="font-medium text-wsu-crimson hover:underline">
-          admin page
-        </Link>
-        .
-      </p>
+      {!hideManageLink ? (
+        <p className="mt-3 text-sm text-[color:var(--wsu-muted)]">
+          Set up a form on the{" "}
+          <Link href="/forms/manage" className="font-medium text-wsu-crimson hover:underline">
+            admin page
+          </Link>
+          .
+        </p>
+      ) : null}
       {onRetry ? (
         <button
           type="button"

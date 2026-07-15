@@ -1,11 +1,7 @@
-import { config, loadConditionalLogic } from "@/lib/forms/config";
-import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
-import { resolveFormColumns } from "@/lib/forms/form-fields";
-import { fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
-import { loadFormFields } from "@/lib/forms/store/field-config";
-import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAccess } from "@/lib/forms/forms-api";
+import { ensureBootstrapped } from "@/lib/forms/init";
+import * as registry from "@/lib/forms/registry";
+import { buildFormSchemaPayload } from "@/lib/forms/form-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,25 +17,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sheet = await ss.getSheet(active);
-    const extracted = ss.extractColumns(sheet);
-    const { columns, source: formColumnSource } = await resolveFormColumns(sheet, extracted);
-    const fieldConfig = await loadFormFields(active);
-    const fieldMeta = fieldMetaFromConfig(fieldConfig);
-    const conditionalLogic = await loadConditionalLogic(active);
-    return Response.json({
-      sheetName: sheet.name,
-      formTitle: fieldConfig?.formTitle ?? "",
-      formDescription: fieldConfig?.formDescription ?? "",
-      formItems: (fieldConfig?.fields ?? []).filter((f) => !f.hiddenOnForm),
-      columns,
-      formColumnSource,
-      fieldMeta,
-      conditionalLogic,
-      allowedDomains: config.allowedDomains,
-      demo: config.demo,
-      attachmentsEnabled: config.attachmentsEnabled,
-    });
+    const payload = await buildFormSchemaPayload(active);
+    return Response.json(payload);
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

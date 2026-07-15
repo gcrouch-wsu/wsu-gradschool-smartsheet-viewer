@@ -166,12 +166,19 @@ export function mergeFieldsWithColumns(
 
 export function deriveFormFieldConfig(
   fields: FormFieldDefinition[],
-  presentation?: { formTitle?: string; formDescription?: string },
+  presentation?: {
+    formTitle?: string;
+    formDescription?: string;
+    allowedDomains?: string[];
+    attachmentsEnabled?: boolean;
+  },
 ): FormFieldConfig {
   return normalizeFormFieldConfig({
     columns: [],
     fields,
     formTitle: presentation?.formTitle,
     formDescription: presentation?.formDescription,
+    allowedDomains: presentation?.allowedDomains,
+    attachmentsEnabled: presentation?.attachmentsEnabled,
   });
 }

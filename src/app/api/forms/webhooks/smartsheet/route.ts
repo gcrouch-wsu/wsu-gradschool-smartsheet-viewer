@@ -22,8 +22,9 @@ export async function POST(request: Request) {
   const active = await registry.activeSheetId();
 
   for (const ev of Array.isArray(events) ? events : [events]) {
-    const sheetId = ev.objectId ?? ev.sheetId ?? Number(active);
-    await recordWebhookEvent(Number(sheetId), String(ev.eventType ?? ev.type ?? "unknown"), Number(ev.rowId ?? ev.id ?? 0));
+    const sheetId = Number(ev.objectId ?? ev.sheetId ?? active);
+    if (!Number.isFinite(sheetId) || sheetId <= 0) continue;
+    await recordWebhookEvent(sheetId, String(ev.eventType ?? ev.type ?? "unknown"), Number(ev.rowId ?? ev.id ?? 0));
   }
 
   return Response.json({ ok: true });

@@ -39,9 +39,14 @@ export function validateSubmission(
   values: Record<string, string>,
   conditional: ConditionalRule[],
   fieldMeta?: Record<string, FormFieldMeta>,
+  allowedDomains?: string[],
 ): ValidationOutput {
   const errors: string[] = [];
   const cells: SubmissionCell[] = [];
+  const domains =
+    Array.isArray(allowedDomains) && allowedDomains.length > 0
+      ? allowedDomains.map((d) => d.trim().toLowerCase()).filter(Boolean)
+      : config.allowedDomains;
 
   const conditionalTargets = new Set<string>();
   for (const rule of conditional) {
@@ -98,8 +103,8 @@ export function validateSubmission(
         continue;
       }
       const domain = raw.split("@")[1]?.toLowerCase() ?? "";
-      if (!config.allowedDomains.includes(domain)) {
-        errors.push(`Email must be from: ${config.allowedDomains.join(", ")}.`);
+      if (domains.length && !domains.includes(domain)) {
+        errors.push(`Email must be from: ${domains.join(", ")}.`);
         continue;
       }
       cells.push({
@@ -115,8 +120,8 @@ export function validateSubmission(
         continue;
       }
       const domain = raw.split("@")[1]?.toLowerCase() ?? "";
-      if (!config.allowedDomains.includes(domain)) {
-        errors.push(`Email must be from: ${config.allowedDomains.join(", ")}.`);
+      if (domains.length && !domains.includes(domain)) {
+        errors.push(`Email must be from: ${domains.join(", ")}.`);
         continue;
       }
     }

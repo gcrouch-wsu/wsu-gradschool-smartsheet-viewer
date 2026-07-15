@@ -1,3 +1,4 @@
+import { resolveAllowedDomains, resolveAttachmentsEnabled } from "@/lib/forms/allowed-domains";
 import { config, loadConditionalLogic } from "@/lib/forms/config";
 import {
   isInternalFormColumn,
@@ -29,6 +30,20 @@ const ITEM_KINDS = new Set<FormItemKind>(["field", "heading", "description", "di
 function asOptionalString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   return value;
+}
+
+function parseAllowedDomainsBody(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean);
+  }
+  if (Array.isArray(value)) {
+    return value.map((d) => String(d).trim().toLowerCase()).filter(Boolean);
+  }
+  return undefined;
 }
 
 async function resolveSheetId(request: Request): Promise<string | null> {
@@ -65,7 +80,12 @@ export async function GET(request: Request) {
     const derived = deriveFormFieldConfig(fields, {
       formTitle: fieldConfig?.formTitle,
       formDescription: fieldConfig?.formDescription,
+      allowedDomains: fieldConfig?.allowedDomains,
+      attachmentsEnabled: fieldConfig?.attachmentsEnabled,
     });
+    const formEntry = await registry.getFormById(sheetId);
+    const resolvedDomains = resolveAllowedDomains(fieldConfig);
+    const attachmentsEnabled = resolveAttachmentsEnabled(fieldConfig);
 
     return Response.json({
       sheetId: String(sheet.id ?? sheetId),
@@ -82,8 +102,14 @@ export async function GET(request: Request) {
       workflowExclusions,
       lockedTitles: [...lockedTitles],
       demo: config.demo,
-      attachmentsEnabled: config.attachmentsEnabled,
-      allowedDomains: config.allowedDomains,
+      attachmentsEnabled,
+      envAttachmentsEnabled: config.attachmentsEnabled,
+      allowedDomains: resolvedDomains,
+      formAllowedDomains: fieldConfig?.allowedDomains ?? [],
+      envAllowedDomains: config.allowedDomains,
+      formSlug: formEntry?.slug ?? "",
+      formPublic: Boolean(formEntry?.public),
+      publicUrl: formEntry?.public && formEntry.slug ? `/f/${formEntry.slug}` : null,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);
@@ -105,17 +131,37 @@ export async function PUT(request: Request) {
   const conditionalLogic = Array.isArray(body.conditionalLogic) ? (body.conditionalLogic as ConditionalRule[]) : null;
   const hasFormTitle = Object.prototype.hasOwnProperty.call(body, "formTitle");
   const hasFormDescription = Object.prototype.hasOwnProperty.call(body, "formDescription");
+  const hasAllowedDomains = Object.prototype.hasOwnProperty.call(body, "allowedDomains");
+  const hasAttachmentsEnabled = Object.prototype.hasOwnProperty.call(body, "attachmentsEnabled");
   const formTitle = hasFormTitle ? asOptionalString(body.formTitle) : undefined;
   const formDescription = hasFormDescription ? asOptionalString(body.formDescription) : undefined;
+  const allowedDomains = hasAllowedDomains ? parseAllowedDomainsBody(body.allowedDomains) : undefined;
+  const attachmentsEnabled =
+    hasAttachmentsEnabled && typeof body.attachmentsEnabled === "boolean"
+      ? body.attachmentsEnabled
+      : undefined;
 
-  if (!fields && !conditionalLogic && !hasFormTitle && !hasFormDescription) {
-    return Response.json({ error: "Provide fields, form title/description, and/or conditionalLogic." }, { status: 400 });
+  if (
+    !fields &&
+    !conditionalLogic &&
+    !hasFormTitle &&
+    !hasFormDescription &&
+    !hasAllowedDomains &&
+    !hasAttachmentsEnabled
+  ) {
+    return Response.json(
+      {
+        error:
+          "Provide fields, form title/description, allowedDomains, attachmentsEnabled, and/or conditionalLogic.",
+      },
+      { status: 400 },
+    );
   }
 
   try {
     const existing = await loadFormFields(sheetId);
 
-    if (fields || hasFormTitle || hasFormDescription) {
+    if (fields || hasFormTitle || hasFormDescription || hasAllowedDomains || hasAttachmentsEnabled) {
       const sheet = await ss.getSheet(sheetId);
       const columns = ss.extractColumns(sheet);
       const locked = new Set([
@@ -145,11 +191,23 @@ export async function PUT(request: Request) {
         })
         .filter((f) => f.columnTitle);
 
+      const nextDomains = hasAllowedDomains
+        ? allowedDomains && allowedDomains.length > 0
+          ? allowedDomains
+          : undefined
+        : existing?.allowedDomains;
+
+      const nextAttachments = hasAttachmentsEnabled
+        ? attachmentsEnabled
+        : existing?.attachmentsEnabled;
+
       await saveFormFields(
         sheetId,
         deriveFormFieldConfig(sanitized, {
           formTitle: hasFormTitle ? formTitle : existing?.formTitle,
           formDescription: hasFormDescription ? formDescription : existing?.formDescription,
+          allowedDomains: nextDomains,
+          attachmentsEnabled: nextAttachments,
         }),
       );
     }

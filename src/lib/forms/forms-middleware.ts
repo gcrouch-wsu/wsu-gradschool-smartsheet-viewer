@@ -15,8 +15,20 @@ const FORMS_PUBLIC_PATHS = new Set([
   "/api/forms/approver/session",
 ]);
 
+function isPublicFormPath(pathname: string) {
+  if (pathname === "/f" || pathname.startsWith("/f/")) return true;
+  if (pathname.startsWith("/api/forms/public/")) return true;
+  return false;
+}
+
 function isFormsPath(pathname: string) {
-  return pathname === "/forms" || pathname.startsWith("/forms/") || pathname === "/api/forms" || pathname.startsWith("/api/forms/");
+  return (
+    isPublicFormPath(pathname) ||
+    pathname === "/forms" ||
+    pathname.startsWith("/forms/") ||
+    pathname === "/api/forms" ||
+    pathname.startsWith("/api/forms/")
+  );
 }
 
 function isFormsAdminPath(pathname: string) {
@@ -54,6 +66,10 @@ async function hasApproverSession(request: NextRequest): Promise<boolean> {
 export async function handleFormsMiddleware(request: NextRequest): Promise<NextResponse | null> {
   const { pathname, search } = request.nextUrl;
   if (!isFormsPath(pathname)) return null;
+
+  if (isPublicFormPath(pathname)) {
+    return NextResponse.next();
+  }
 
   if (pathname === "/api/forms/webhooks/smartsheet" && request.method === "POST") {
     if (validateWebhookSecret(request)) return NextResponse.next();

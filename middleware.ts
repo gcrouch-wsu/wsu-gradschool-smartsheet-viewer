@@ -92,6 +92,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/f",
+    "/f/:path*",
     "/forms",
     "/forms/:path*",
     "/api/forms",

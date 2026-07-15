@@ -1,12 +1,15 @@
 "use client";
 
-import { IconCheck, IconFile, IconMore, IconSearch } from "@/components/forms/icons";
+import { IconCheck, IconFile, IconSearch } from "@/components/forms/icons";
 
 export interface FormEntryRow {
   id: string;
   name: string;
   createdAt: string;
   source: "template" | "scratch" | "imported" | "sample";
+  slug?: string;
+  public?: boolean;
+  publishedAt?: string;
 }
 
 const SOURCE_LABEL: Record<FormEntryRow["source"], string> = {
@@ -28,6 +31,9 @@ interface FormsTableProps {
   query: string;
   onQueryChange: (value: string) => void;
   onUseForm: (id: string) => void;
+  onPublish: (id: string) => void;
+  onUnpublish: (id: string) => void;
+  busyId?: string | null;
 }
 
 export function FormsTable({
@@ -37,12 +43,18 @@ export function FormsTable({
   query,
   onQueryChange,
   onUseForm,
+  onPublish,
+  onUnpublish,
+  busyId,
 }: FormsTableProps) {
   return (
     <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--wsu-border)] px-4 py-3">
         <div>
           <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Your forms</h2>
+          <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">
+            Active = testing workspace at /forms. Published = public submit URL (independent).
+          </p>
           <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Active path: {activePath || "—"}</p>
         </div>
         <div className="relative w-full sm:w-56">
@@ -62,14 +74,15 @@ export function FormsTable({
         <p className="px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">No forms yet.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-[color:var(--wsu-border)] text-xs text-[color:var(--wsu-muted)]">
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Source</th>
-                <th className="px-4 py-2.5 font-medium">Sheet ID</th>
+                <th className="px-4 py-2.5 font-medium">Slug</th>
                 <th className="px-4 py-2.5 font-medium">Created</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Workspace</th>
+                <th className="px-4 py-2.5 font-medium">Publication</th>
                 <th className="px-4 py-2.5 font-medium">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -78,6 +91,9 @@ export function FormsTable({
             <tbody>
               {forms.map((form) => {
                 const isActive = String(form.id) === activeId;
+                const isPublished = Boolean(form.public);
+                const publicUrl = form.slug ? `/f/${form.slug}` : null;
+                const busy = busyId === form.id;
                 return (
                   <tr
                     key={form.id}
@@ -88,13 +104,12 @@ export function FormsTable({
                         <IconFile className="h-4 w-4 shrink-0 text-[color:var(--wsu-muted)]" />
                         <span className="truncate font-medium text-[color:var(--wsu-ink)]">{form.name}</span>
                       </div>
+                      <p className="mt-0.5 font-mono text-[10px] text-[color:var(--wsu-muted)]" title={form.id}>
+                        {truncateSheetId(form.id)}
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-[color:var(--wsu-muted)]">{SOURCE_LABEL[form.source]}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-[color:var(--wsu-muted)]" title={form.id}>
-                        {truncateSheetId(form.id)}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-[color:var(--wsu-muted)]">{form.slug || "—"}</td>
                     <td className="px-4 py-3 text-[color:var(--wsu-muted)]">
                       {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : ""}
                     </td>
@@ -114,15 +129,52 @@ export function FormsTable({
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        className="rounded-lg p-1.5 text-[color:var(--wsu-muted)] hover:bg-white hover:text-[color:var(--wsu-ink)]"
-                        aria-label={`Actions for ${form.name}`}
-                        onClick={() => !isActive && onUseForm(form.id)}
-                      >
-                        <IconMore />
-                      </button>
+                    <td className="px-4 py-3">
+                      {isPublished ? (
+                        <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800">
+                          Published
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full bg-[color:var(--wsu-stone)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--wsu-muted)]">
+                          Draft
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {isPublished && publicUrl ? (
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                            disabled={busy}
+                            onClick={() => {
+                              const absolute = `${window.location.origin}${publicUrl}`;
+                              void navigator.clipboard.writeText(absolute);
+                            }}
+                          >
+                            Copy URL
+                          </button>
+                        ) : null}
+                        {isPublished ? (
+                          <button
+                            type="button"
+                            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                            disabled={busy}
+                            onClick={() => onUnpublish(form.id)}
+                          >
+                            Unpublish
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                            disabled={busy}
+                            onClick={() => onPublish(form.id)}
+                          >
+                            Publish
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

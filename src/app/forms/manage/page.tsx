@@ -17,6 +17,9 @@ interface FormEntry {
   name: string;
   createdAt: string;
   source: "template" | "scratch" | "imported" | "sample";
+  slug?: string;
+  public?: boolean;
+  publishedAt?: string;
 }
 
 interface SheetOption {
@@ -109,6 +112,45 @@ export default function ManagePage() {
   const [approverMsg, setApproverMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [resetPasswordId, setResetPasswordId] = useState("");
   const [resetPassword, setResetPassword] = useState("");
+  const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
+
+  async function publishForm(id: string) {
+    setPublishBusyId(id);
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Publish failed.");
+      await loadForms();
+      if (d.publicUrl) {
+        const absolute = `${window.location.origin}${d.publicUrl}`;
+        void navigator.clipboard.writeText(absolute).catch(() => undefined);
+      }
+    } catch (e: unknown) {
+      setFormsError(e instanceof Error ? e.message : "Publish failed.");
+    } finally {
+      setPublishBusyId(null);
+    }
+  }
+
+  async function unpublishForm(id: string) {
+    setPublishBusyId(id);
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/unpublish`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Unpublish failed.");
+      await loadForms();
+    } catch (e: unknown) {
+      setFormsError(e instanceof Error ? e.message : "Unpublish failed.");
+    } finally {
+      setPublishBusyId(null);
+    }
+  }
 
   async function loadForms() {
     try {
@@ -171,7 +213,12 @@ export default function ManagePage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return forms;
-    return forms.filter((f) => f.name.toLowerCase().includes(q) || String(f.id).includes(q));
+    return forms.filter(
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        String(f.id).includes(q) ||
+        (f.slug ?? "").toLowerCase().includes(q),
+    );
   }, [forms, query]);
 
   const registeredIds = useMemo(() => new Set(forms.map((f) => String(f.id))), [forms]);
@@ -470,6 +517,9 @@ export default function ManagePage() {
             query={query}
             onQueryChange={setQuery}
             onUseForm={useForm}
+            onPublish={publishForm}
+            onUnpublish={unpublishForm}
+            busyId={publishBusyId}
           />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

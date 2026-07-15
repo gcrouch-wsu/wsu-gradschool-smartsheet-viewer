@@ -45,18 +45,38 @@ function FormPresentationEditor({
   sheetName,
   formTitle,
   formDescription,
+  allowedDomains,
+  envAllowedDomains,
+  attachmentsEnabled,
+  envAttachmentsEnabled,
+  formPublic,
+  publicUrl,
   onChange,
 }: {
   sheetName: string;
   formTitle: string;
   formDescription: string;
-  onChange: (patch: { formTitle?: string; formDescription?: string }) => void;
+  allowedDomains: string[];
+  envAllowedDomains: string[];
+  attachmentsEnabled: boolean;
+  envAttachmentsEnabled: boolean;
+  formPublic: boolean;
+  publicUrl: string | null;
+  onChange: (patch: {
+    formTitle?: string;
+    formDescription?: string;
+    allowedDomains?: string[];
+    attachmentsEnabled?: boolean;
+  }) => void;
 }) {
+  const domainsText = allowedDomains.join(", ");
+  const envDefault = (envAllowedDomains.length ? envAllowedDomains : ["wsu.edu"]).join(", ");
+
   return (
     <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form title & description</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-        Shown at the top of the public form, like view title and description on Smartsheet Viewer.
+        Shown at the top of the public form. Next: set domains, then publish from Manage.
       </p>
       <div className="mt-3 space-y-3">
         <div>
@@ -76,6 +96,55 @@ function FormPresentationEditor({
             placeholder="Optional supporting text for submitters"
             onChange={(e) => onChange({ formDescription: e.target.value })}
           />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Allowed email domains</label>
+          <input
+            className={inputClass}
+            value={domainsText}
+            placeholder="wsu.edu"
+            onChange={(e) =>
+              onChange({
+                allowedDomains: e.target.value
+                  .split(",")
+                  .map((d) => d.trim().toLowerCase())
+                  .filter(Boolean),
+              })
+            }
+          />
+          <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
+            Comma-separated. Default is <span className="font-mono">{envDefault}</span>. Clear and save to use that
+            default again.
+          </p>
+        </div>
+        <div>
+          <label className="flex items-start gap-2 text-sm text-[color:var(--wsu-ink)]">
+            <input
+              type="checkbox"
+              className="mt-0.5 rounded border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
+              checked={attachmentsEnabled}
+              onChange={(e) => onChange({ attachmentsEnabled: e.target.checked })}
+            />
+            <span>
+              Allow file uploads
+              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--wsu-muted)]">
+                When off, the submit form hides the attachment control. Env default is{" "}
+                {envAttachmentsEnabled ? "on" : "off"} (`ATTACHMENTS_ENABLED`).
+              </span>
+            </span>
+          </label>
+        </div>
+        <div className="rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-3 py-2 text-xs text-[color:var(--wsu-muted)]">
+          {formPublic && publicUrl ? (
+            <p>
+              Published:{" "}
+              <Link href={publicUrl} className="font-medium text-wsu-crimson hover:underline">
+                {publicUrl}
+              </Link>
+            </p>
+          ) : (
+            <p>Draft — publish from Manage to get a public /f/… URL. Active status is only for /forms testing.</p>
+          )}
         </div>
       </div>
     </section>
@@ -615,6 +684,12 @@ export function FormBuilderView() {
             sheetName={builder.state.sheetName}
             formTitle={builder.state.formTitle}
             formDescription={builder.state.formDescription}
+            allowedDomains={builder.state.allowedDomains}
+            envAllowedDomains={builder.state.envAllowedDomains}
+            attachmentsEnabled={builder.state.attachmentsEnabled}
+            envAttachmentsEnabled={builder.state.envAttachmentsEnabled}
+            formPublic={builder.state.formPublic}
+            publicUrl={builder.state.publicUrl}
             onChange={builder.setFormPresentation}
           />
           <FieldPalette onAdd={(type) => void builder.addElement(type)} />

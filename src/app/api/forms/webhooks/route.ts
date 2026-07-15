@@ -29,19 +29,26 @@ export async function POST(request: Request) {
 
   await ensureBootstrapped();
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+  const requestedSheetId = body.sheetId != null ? String(body.sheetId).trim() : "";
+  const active = await registry.activeSheetId();
+  const targetSheetId = requestedSheetId || active;
+  if (!targetSheetId) return Response.json({ error: "No form selected yet." }, { status: 409 });
+
+  const registered = await registry.getFormById(targetSheetId);
+  if (!registered) {
+    return Response.json({ error: "Sheet is not in the forms registry." }, { status: 404 });
+  }
+
   const callbackUrl = String(body.callbackUrl ?? config.webhookCallbackUrl).trim();
   if (!callbackUrl) {
     return Response.json({ error: "callbackUrl or WEBHOOK_CALLBACK_URL is required." }, { status: 400 });
   }
 
   try {
-    const result = (await ss.createWebhook(callbackUrl, Number(active), ["*.*"])) as { result?: { id?: number } };
+    const result = (await ss.createWebhook(callbackUrl, Number(targetSheetId), ["*.*"])) as { result?: { id?: number } };
     if (result.result?.id) await setWebhookId(result.result.id);
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result, sheetId: targetSheetId, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

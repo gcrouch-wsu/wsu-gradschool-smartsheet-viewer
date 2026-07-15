@@ -39,9 +39,16 @@ export interface BuilderState {
   fields: FormFieldDefinition[];
   conditionalLogic: ConditionalRule[];
   lockedTitles: string[];
+  /** Domains currently shown/edited in Builder (resolved for display; save writes this list). */
   allowedDomains: string[];
-  demo: boolean;
+  /** Env fallback domains (for helper text). */
+  envAllowedDomains: string[];
+  formSlug: string;
+  formPublic: boolean;
+  publicUrl: string | null;
   attachmentsEnabled: boolean;
+  envAttachmentsEnabled: boolean;
+  demo: boolean;
 }
 
 async function parseJson(r: Response): Promise<Record<string, unknown>> {
@@ -149,9 +156,14 @@ export function useFormBuilder() {
         fields: (d.fields as FormFieldDefinition[]) ?? [],
         conditionalLogic: (d.conditionalLogic as ConditionalRule[]) ?? [],
         lockedTitles: Array.isArray(d.lockedTitles) ? (d.lockedTitles as string[]) : [],
-        allowedDomains: Array.isArray(d.allowedDomains) ? (d.allowedDomains as string[]) : [],
-        demo: Boolean(d.demo),
+        allowedDomains: Array.isArray(d.allowedDomains) ? (d.allowedDomains as string[]) : ["wsu.edu"],
+        envAllowedDomains: Array.isArray(d.envAllowedDomains) ? (d.envAllowedDomains as string[]) : ["wsu.edu"],
+        formSlug: typeof d.formSlug === "string" ? d.formSlug : "",
+        formPublic: Boolean(d.formPublic),
+        publicUrl: typeof d.publicUrl === "string" ? d.publicUrl : null,
         attachmentsEnabled: d.attachmentsEnabled !== false,
+        envAttachmentsEnabled: d.envAttachmentsEnabled !== false,
+        demo: Boolean(d.demo),
       };
       setState(next);
       setSelectedTitle((prev) => {
@@ -189,7 +201,16 @@ export function useFormBuilder() {
     );
   }
 
-  async function persist(fields: FormFieldDefinition[], conditionalLogic: ConditionalRule[], presentation?: { formTitle: string; formDescription: string }) {
+  async function persist(
+    fields: FormFieldDefinition[],
+    conditionalLogic: ConditionalRule[],
+    presentation?: {
+      formTitle: string;
+      formDescription: string;
+      allowedDomains: string[];
+      attachmentsEnabled: boolean;
+    },
+  ) {
     if (!state) return;
     const r = await fetch("/api/forms/builder", {
       method: "PUT",
@@ -199,6 +220,8 @@ export function useFormBuilder() {
         conditionalLogic,
         formTitle: presentation?.formTitle ?? state.formTitle,
         formDescription: presentation?.formDescription ?? state.formDescription,
+        allowedDomains: presentation?.allowedDomains ?? state.allowedDomains,
+        attachmentsEnabled: presentation?.attachmentsEnabled ?? state.attachmentsEnabled,
       }),
     });
     const d = await parseJson(r);
@@ -382,7 +405,12 @@ export function useFormBuilder() {
     }
   }
 
-  function setFormPresentation(patch: { formTitle?: string; formDescription?: string }) {
+  function setFormPresentation(patch: {
+    formTitle?: string;
+    formDescription?: string;
+    allowedDomains?: string[];
+    attachmentsEnabled?: boolean;
+  }) {
     setState((prev) => (prev ? { ...prev, ...patch } : prev));
     setDirty(true);
     setMessage(null);
@@ -399,6 +427,8 @@ export function useFormBuilder() {
     const config = deriveFormFieldConfig(state.fields, {
       formTitle: state.formTitle,
       formDescription: state.formDescription,
+      allowedDomains: state.allowedDomains,
+      attachmentsEnabled: state.attachmentsEnabled,
     });
     const byTitle = new Map(state.columns.map((c) => [c.title.toLowerCase(), c]));
     const columns = config.columns.map((t) => byTitle.get(t.toLowerCase())).filter((c): c is SmartsheetColumn => Boolean(c));

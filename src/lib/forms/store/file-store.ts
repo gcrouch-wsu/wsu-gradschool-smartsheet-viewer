@@ -66,6 +66,11 @@ export interface FormEntry {
   name: string;
   createdAt: string;
   source: "template" | "scratch" | "imported" | "sample";
+  /** Public path segment for `/f/[slug]`. */
+  slug?: string;
+  /** When true, anonymous users may load/submit via the public URL. Independent of activeSheetId. */
+  public?: boolean;
+  publishedAt?: string;
 }
 
 export interface RegistryShape {

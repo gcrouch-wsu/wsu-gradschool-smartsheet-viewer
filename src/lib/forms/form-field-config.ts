@@ -34,6 +34,16 @@ export interface FormFieldConfig {
   formTitle?: string;
   /** Public form supporting text (like Smartsheet viewer view description). */
   formDescription?: string;
+  /**
+   * Allowed email domains for this form (e.g. ["wsu.edu"]).
+   * Empty/unset falls back to env ALLOWED_DOMAINS, then wsu.edu.
+   */
+  allowedDomains?: string[];
+  /**
+   * Whether this form accepts file uploads.
+   * Unset falls back to env ATTACHMENTS_ENABLED (default true).
+   */
+  attachmentsEnabled?: boolean;
 }
 
 function optionalTrimmed(value: unknown): string | undefined {
@@ -68,6 +78,13 @@ export function defaultTextForLayout(type: FormLayoutElementType): string {
 export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConfig {
   const formTitle = optionalTrimmed(config.formTitle);
   const formDescription = optionalTrimmed(config.formDescription);
+  const allowedDomains = Array.isArray(config.allowedDomains)
+    ? config.allowedDomains
+        .map((d) => String(d).trim().toLowerCase())
+        .filter(Boolean)
+    : undefined;
+  const attachmentsEnabled =
+    typeof config.attachmentsEnabled === "boolean" ? config.attachmentsEnabled : undefined;
 
   if (Array.isArray(config.fields) && config.fields.length > 0) {
     const sorted = [...config.fields].sort((a, b) => a.order - b.order);
@@ -79,6 +96,8 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
       fields: sorted.map((f, i) => ({ ...f, order: i, itemKind: f.itemKind ?? "field" })),
       formTitle,
       formDescription,
+      ...(allowedDomains?.length ? { allowedDomains } : {}),
+      ...(typeof attachmentsEnabled === "boolean" ? { attachmentsEnabled } : {}),
     };
   }
   return {
@@ -86,5 +105,7 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
     fields: config.fields,
     formTitle,
     formDescription,
+    ...(allowedDomains?.length ? { allowedDomains } : {}),
+    ...(typeof attachmentsEnabled === "boolean" ? { attachmentsEnabled } : {}),
   };
 }

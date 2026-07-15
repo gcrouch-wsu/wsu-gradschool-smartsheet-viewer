@@ -209,6 +209,9 @@ export function CreateFormModal({
               className={`rounded-lg px-3 py-2 text-xs ${createMsg.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}
             >
               {createMsg.text}
+              {createMsg.ok
+                ? " Next: edit fields and allowed domains in Builder, then publish from Manage to share /f/…"
+                : ""}
             </p>
           ) : null}
         </div>
