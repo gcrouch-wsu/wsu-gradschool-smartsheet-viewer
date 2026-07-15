@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PublicViewRenderer, formatLayoutLabel } from "@/components/public/ViewRenderer";
+import { PublicViewRenderer } from "@/components/public/ViewRenderer";
 import { requireAdminPageAccess } from "@/lib/admin-page";
-import { LAYOUT_OPTIONS } from "@/lib/config/options";
+import { LAYOUT_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import type { LayoutType } from "@/lib/config/types";
 import { getPublicViewsBySlug } from "@/lib/config/store";
 import { loadAdminViewPreview } from "@/lib/public-view";

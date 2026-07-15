@@ -4,7 +4,7 @@
   "sourceId": "test-fog-automation",
   "label": "Test_FOG_Automation",
   "layout": "table",
-  "public": false,
+  "public": true,
   "tabOrder": 1,
   "filters": [],
   "defaultSort": [],

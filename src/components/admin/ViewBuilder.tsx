@@ -5,10 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/admin/Toast";
 import { PublicHeaderBrandStrip } from "@/components/public/PublicHeaderBrandStrip";
-import { formatLayoutLabel } from "@/components/public/ViewRenderer";
 import { ViewStyleWrapper } from "@/components/public/ViewStyleWrapper";
 import { ViewWithSearchAndIndex } from "@/components/public/ViewWithSearchAndIndex";
-import { FILTER_OPERATOR_OPTIONS, LAYOUT_OPTIONS, PEOPLE_STYLE_OPTIONS, RENDER_TYPE_OPTIONS, TRANSFORM_OPTIONS } from "@/lib/config/options";
+import { FILTER_OPERATOR_OPTIONS, LAYOUT_OPTIONS, PEOPLE_STYLE_OPTIONS, RENDER_TYPE_OPTIONS, TRANSFORM_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import { getEligibleEditableFieldDefinitions, getFieldsForMultiPersonGroup } from "@/lib/contributor-utils";
 import { HeaderCustomTextEditor } from "./HeaderCustomTextEditor";
 import { HeaderLogoBrandingSection } from "./HeaderLogoBrandingSection";

@@ -20,13 +20,6 @@ export interface PublicRowEditingProps {
   slug?: string;
 }
 
-export function formatLayoutLabel(layout: LayoutType) {
-  return layout
-    .split("_")
-    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
-    .join(" ");
-}
-
 export function PublicViewRenderer({
   layout,
   view,
