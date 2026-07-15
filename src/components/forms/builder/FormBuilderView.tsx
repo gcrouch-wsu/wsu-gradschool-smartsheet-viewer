@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { HeaderCustomTextEditor } from "@/components/admin/HeaderCustomTextEditor";
 import { SubmissionFormView } from "@/components/forms/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
@@ -12,6 +13,7 @@ import {
   type BuilderFieldType,
   useFormBuilder,
 } from "@/components/forms/builder/useFormBuilder";
+import { richTextPlainText } from "@/lib/rendering";
 
 const inputClass =
   "w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson";
@@ -81,20 +83,19 @@ function FormPresentationEditor({
       <div className="mt-3 space-y-3">
         <div>
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Title</label>
-          <input
-            className={inputClass}
+          <HeaderCustomTextEditor
             value={formTitle}
             placeholder={sheetName}
-            onChange={(e) => onChange({ formTitle: e.target.value })}
+            compact
+            onChange={(html) => onChange({ formTitle: html })}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Description</label>
-          <textarea
-            className={`${inputClass} min-h-[4.5rem]`}
+          <HeaderCustomTextEditor
             value={formDescription}
             placeholder="Optional supporting text for submitters"
-            onChange={(e) => onChange({ formDescription: e.target.value })}
+            onChange={(html) => onChange({ formDescription: html })}
           />
         </div>
         <div>
@@ -233,7 +234,8 @@ function FieldCanvas({
           const label = layout
             ? field.itemKind === "divider"
               ? "Divider"
-              : field.text?.trim() || (field.itemKind === "heading" ? "Heading" : "Description")
+              : richTextPlainText(field.text ?? "") ||
+                (field.itemKind === "heading" ? "Heading" : "Description")
             : field.label || field.columnTitle;
           return (
             <li
@@ -339,10 +341,16 @@ function FieldInspector({
             <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
               {field.itemKind === "heading" ? "Heading text" : "Description text"}
             </label>
-            <textarea
-              className={`${inputClass} min-h-[5rem]`}
+            <HeaderCustomTextEditor
+              key={field.columnTitle}
               value={field.text ?? ""}
-              onChange={(e) => onChange({ text: e.target.value })}
+              compact={field.itemKind === "heading"}
+              placeholder={
+                field.itemKind === "heading"
+                  ? "Section heading"
+                  : "Add supporting instructions for this section."
+              }
+              onChange={(html) => onChange({ text: html })}
             />
           </div>
         ) : (

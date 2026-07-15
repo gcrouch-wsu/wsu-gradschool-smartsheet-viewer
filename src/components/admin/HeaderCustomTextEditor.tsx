@@ -177,10 +177,13 @@ export function HeaderCustomTextEditor({
   value,
   onChange,
   placeholder,
+  compact = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  /** Smaller editor for titles / short headings. */
+  compact?: boolean;
 }) {
   const isInternalUpdate = useRef(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
@@ -213,8 +216,10 @@ export function HeaderCustomTextEditor({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class:
-          "prose prose-sm max-w-none min-h-[150px] rounded-b-lg rounded-t-none border border-t-0 border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--wsu-crimson)]",
+        class: [
+          "prose prose-sm max-w-none rounded-b-lg rounded-t-none border border-t-0 border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--wsu-crimson)]",
+          compact ? "min-h-[4.5rem]" : "min-h-[150px]",
+        ].join(" "),
       },
     },
     onUpdate: ({ editor }) => {

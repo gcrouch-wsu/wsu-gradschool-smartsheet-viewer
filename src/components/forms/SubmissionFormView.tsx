@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { IconCheck, IconFile } from "@/components/forms/icons";
+import { RichTextHtml } from "@/components/forms/RichTextHtml";
 import {
   buildSubmitPayload,
   conditionalTargetTitles,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/forms/form-ui";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import type { SmartsheetColumn } from "@/lib/forms/types";
+import { isRichTextEmpty } from "@/lib/rendering";
 
 type FormValues = Record<string, string>;
 
@@ -200,9 +202,22 @@ function LayoutBlock({ item }: { item: FormFieldDefinition }) {
     return <hr className="border-[color:var(--wsu-border)]" />;
   }
   if (item.itemKind === "heading") {
-    return <h2 className="text-lg font-medium text-[color:var(--wsu-ink)]">{item.text?.trim() || "Section"}</h2>;
+    return (
+      <RichTextHtml
+        value={item.text}
+        as="h2"
+        className="text-lg font-medium text-[color:var(--wsu-ink)]"
+        fallback="Section"
+      />
+    );
   }
-  return <p className="text-sm leading-6 text-[color:var(--wsu-muted)]">{item.text?.trim() || ""}</p>;
+  return (
+    <RichTextHtml
+      value={item.text}
+      as="div"
+      className="text-sm leading-6 text-[color:var(--wsu-muted)]"
+    />
+  );
 }
 
 function FileUploadZone({
@@ -323,6 +338,7 @@ export function SubmissionFormView({
 
   const formTitle = schema.formTitle?.trim() || schema.sheetName;
   const formDescription = schema.formDescription?.trim() || "";
+  const hasDescription = !isRichTextEmpty(formDescription);
 
   useEffect(() => {
     if (!publicMode || !turnstileSiteKey || preview) return;
@@ -417,9 +433,20 @@ export function SubmissionFormView({
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <h1 className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]">{formTitle}</h1>
-        {formDescription ? <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">{formDescription}</p> : null}
-        {!formDescription && schema.allowedDomains.length ? (
+        <RichTextHtml
+          value={formTitle}
+          as="h1"
+          className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]"
+          fallback={schema.sheetName}
+        />
+        {hasDescription ? (
+          <RichTextHtml
+            value={formDescription}
+            as="div"
+            className="mt-1 text-sm text-[color:var(--wsu-muted)]"
+          />
+        ) : null}
+        {!hasDescription && schema.allowedDomains.length ? (
           <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
             Open to @{schema.allowedDomains.join(", @")} email addresses.
             {schema.demo ? " Demo mode." : ""}

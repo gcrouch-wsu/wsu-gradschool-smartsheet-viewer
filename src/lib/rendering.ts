@@ -128,3 +128,51 @@ export function isHtmlContent(text: string): boolean {
     trimmed.startsWith("<u")
   );
 }
+
+function sanitizeRichTextTransform(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: ALLOWED_ATTR,
+    transformTags: {
+      a: (_tagName, attribs) => {
+        const href = attribs.href || "";
+        const lower = href.toLowerCase();
+        if (
+          lower.startsWith("javascript:") ||
+          lower.startsWith("data:") ||
+          lower.startsWith("vbscript:")
+        ) {
+          delete attribs.href;
+        }
+        return {
+          tagName: "a",
+          attribs: {
+            ...attribs,
+            target: "_blank",
+            rel: "noopener noreferrer",
+          },
+        };
+      },
+    },
+  });
+}
+
+/** Sanitize TipTap / pasted HTML for safe public rendering (forms, etc.). */
+export function sanitizeRichTextHtml(html: string): string {
+  return sanitizeRichTextTransform(html);
+}
+
+/** Strip tags for list labels, document titles, and emptiness checks. */
+export function richTextPlainText(htmlOrText: string): string {
+  const trimmed = htmlOrText.trim();
+  if (!trimmed) return "";
+  if (!isHtmlContent(trimmed)) return trimmed;
+  return sanitizeHtml(trimmed, { allowedTags: [], allowedAttributes: {} })
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isRichTextEmpty(htmlOrText: string | undefined | null): boolean {
+  if (!htmlOrText?.trim()) return true;
+  return !richTextPlainText(htmlOrText);
+}

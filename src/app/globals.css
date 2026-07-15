@@ -426,6 +426,39 @@ a {
   color: var(--wsu-crimson-dark, var(--wsu-crimson));
 }
 
+/* Form builder / public form TipTap content */
+.form-rich-text p {
+  margin: 0 0 0.5em;
+}
+.form-rich-text p:last-child {
+  margin-bottom: 0;
+}
+.form-rich-text ul,
+.form-rich-text ol {
+  margin: 0.25em 0 0.5em;
+  padding-left: 1.25rem;
+}
+.form-rich-text a {
+  color: var(--wsu-crimson);
+  text-decoration: underline;
+}
+.form-rich-text a:hover {
+  color: var(--wsu-crimson-dark, var(--wsu-crimson));
+}
+.form-rich-text h1,
+.form-rich-text h2,
+.form-rich-text h3 {
+  margin: 0 0 0.35em;
+  font-weight: 600;
+  color: var(--wsu-ink);
+}
+.form-rich-text h1 {
+  font-size: 1.25rem;
+}
+.form-rich-text h2 {
+  font-size: 1.125rem;
+}
+
 /* TipTap editor base styles */
 .ProseMirror {
   outline: none;
