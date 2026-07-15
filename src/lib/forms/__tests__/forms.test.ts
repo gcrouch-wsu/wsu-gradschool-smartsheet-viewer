@@ -35,6 +35,26 @@ describe("forms validation", () => {
     const bad = validateSubmission(columns, { "1": "a@wsu.edu" }, [], undefined, ["email.wsu.edu"]);
     expect(bad.ok).toBe(false);
   });
+
+  it("accepts ISO calendar dates for Smartsheet DATE columns", () => {
+    const columns: SmartsheetColumn[] = [{ id: 1, title: "Start Date", type: "DATE" }];
+    const result = validateSubmission(columns, { "1": "2026-07-15" }, []);
+    expect(result.ok).toBe(true);
+    expect(result.cells).toEqual([{ columnId: 1, value: "2026-07-15" }]);
+  });
+
+  it("normalizes US typed dates to ISO for Smartsheet DATE columns", () => {
+    const columns: SmartsheetColumn[] = [{ id: 1, title: "Start Date", type: "DATE" }];
+    const result = validateSubmission(columns, { "1": "07/15/2026" }, []);
+    expect(result.ok).toBe(true);
+    expect(result.cells).toEqual([{ columnId: 1, value: "2026-07-15" }]);
+  });
+
+  it("rejects invalid dates", () => {
+    const columns: SmartsheetColumn[] = [{ id: 1, title: "Start Date", type: "DATE" }];
+    const result = validateSubmission(columns, { "1": "13/40/2026" }, []);
+    expect(result.ok).toBe(false);
+  });
 });
 
 describe("form ui helpers", () => {

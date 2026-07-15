@@ -180,6 +180,25 @@ function FormField({
     );
   }
 
+  if (kind === "date") {
+    return (
+      <FieldShell
+        id={id}
+        label={label}
+        required={required}
+        hint={helpText || "Select a date from the calendar."}
+        error={error}
+      >
+        <input
+          id={id}
+          type="date"
+          className={`${inputClass} ${hasError ? inputErrorClass : ""}`}
+          {...register(String(col.id), { required: required ? `${label} is required.` : false })}
+        />
+      </FieldShell>
+    );
+  }
+
   const emailHint = kind === "email" ? helpText || "Use your institutional email address." : helpText;
   const inputType = kind === "phone" ? "tel" : kind === "number" ? "number" : kind === "email" ? "email" : "text";
 

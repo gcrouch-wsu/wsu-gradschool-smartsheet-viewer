@@ -1,0 +1,14 @@
+{
+  "id": "test-list",
+  "label": "TEST list",
+  "sourceType": "sheet",
+  "smartsheetId": 8803151154990980,
+  "connectionKey": "default",
+  "apiBaseUrl": "https://api.smartsheet.com/2.0",
+  "cacheTtlSeconds": 120,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true,
+    "level": 2
+  }
+}

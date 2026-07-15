@@ -1,4 +1,5 @@
 import { config } from "@/lib/forms/config";
+import { isSmartsheetDateColumnType, parseFormDateToIso } from "@/lib/forms/date-format";
 import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 
@@ -133,6 +134,16 @@ export function validateSubmission(
 
     if (meta?.kindHint === "number" && Number.isNaN(Number(raw))) {
       errors.push(`${label} must be a number.`);
+      continue;
+    }
+
+    if (isSmartsheetDateColumnType(col.type)) {
+      const iso = parseFormDateToIso(raw);
+      if (!iso) {
+        errors.push(`${label} must be a valid date.`);
+        continue;
+      }
+      cells.push({ columnId: col.id, value: iso });
       continue;
     }
 

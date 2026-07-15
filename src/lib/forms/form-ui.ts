@@ -1,3 +1,4 @@
+import { isSmartsheetDateColumnType, parseFormDateToIso } from "@/lib/forms/date-format";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import type { FormFieldMeta } from "@/lib/forms/form-field-meta";
@@ -37,7 +38,7 @@ export function fieldKind(col: SmartsheetColumn, meta?: FormFieldMeta): FormFiel
   if (col.type === "CHECKBOX") return "checkbox";
   if (col.type === "MULTI_PICKLIST") return "multiselect";
   if (col.type === "PICKLIST" || (col.options && col.options.length)) return "select";
-  if (col.type === "DATE" || col.type === "ABSTRACT_DATETIME") return "date";
+  if (isSmartsheetDateColumnType(col.type)) return "date";
   if (col.type === "PHONE" || meta?.kindHint === "phone") return "phone";
   if (meta?.kindHint === "number") return "number";
   if (meta?.kindHint === "textarea") return "textarea";
@@ -184,6 +185,14 @@ export function validateFormClient(
       errors.push(msg);
       fieldErrors[key] = msg;
     }
+
+    if (kind === "date" || isSmartsheetDateColumnType(col.type)) {
+      if (!parseFormDateToIso(raw)) {
+        const msg = `${label} must be a valid date.`;
+        errors.push(msg);
+        fieldErrors[key] = msg;
+      }
+    }
   }
 
   return { ok: errors.length === 0, errors, fieldErrors };
@@ -198,7 +207,13 @@ export function buildSubmitPayload(
   const payload: Record<string, string> = {};
   for (const col of columns) {
     if (!isFieldVisible(col, hidden)) continue;
-    payload[col.id] = values[String(col.id)] ?? (col.type === "CHECKBOX" ? "false" : "");
+    const raw = values[String(col.id)] ?? (col.type === "CHECKBOX" ? "false" : "");
+    if (isSmartsheetDateColumnType(col.type)) {
+      const iso = parseFormDateToIso(raw);
+      payload[col.id] = iso ?? raw;
+      continue;
+    }
+    payload[col.id] = raw;
   }
   return payload;
 }
