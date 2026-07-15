@@ -3,7 +3,7 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/admin/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { ContributorProvider } from "@/components/public/ContributorContext";
 import { DisplayTimezoneProvider } from "@/components/public/DisplayTimezoneContext";
 import { EditRowDrawer } from "@/components/public/EditRowDrawer";

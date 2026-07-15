@@ -5,8 +5,8 @@ import {
   SubmissionFormEmptyState,
   SubmissionFormView,
   SubmissionSuccessView,
-} from "@/components/forms/SubmissionFormView";
-import { usePublicSubmissionForm } from "@/components/forms/usePublicSubmissionForm";
+} from "@/components/forms/submission/SubmissionFormView";
+import { usePublicSubmissionForm } from "@/components/forms/submission/usePublicSubmissionForm";
 
 export default function PublicFormPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);

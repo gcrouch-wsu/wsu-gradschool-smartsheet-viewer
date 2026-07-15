@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { AdminBreadcrumbs, type BreadcrumbItem } from "@/components/admin/AdminBreadcrumbs";
+import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs";
 
 function itemsForPath(pathname: string): BreadcrumbItem[] {
   const dashboard: BreadcrumbItem = { href: "/admin", label: "Dashboard" };
@@ -30,5 +30,5 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
 }
 
 export function ProductBreadcrumbs() {
-  return <AdminBreadcrumbs items={itemsForPath(usePathname())} />;
+  return <Breadcrumbs items={itemsForPath(usePathname())} />;
 }

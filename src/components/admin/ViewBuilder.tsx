@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/admin/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { PublicHeaderBrandStrip } from "@/components/public/PublicHeaderBrandStrip";
 import { ViewStyleWrapper } from "@/components/public/ViewStyleWrapper";
 import { ViewWithSearchAndIndex } from "@/components/public/ViewWithSearchAndIndex";
 import { FILTER_OPERATOR_OPTIONS, LAYOUT_OPTIONS, PEOPLE_STYLE_OPTIONS, RENDER_TYPE_OPTIONS, TRANSFORM_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import { getEligibleEditableFieldDefinitions, getFieldsForMultiPersonGroup } from "@/lib/contributor-utils";
-import { HeaderCustomTextEditor } from "./HeaderCustomTextEditor";
+import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
 import { HeaderLogoBrandingSection } from "./HeaderLogoBrandingSection";
 import { ThemeEditor } from "./ThemeEditor";
 import { isRoleGroupFieldSource } from "@/lib/role-groups";

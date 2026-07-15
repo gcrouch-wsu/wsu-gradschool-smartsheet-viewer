@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/admin/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { getContributorEditRowHeading, getEditDrawerOrderedFields } from "@/components/public/layout-utils";
 import {
   ContributorGroupFieldControl,

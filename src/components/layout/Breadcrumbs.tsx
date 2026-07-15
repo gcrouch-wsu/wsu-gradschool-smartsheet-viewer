@@ -5,7 +5,7 @@ export interface BreadcrumbItem {
   label: string;
 }
 
-export function AdminBreadcrumbs({ items }: { items: BreadcrumbItem[] }) {
+export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   if (items.length === 0) return null;
 
   return (

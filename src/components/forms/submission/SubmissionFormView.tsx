@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { IconCheck, IconFile } from "@/components/forms/icons";
-import { RichTextHtml } from "@/components/forms/RichTextHtml";
+import { RichTextHtml } from "@/components/forms/submission/RichTextHtml";
 import {
   buildSubmitPayload,
   conditionalTargetTitles,

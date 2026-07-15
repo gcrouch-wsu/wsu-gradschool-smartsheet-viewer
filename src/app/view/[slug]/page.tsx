@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { ToastProvider } from "@/components/admin/Toast";
+import { ToastProvider } from "@/components/ui/Toast";
 import { EmbedHeightReporter } from "@/components/public/EmbedHeightReporter";
 import { PublicHeaderBrandStrip } from "@/components/public/PublicHeaderBrandStrip";
 import { ViewStyleWrapper } from "@/components/public/ViewStyleWrapper";

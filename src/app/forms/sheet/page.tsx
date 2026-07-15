@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SheetGridView, type SheetGridColumn, type SheetGridRow, type SheetGridWorkflow } from "@/components/forms/SheetGridView";
+import { SheetGridView, type SheetGridColumn, type SheetGridRow, type SheetGridWorkflow } from "@/components/forms/sheet/SheetGridView";
 
 export default function SheetViewPage() {
   const [sheetName, setSheetName] = useState("");

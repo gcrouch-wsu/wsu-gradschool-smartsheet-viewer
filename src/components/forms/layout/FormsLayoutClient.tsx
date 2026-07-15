@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { FormsShell } from "@/components/forms/FormsShell";
+import { FormsShell } from "@/components/forms/layout/FormsShell";
 
 export function FormsLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

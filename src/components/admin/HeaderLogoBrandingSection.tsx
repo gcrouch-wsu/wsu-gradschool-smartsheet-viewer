@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { useToast } from "@/components/admin/Toast";
+import { useToast } from "@/components/ui/Toast";
 import type { ViewPresentationConfig } from "@/lib/config/types";
 import {
   HEADER_BRAND_TEXT_MAX_LENGTH,

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { HeaderCustomTextEditor } from "@/components/admin/HeaderCustomTextEditor";
-import { SubmissionFormView } from "@/components/forms/SubmissionFormView";
+import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
+import { SubmissionFormView } from "@/components/forms/submission/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import { isFieldFormItem, isLayoutFormItem } from "@/lib/forms/form-field-config";

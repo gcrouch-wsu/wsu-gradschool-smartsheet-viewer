@@ -4,8 +4,8 @@ import {
   SubmissionFormEmptyState,
   SubmissionFormView,
   SubmissionSuccessView,
-} from "@/components/forms/SubmissionFormView";
-import { useSubmissionForm } from "@/components/forms/useSubmissionForm";
+} from "@/components/forms/submission/SubmissionFormView";
+import { useSubmissionForm } from "@/components/forms/submission/useSubmissionForm";
 
 export default function FormPage() {
   const form = useSubmissionForm();

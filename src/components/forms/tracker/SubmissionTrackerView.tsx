@@ -9,7 +9,7 @@ import type {
   TrackerDiscussion,
   TrackerStep,
   TrackerSubmission,
-} from "@/components/forms/useSubmissionTracker";
+} from "@/components/forms/tracker/useSubmissionTracker";
 
 type StatusFilter = "all" | "current" | "complete" | "declined";
 

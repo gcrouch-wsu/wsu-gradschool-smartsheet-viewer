@@ -1,7 +1,7 @@
 "use client";
 
-import { SubmissionTrackerView } from "@/components/forms/SubmissionTrackerView";
-import { useSubmissionTracker } from "@/components/forms/useSubmissionTracker";
+import { SubmissionTrackerView } from "@/components/forms/tracker/SubmissionTrackerView";
+import { useSubmissionTracker } from "@/components/forms/tracker/useSubmissionTracker";
 
 export default function TrackerPage() {
   const tracker = useSubmissionTracker();
