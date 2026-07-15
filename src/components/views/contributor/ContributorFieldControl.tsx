@@ -7,7 +7,7 @@ import type {
   MultiPersonEntry,
   MultiPersonFieldErrors,
 } from "@/lib/contributor-utils";
-import { FieldValue } from "@/components/public/FieldValue";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import { fieldLabelClassName } from "@/lib/field-typography";
 import {
   countFixedSlotsInEditableGroup,

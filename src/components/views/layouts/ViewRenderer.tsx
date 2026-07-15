@@ -1,14 +1,14 @@
 "use client";
 
-import { DataAccordion } from "@/components/public/DataAccordion";
-import { DataCards } from "@/components/public/DataCards";
-import { DataList } from "@/components/public/DataList";
-import { DataListDetail } from "@/components/public/DataListDetail";
-import { DataStacked } from "@/components/public/DataStacked";
-import { DataTabbed } from "@/components/public/DataTabbed";
-import { DataTable } from "@/components/public/DataTable";
-import { CampusBadgeStyleProvider } from "@/components/public/CampusBadgeStyleContext";
-import { ViewValueLinkProvider } from "@/components/public/ViewValueLinkContext";
+import { DataAccordion } from "@/components/views/layouts/DataAccordion";
+import { DataCards } from "@/components/views/layouts/DataCards";
+import { DataList } from "@/components/views/layouts/DataList";
+import { DataListDetail } from "@/components/views/layouts/DataListDetail";
+import { DataStacked } from "@/components/views/layouts/DataStacked";
+import { DataTabbed } from "@/components/views/layouts/DataTabbed";
+import { DataTable } from "@/components/views/layouts/DataTable";
+import { CampusBadgeStyleProvider } from "@/components/views/shared/CampusBadgeStyleContext";
+import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
 import type { ProgramGroup } from "@/lib/campus-grouping";
 import type { LayoutType, ResolvedView } from "@/lib/config/types";
 

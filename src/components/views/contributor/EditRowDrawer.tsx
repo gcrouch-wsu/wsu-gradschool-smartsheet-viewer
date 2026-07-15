@@ -3,13 +3,13 @@
 import { startTransition, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { getContributorEditRowHeading, getEditDrawerOrderedFields } from "@/components/public/layout-utils";
+import { getContributorEditRowHeading, getEditDrawerOrderedFields } from "@/components/views/layouts/layout-utils";
 import {
   ContributorGroupFieldControl,
   ContributorReadOnlyField,
   ContributorSingleFieldControl,
-} from "@/components/public/ContributorFieldControl";
-import { useContributorContext } from "@/components/public/ContributorContext";
+} from "@/components/views/contributor/ContributorFieldControl";
+import { useContributorContext } from "@/components/views/contributor/ContributorContext";
 import type { EditableFieldGroup, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 import type { ContributorEditableFieldDefinition } from "@/lib/contributor-utils";
 import {

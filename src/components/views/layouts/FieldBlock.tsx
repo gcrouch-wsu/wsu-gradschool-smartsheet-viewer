@@ -1,4 +1,4 @@
-import { FieldValue } from "@/components/public/FieldValue";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import type { ResolvedFieldValue } from "@/lib/config/types";
 import { fieldLabelClassName } from "@/lib/field-typography";
 

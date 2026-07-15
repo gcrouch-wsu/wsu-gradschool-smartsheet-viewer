@@ -1,9 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useOptionalCampusBadgeStyle } from "@/components/public/CampusBadgeStyleContext";
-import { useDisplayTimezone } from "@/components/public/DisplayTimezoneContext";
-import { useViewValueLinkFlags } from "@/components/public/ViewValueLinkContext";
+import { useOptionalCampusBadgeStyle } from "@/components/views/shared/CampusBadgeStyleContext";
+import { useDisplayTimezone } from "@/components/views/shared/DisplayTimezoneContext";
+import { useViewValueLinkFlags } from "@/components/views/shared/ViewValueLinkContext";
 import type { ResolvedFieldValue } from "@/lib/config/types";
 import { campusChipInlineStyle } from "@/lib/campus-chip-inline-style";
 import { publicCoordinatorCampusBadgeLabel } from "@/lib/coordinator-campus-badge";

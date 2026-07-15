@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { DisplayTimezoneProvider } from "@/components/public/DisplayTimezoneContext";
-import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/public/PrintViewDocument";
+import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
+import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/views/print/PrintViewDocument";
 import {
   loadPublicPageState,
   resolveRequestedResolvedView,

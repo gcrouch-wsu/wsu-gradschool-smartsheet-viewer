@@ -1,5 +1,5 @@
 import type { ViewPresentationConfig } from "@/lib/config/types";
-import { PublicHeaderLogo } from "@/components/public/PublicHeaderLogo";
+import { PublicHeaderLogo } from "@/components/views/shell/PublicHeaderLogo";
 
 /**
  * Optional brand row: logo + vertical rule + organization line + title (e.g. WSU + unit name).

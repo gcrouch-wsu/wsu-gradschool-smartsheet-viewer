@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PublicViewRenderer } from "@/components/public/ViewRenderer";
+import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { LAYOUT_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import type { LayoutType } from "@/lib/config/types";

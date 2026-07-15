@@ -4,7 +4,7 @@ import {
   ContributorSingleFieldControl,
   ContributorGroupFieldControl,
   ContributorReadOnlyField,
-} from "@/components/public/ContributorFieldControl";
+} from "@/components/views/contributor/ContributorFieldControl";
 import type { ResolvedFieldValue, EditableFieldGroup } from "@/lib/config/types";
 import type { ContributorEditableFieldDefinition, MultiPersonEntry } from "@/lib/contributor-utils";
 

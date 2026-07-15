@@ -8,8 +8,8 @@ import {
   resolvePublicVisibilityFieldKey,
   sortContributorEditorAdditionalFields,
   stripCardLayoutRowsForContributorMainEditor,
-} from "@/components/public/layout-utils";
-import type { CardLayoutCell } from "@/components/public/layout-utils";
+} from "@/components/views/layouts/layout-utils";
+import type { CardLayoutCell } from "@/components/views/layouts/layout-utils";
 import type { ContributorEditableFieldDefinition } from "@/lib/contributor-utils";
 import { contributorResolvedFieldStub } from "@/lib/contributor-utils";
 import { CARD_LAYOUT_CAMPUS_BADGES } from "@/lib/config/types";

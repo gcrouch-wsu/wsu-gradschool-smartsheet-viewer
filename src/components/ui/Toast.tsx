@@ -33,11 +33,17 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  // Portal only after mount so SSR and the first client render match (no document check at render time).
+  const [mounted, setMounted] = useState(false);
 
   const addToast = useCallback((message: string, variant: ToastVariant = "info") => {
     const id = `toast-${++toastId}`;
     const item: ToastItem = { id, message, variant, createdAt: Date.now() };
     setToasts((prev) => [...prev, item]);
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -52,19 +58,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      {typeof document !== "undefined" &&
-        createPortal(
-          <div
-            className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {toasts.map((toast) => (
-              <ToastItem key={toast.id} item={toast} />
-            ))}
-          </div>,
-          document.body
-        )}
+      {mounted
+        ? createPortal(
+            <div
+              className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {toasts.map((toast) => (
+                <ToastItem key={toast.id} item={toast} />
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
     </ToastContext.Provider>
   );
 }

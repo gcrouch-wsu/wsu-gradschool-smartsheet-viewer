@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canOpenContributorEditor } from "@/components/public/ViewWithSearchAndIndex";
+import { canOpenContributorEditor } from "@/components/views/layouts/ViewWithSearchAndIndex";
 
 describe("canOpenContributorEditor", () => {
   it("disables contributor editing in embed mode", () => {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { getRowHeadingText } from "@/components/public/layout-utils";
+import { getRowHeadingText } from "@/components/views/layouts/layout-utils";
 import type { ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 
 /**

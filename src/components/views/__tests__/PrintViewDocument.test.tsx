@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/public/PrintViewDocument";
+import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/views/print/PrintViewDocument";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),

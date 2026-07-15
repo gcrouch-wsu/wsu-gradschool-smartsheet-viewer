@@ -1,9 +1,9 @@
-import { CardLayoutCellRenderer } from "@/components/public/CardLayoutCellRenderer";
-import { DataStacked } from "@/components/public/DataStacked";
-import { ContributorEditButton, ContributorEditableBadge, getContributorRowAccentClass } from "@/components/public/ContributorRowControls";
-import { ContributorCardEditShell } from "@/components/public/ContributorCardEditShell";
-import { EmptyState } from "@/components/public/EmptyState";
-import { FieldValue } from "@/components/public/FieldValue";
+import { CardLayoutCellRenderer } from "@/components/views/layouts/CardLayoutCellRenderer";
+import { DataStacked } from "@/components/views/layouts/DataStacked";
+import { ContributorEditButton, ContributorEditableBadge, getContributorRowAccentClass } from "@/components/views/contributor/ContributorRowControls";
+import { ContributorCardEditShell } from "@/components/views/contributor/ContributorCardEditShell";
+import { EmptyState } from "@/components/views/shared/EmptyState";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import {
   cardLayoutContinuationRowClass,
   customCardAlignedGridStyle,
@@ -18,13 +18,13 @@ import {
   getRowSummaryField,
   getVisibleRowFields,
   hasCustomCardLayout,
-} from "@/components/public/layout-utils";
-import { MergedRowCampusBadges } from "@/components/public/MergedRowCampusBadges";
+} from "@/components/views/layouts/layout-utils";
+import { MergedRowCampusBadges } from "@/components/views/shared/MergedRowCampusBadges";
 import { fieldLabelClassName } from "@/lib/field-typography";
 import type { ProgramGroup } from "@/lib/campus-grouping";
 import { suppressMergedRowCampusBadgesWhenSectionStripShows } from "@/lib/campus-grouping";
 import { contributorEditTargetRowId, isContributorRowOrMergedEditable } from "@/lib/contributor-utils";
-import { fieldBlockOuterClassName } from "@/components/public/FieldBlock";
+import { fieldBlockOuterClassName } from "@/components/views/layouts/FieldBlock";
 import type { ResolvedFieldValue, ResolvedView } from "@/lib/config/types";
 
 function FieldBlock({ rowId, field }: { rowId: number; field: ResolvedFieldValue }) {

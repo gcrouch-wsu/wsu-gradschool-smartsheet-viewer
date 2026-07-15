@@ -1,4 +1,4 @@
-import { CampusBadgeStrip } from "@/components/public/CampusBadgeStrip";
+import { CampusBadgeStrip } from "@/components/views/shared/CampusBadgeStrip";
 import type { ResolvedViewRow, ViewPresentationConfig } from "@/lib/config/types";
 
 /** Campus badges for rows merged across sheet lines (email merge unions campuses; campus merge same picklist). */

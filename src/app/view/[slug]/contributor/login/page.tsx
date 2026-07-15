@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ContributorLoginForm } from "@/components/public/ContributorLoginForm";
-import { ViewStyleWrapper } from "@/components/public/ViewStyleWrapper";
+import { ContributorLoginForm } from "@/components/views/contributor/ContributorLoginForm";
+import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import {
   CONTRIBUTOR_SESSION_COOKIE_NAME,
   getContributorConfigurationError,

@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { CardLayoutCellRenderer } from "@/components/public/CardLayoutCellRenderer";
-import { DataStacked } from "@/components/public/DataStacked";
-import { ContributorCardEditShell } from "@/components/public/ContributorCardEditShell";
+import { CardLayoutCellRenderer } from "@/components/views/layouts/CardLayoutCellRenderer";
+import { DataStacked } from "@/components/views/layouts/DataStacked";
+import { ContributorCardEditShell } from "@/components/views/contributor/ContributorCardEditShell";
 import {
   ContributorEditButton,
   ContributorEditableBadge,
   getContributorRowAccentClass,
-} from "@/components/public/ContributorRowControls";
-import { EmptyState } from "@/components/public/EmptyState";
-import { FieldValue } from "@/components/public/FieldValue";
+} from "@/components/views/contributor/ContributorRowControls";
+import { EmptyState } from "@/components/views/shared/EmptyState";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import {
   cardLayoutContinuationRowClass,
   customCardAlignedGridStyle,
@@ -25,14 +25,14 @@ import {
   getRowSummaryField,
   getVisibleRowFields,
   hasCustomCardLayout,
-} from "@/components/public/layout-utils";
-import { MergedRowCampusBadges } from "@/components/public/MergedRowCampusBadges";
-import { RecordSuppressionCollapsible } from "@/components/public/RecordSuppressionCollapsible";
+} from "@/components/views/layouts/layout-utils";
+import { MergedRowCampusBadges } from "@/components/views/shared/MergedRowCampusBadges";
+import { RecordSuppressionCollapsible } from "@/components/views/shared/RecordSuppressionCollapsible";
 import type { ProgramGroup } from "@/lib/campus-grouping";
 import { suppressMergedRowCampusBadgesWhenSectionStripShows } from "@/lib/campus-grouping";
 import { contributorEditTargetRowId, isContributorRowOrMergedEditable } from "@/lib/contributor-utils";
 import type { ResolvedFieldValue, ResolvedView } from "@/lib/config/types";
-import { fieldBlockOuterClassName } from "@/components/public/FieldBlock";
+import { fieldBlockOuterClassName } from "@/components/views/layouts/FieldBlock";
 import { fieldLabelClassName } from "@/lib/field-typography";
 
 function FieldBlock({ rowId, field }: { rowId: number; field: ResolvedFieldValue }) {

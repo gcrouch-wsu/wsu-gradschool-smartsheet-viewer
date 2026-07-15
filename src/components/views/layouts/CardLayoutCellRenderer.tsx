@@ -1,12 +1,12 @@
-import { CampusBadgeStrip } from "@/components/public/CampusBadgeStrip";
-import { FieldBlock } from "@/components/public/FieldBlock";
-import { FieldValue } from "@/components/public/FieldValue";
+import { CampusBadgeStrip } from "@/components/views/shared/CampusBadgeStrip";
+import { FieldBlock } from "@/components/views/layouts/FieldBlock";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import {
   ContributorGroupFieldControl,
   ContributorReadOnlyField,
   ContributorSingleFieldControl,
-} from "@/components/public/ContributorFieldControl";
-import type { CardLayoutCell } from "@/components/public/layout-utils";
+} from "@/components/views/contributor/ContributorFieldControl";
+import type { CardLayoutCell } from "@/components/views/layouts/layout-utils";
 import { fieldLabelClassName } from "@/lib/field-typography";
 import type { ContributorEditableFieldDefinition, MultiPersonEntry, MultiPersonFieldErrors } from "@/lib/contributor-utils";
 import type { EditableFieldGroup } from "@/lib/config/types";

@@ -1,11 +1,11 @@
-import { CardLayoutCellRenderer } from "@/components/public/CardLayoutCellRenderer";
-import { CampusBadgeStrip } from "@/components/public/CampusBadgeStrip";
-import { ContributorEditButton, ContributorEditableBadge, getContributorRowAccentClass } from "@/components/public/ContributorRowControls";
-import { ContributorCardEditShell } from "@/components/public/ContributorCardEditShell";
-import { EmptyState } from "@/components/public/EmptyState";
-import { FieldValue } from "@/components/public/FieldValue";
-import { MergedRowCampusBadges } from "@/components/public/MergedRowCampusBadges";
-import { RecordSuppressionCollapsible } from "@/components/public/RecordSuppressionCollapsible";
+import { CardLayoutCellRenderer } from "@/components/views/layouts/CardLayoutCellRenderer";
+import { CampusBadgeStrip } from "@/components/views/shared/CampusBadgeStrip";
+import { ContributorEditButton, ContributorEditableBadge, getContributorRowAccentClass } from "@/components/views/contributor/ContributorRowControls";
+import { ContributorCardEditShell } from "@/components/views/contributor/ContributorCardEditShell";
+import { EmptyState } from "@/components/views/shared/EmptyState";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
+import { MergedRowCampusBadges } from "@/components/views/shared/MergedRowCampusBadges";
+import { RecordSuppressionCollapsible } from "@/components/views/shared/RecordSuppressionCollapsible";
 import {
   cardLayoutContinuationRowClass,
   customCardAlignedGridStyle,
@@ -17,7 +17,7 @@ import {
   getRowSummaryField,
   getVisibleRowFields,
   hasCustomCardLayout,
-} from "@/components/public/layout-utils";
+} from "@/components/views/layouts/layout-utils";
 import type { ProgramGroup } from "@/lib/campus-grouping";
 import {
   showCampusStripOnProgramSections,
@@ -26,7 +26,7 @@ import {
 } from "@/lib/campus-grouping";
 import type { ResolvedFieldValue, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 import { contributorEditTargetRowId, isContributorRowOrMergedEditable } from "@/lib/contributor-utils";
-import { fieldBlockOuterClassName } from "@/components/public/FieldBlock";
+import { fieldBlockOuterClassName } from "@/components/views/layouts/FieldBlock";
 import { fieldLabelClassName } from "@/lib/field-typography";
 
 function FieldBlock({ rowId, field }: { rowId: number; field: ResolvedFieldValue }) {

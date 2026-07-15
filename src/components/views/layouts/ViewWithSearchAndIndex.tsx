@@ -4,12 +4,12 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { ContributorProvider } from "@/components/public/ContributorContext";
-import { DisplayTimezoneProvider } from "@/components/public/DisplayTimezoneContext";
-import { EditRowDrawer } from "@/components/public/EditRowDrawer";
-import { PublicViewRenderer } from "@/components/public/ViewRenderer";
-import { ViewValueLinkProvider } from "@/components/public/ViewValueLinkContext";
-import { describeResolvedField, getIndexText } from "@/components/public/layout-utils";
+import { ContributorProvider } from "@/components/views/contributor/ContributorContext";
+import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
+import { EditRowDrawer } from "@/components/views/contributor/EditRowDrawer";
+import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
+import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
+import { describeResolvedField, getIndexText } from "@/components/views/layouts/layout-utils";
 import {
   groupResolvedRows,
   indexLetterFromLabel,

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FieldValue } from "@/components/public/FieldValue";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import type { ResolvedFieldValue } from "@/lib/config/types";
 
 function buildPeopleField(overrides?: Partial<ResolvedFieldValue>): ResolvedFieldValue {

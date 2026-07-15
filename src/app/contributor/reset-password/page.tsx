@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ContributorResetPasswordForm } from "@/components/public/ContributorResetPasswordForm";
+import { ContributorResetPasswordForm } from "@/components/views/contributor/ContributorResetPasswordForm";
 
 export const metadata: Metadata = {
   title: "Reset your contributor password",

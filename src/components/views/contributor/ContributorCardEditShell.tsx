@@ -4,12 +4,12 @@ import React, { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import type { ResolvedView, ResolvedViewRow, EditableFieldGroup, ResolvedFieldValue } from "@/lib/config/types";
-import { useContributorContext } from "@/components/public/ContributorContext";
+import { useContributorContext } from "@/components/views/contributor/ContributorContext";
 import {
   ContributorGroupFieldControl,
   ContributorReadOnlyField,
   ContributorSingleFieldControl,
-} from "@/components/public/ContributorFieldControl";
+} from "@/components/views/contributor/ContributorFieldControl";
 import {
   contributorEditTargetRowId,
   serializeContactDisplayToObjectValue,
@@ -29,8 +29,8 @@ import {
   getContributorEditorAdditionalOnlyFieldKeys,
   stripCardLayoutRowsForContributorMainEditor,
   sortContributorEditorAdditionalFields,
-} from "@/components/public/layout-utils";
-import { CardLayoutCellRenderer } from "@/components/public/CardLayoutCellRenderer";
+} from "@/components/views/layouts/layout-utils";
+import { CardLayoutCellRenderer } from "@/components/views/layouts/CardLayoutCellRenderer";
 
 const EMPTY_EDITABLE_FIELDS: ContributorEditableFieldDefinition[] = [];
 const EMPTY_EDITABLE_GROUPS: EditableFieldGroup[] = [];

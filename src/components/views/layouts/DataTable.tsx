@@ -1,8 +1,8 @@
-import { CampusBadgeStrip } from "@/components/public/CampusBadgeStrip";
-import { ContributorEditButton, getContributorRowAccentClass } from "@/components/public/ContributorRowControls";
+import { CampusBadgeStrip } from "@/components/views/shared/CampusBadgeStrip";
+import { ContributorEditButton, getContributorRowAccentClass } from "@/components/views/contributor/ContributorRowControls";
 import { contributorEditTargetRowId, isContributorRowOrMergedEditable } from "@/lib/contributor-utils";
-import { EmptyState } from "@/components/public/EmptyState";
-import { FieldValue } from "@/components/public/FieldValue";
+import { EmptyState } from "@/components/views/shared/EmptyState";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
 import type { ProgramGroup } from "@/lib/campus-grouping";
 import { showCampusStripOnProgramSections, showProgramSectionHeaders } from "@/lib/campus-grouping";
 import type { ResolvedView } from "@/lib/config/types";

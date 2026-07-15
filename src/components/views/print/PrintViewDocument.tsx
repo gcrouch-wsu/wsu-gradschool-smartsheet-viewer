@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { CampusBadgeStyleProvider } from "@/components/public/CampusBadgeStyleContext";
-import { FieldValue } from "@/components/public/FieldValue";
-import { getRowHeadingField } from "@/components/public/layout-utils";
-import { ViewStyleWrapper } from "@/components/public/ViewStyleWrapper";
+import { CampusBadgeStyleProvider } from "@/components/views/shared/CampusBadgeStyleContext";
+import { FieldValue } from "@/components/views/layouts/FieldValue";
+import { getRowHeadingField } from "@/components/views/layouts/layout-utils";
+import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import { formatFetchedAtInViewTimeZone } from "@/lib/display-datetime";
 import type { ResolvedFieldValue, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 import { buildPrintExportStylesheet, getPrintExportConfig } from "@/lib/print-export";
