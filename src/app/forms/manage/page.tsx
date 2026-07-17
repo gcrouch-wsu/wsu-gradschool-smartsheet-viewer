@@ -11,8 +11,6 @@ import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { OrgSharingCard } from "@/components/forms/admin/OrgSharingCard";
-import { PlatformAssetsCard } from "@/components/forms/admin/PlatformAssetsCard";
-import { SchemaCard } from "@/components/forms/admin/SchemaCard";
 import { WebhooksCard } from "@/components/forms/admin/WebhooksCard";
 import { IconPlus } from "@/components/forms/icons";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -92,14 +90,6 @@ export default function ManagePage() {
   const [shareSheetEmail, setShareSheetEmail] = useState("");
   const [shareMsg, setShareMsg] = useState("");
   const [webhookInfo, setWebhookInfo] = useState<{ webhooks?: unknown[]; state?: { lastWebhookAt?: string } } | null>(null);
-  const [columns, setColumns] = useState<{ id: number; title: string; type: string }[]>([]);
-  const [newColTitle, setNewColTitle] = useState("");
-  const [reports, setReports] = useState<{ id: number; name: string; permalink?: string }[]>([]);
-  const [dashboards, setDashboards] = useState<{ id: number; name: string; permalink?: string }[]>([]);
-  const [nativeForms, setNativeForms] = useState<{ id: number; name: string; url?: string }[]>([]);
-  const [rowToolRowId, setRowToolRowId] = useState("");
-  const [rowToolSheetId, setRowToolSheetId] = useState("");
-  const [rowToolMsg, setRowToolMsg] = useState("");
   const [approvers, setApprovers] = useState<ApproverSummary[]>([]);
   const [approverEmail, setApproverEmail] = useState("");
   const [approverPassword, setApproverPassword] = useState("");
@@ -225,8 +215,6 @@ export default function ManagePage() {
     setTab(id);
     if (id === "org") loadOrg();
     if (id === "webhooks") loadWebhooks();
-    if (id === "schema") loadSchema();
-    if (id === "platform") loadPlatform();
     if (id === "approvers") loadApprovers();
   }
 
@@ -391,57 +379,6 @@ export default function ManagePage() {
     else await loadWebhooks();
   }
 
-  async function loadSchema() {
-    if (!activeId) return;
-    const r = await fetch(`/api/forms/platform/sheets/${activeId}/columns`);
-    const d = await r.json();
-    if (r.ok) setColumns(d.columns ?? []);
-  }
-
-  async function addColumn() {
-    if (!activeId || !newColTitle.trim()) return;
-    const r = await fetch(`/api/forms/platform/sheets/${activeId}/columns`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ columns: [{ title: newColTitle.trim(), type: "TEXT_NUMBER", index: columns.length }], index: columns.length }),
-    });
-    const d = await r.json();
-    if (!r.ok) setFormsError(d.error || d.message || "Could not add column.");
-    else {
-      setNewColTitle("");
-      await loadSchema();
-    }
-  }
-
-  async function loadPlatform() {
-    if (!activeId) return;
-    const [rr, dr, fr] = await Promise.all([
-      fetch("/api/forms/platform/reports").then((r) => r.json()),
-      fetch("/api/forms/platform/dashboards").then((r) => r.json()),
-      fetch(`/api/forms/platform/sheets/${activeId}/forms`).then((r) => r.json()),
-    ]);
-    setReports(rr.reports ?? []);
-    setDashboards(dr.dashboards ?? []);
-    setNativeForms(fr.forms ?? []);
-  }
-
-  async function copyRowTool() {
-    setRowToolMsg("");
-    if (!activeId || !rowToolRowId || !rowToolSheetId) return;
-    try {
-      const r = await fetch(`/api/forms/platform/sheets/${activeId}/rows/copy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rowIds: [Number(rowToolRowId)], toSheetId: Number(rowToolSheetId) }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Copy failed.");
-      setRowToolMsg("Row copied.");
-    } catch (e: unknown) {
-      setRowToolMsg(e instanceof Error ? e.message : "Copy failed.");
-    }
-  }
-
   async function createApprover() {
     setApproverMsg(null);
     if (!approverEmail.trim() || !approverPassword) {
@@ -572,31 +509,6 @@ export default function ManagePage() {
 
       {tab === "webhooks" ? (
         <WebhooksCard webhookInfo={webhookInfo} onRegister={registerWebhook} />
-      ) : null}
-
-      {tab === "schema" ? (
-        <SchemaCard
-          columns={columns}
-          newColTitle={newColTitle}
-          onNewColTitleChange={setNewColTitle}
-          onLoadSchema={loadSchema}
-          onAddColumn={addColumn}
-        />
-      ) : null}
-
-      {tab === "platform" ? (
-        <PlatformAssetsCard
-          reports={reports}
-          dashboards={dashboards}
-          nativeForms={nativeForms}
-          rowToolRowId={rowToolRowId}
-          onRowToolRowIdChange={setRowToolRowId}
-          rowToolSheetId={rowToolSheetId}
-          onRowToolSheetIdChange={setRowToolSheetId}
-          rowToolMsg={rowToolMsg}
-          onLoadPlatform={loadPlatform}
-          onCopyRow={copyRowTool}
-        />
       ) : null}
 
       {tab === "approvers" ? (

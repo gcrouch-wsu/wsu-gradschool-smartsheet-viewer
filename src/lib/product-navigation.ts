@@ -19,22 +19,6 @@ export interface ProductNavItem {
   icon?: ProductNavIcon;
 }
 
-export const formsWorkspaceNav: ProductNavItem[] = [
-  { href: "/forms", label: "Form", exact: true, icon: "form" },
-  { href: "/forms/tracker", label: "Tracker", icon: "tracker" },
-  { href: "/forms/sheet", label: "Grid", icon: "grid" },
-];
-
-export function formsContextNav(isAdmin: boolean): ProductNavItem[] {
-  return isAdmin
-    ? [
-        ...formsWorkspaceNav,
-        { href: "/forms/manage", label: "Manage", icon: "manage" },
-        { href: "/forms/builder", label: "Builder", icon: "builder" },
-      ]
-    : formsWorkspaceNav;
-}
-
 export function productNav(isAdmin: boolean, isOwner = false): ProductNavItem[] {
   if (!isAdmin) return [];
 

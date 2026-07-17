@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { IconChevronDown, IconSearch } from "@/components/forms/icons";
-import { formsContextNav, productNav } from "@/lib/product-navigation";
+import { productNav } from "@/lib/product-navigation";
 
 interface FormsSessionInfo {
   demo: boolean;
@@ -69,7 +69,6 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   return (
     <ProductShell
       globalNav={productNav(Boolean(session?.isAdmin))}
-      contextNav={formsContextNav(Boolean(session?.isAdmin))}
       title="Smartsheet Workspace"
       description="Submit forms, track approvals, and manage Smartsheet workflows."
       identity={

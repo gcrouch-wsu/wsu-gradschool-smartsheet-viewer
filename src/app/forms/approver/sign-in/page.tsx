@@ -5,7 +5,8 @@ import { Suspense, useState } from "react";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 
 function normalizeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/forms")) return "/forms";
+  if (!value || !value.startsWith("/forms")) return "/forms/tracker";
+  if (value === "/forms" || value === "/forms/") return "/forms/tracker";
   return value;
 }
 

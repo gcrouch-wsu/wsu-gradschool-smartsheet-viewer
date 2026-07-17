@@ -144,7 +144,7 @@ function FormPresentationEditor({
               </Link>
             </p>
           ) : (
-            <p>Draft — publish from Manage to get a public /f/… URL. Active status is only for /forms testing.</p>
+            <p>Draft — publish from Manage to get a public /f/… URL for submissions.</p>
           )}
         </div>
       </div>

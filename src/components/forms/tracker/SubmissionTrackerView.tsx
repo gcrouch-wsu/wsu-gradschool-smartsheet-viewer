@@ -547,11 +547,7 @@ export function SubmissionTrackerView({
       {subs.length === 0 ? (
         <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-6 py-12 text-center">
           <p className="text-sm text-[color:var(--wsu-muted)]">
-            No submissions yet.{" "}
-            <Link href="/forms" className="font-medium text-wsu-crimson hover:underline">
-              Submit a form
-            </Link>
-            .
+            No submissions yet. Publish a form from Manage to collect responses via its public URL.
           </p>
         </div>
       ) : filtered.length === 0 ? (

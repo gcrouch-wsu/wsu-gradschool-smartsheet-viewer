@@ -41,7 +41,8 @@ function isFormsAdminPath(pathname: string) {
 
 function normalizeFormsNextPath(pathname: string, search: string) {
   const next = `${pathname}${search}`;
-  if (!next.startsWith("/forms")) return "/forms";
+  if (!next.startsWith("/forms")) return "/forms/tracker";
+  if (next === "/forms" || next === "/forms/") return "/forms/tracker";
   return next;
 }
 
