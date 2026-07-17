@@ -1,0 +1,15 @@
+{
+  "id": "test-user-form",
+  "label": "Test User Form",
+  "sourceType": "sheet",
+  "smartsheetId": 3361171036917636,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "test-user-form",
+  "formPublic": false,
+  "formProvenance": "scratch",
+  "formRegisteredAt": "2026-07-13T18:58:13.147Z"
+}

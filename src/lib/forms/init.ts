@@ -12,6 +12,7 @@ import type { ConditionalRule } from "@/lib/forms/types";
 const SEED_CONFIG_ROOT = path.join(process.cwd(), "smartsheet-wsu-form", "config");
 
 let done = false;
+let bootstrapPromise: Promise<void> | null = null;
 
 function stripBom(value: string) {
   return value.replace(/^\uFEFF/, "");
@@ -93,8 +94,16 @@ export async function ensureBootstrapped(): Promise<void> {
   if (done) {
     return;
   }
-  done = true;
-
-  await seedDefaultConfigFromPrototype();
-  await seedRegistryFromEnv();
+  if (!bootstrapPromise) {
+    bootstrapPromise = (async () => {
+      await seedDefaultConfigFromPrototype();
+      await registry.ensureFormsSourcesMigrated();
+      await seedRegistryFromEnv();
+      done = true;
+    })().catch((error) => {
+      bootstrapPromise = null;
+      throw error;
+    });
+  }
+  await bootstrapPromise;
 }

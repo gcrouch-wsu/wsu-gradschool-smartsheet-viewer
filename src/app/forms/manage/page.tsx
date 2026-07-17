@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
 import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
 import { AdminSectionNav, type AdminTab } from "@/components/forms/admin/AdminSectionNav";
@@ -24,6 +25,7 @@ interface FormEntry {
   slug?: string;
   public?: boolean;
   publishedAt?: string;
+  sourceConfigId?: string;
 }
 
 interface SheetOption {
@@ -47,7 +49,22 @@ interface ApproverSummary {
   updatedAt: string;
 }
 
+async function parseJson(r: Response): Promise<Record<string, unknown>> {
+  const text = await r.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error(
+      r.ok
+        ? "Invalid response from server."
+        : `Request failed (${r.status}). Sign in again if you were redirected.`,
+    );
+  }
+}
+
 export default function ManagePage() {
+  const router = useRouter();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tab, setTab] = useState<AdminTab>("forms");
   const [forms, setForms] = useState<FormEntry[]>([]);
@@ -132,9 +149,9 @@ export default function ManagePage() {
   async function loadForms() {
     try {
       const r = await fetch("/api/forms/registry");
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not load forms.");
-      setForms(d.forms);
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load forms."));
+      setForms((d.forms as FormEntry[]) ?? []);
       setActiveId(String(d.activeSheetId || ""));
     } catch (e: unknown) {
       setFormsError(e instanceof Error ? e.message : "Could not load forms.");
@@ -144,9 +161,9 @@ export default function ManagePage() {
   async function loadSheets() {
     try {
       const r = await fetch("/api/forms/platform/sheets");
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not load sheets from Smartsheet.");
-      setSheets(d.sheets ?? []);
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load sheets from Smartsheet."));
+      setSheets((d.sheets as SheetOption[]) ?? []);
       setSheetsLive(!d.demo);
       setSheetsError("");
       if (d.defaultTemplateId) setTemplateId(String(d.defaultTemplateId));
@@ -160,9 +177,9 @@ export default function ManagePage() {
     setApproverMsg(null);
     try {
       const r = await fetch("/api/forms/registry/approvers");
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not load approvers.");
-      setApprovers(d.approvers ?? []);
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load approvers."));
+      setApprovers((d.approvers as ApproverSummary[]) ?? []);
     } catch (e: unknown) {
       setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Could not load approvers." });
     }
@@ -231,11 +248,29 @@ export default function ManagePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not switch form.");
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not switch form."));
       await loadForms();
     } catch (e: unknown) {
       setFormsError(e instanceof Error ? e.message : "Could not switch form.");
+    }
+  }
+
+  async function editForm(id: string) {
+    setFormsError("");
+    try {
+      if (String(id) !== activeId) {
+        const r = await fetch("/api/forms/registry/select", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        const d = await parseJson(r);
+        if (!r.ok) throw new Error(String(d.error || d.message || "Could not open form in builder."));
+      }
+      router.push("/forms/builder");
+    } catch (e: unknown) {
+      setFormsError(e instanceof Error ? e.message : "Could not open form in builder.");
     }
   }
 
@@ -249,10 +284,11 @@ export default function ManagePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not add that sheet.");
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not add that sheet."));
+      const sheet = d.sheet as { name?: string } | undefined;
       setAddId("");
-      setAddMsg({ ok: true, text: `Added "${d.sheet.name}" and set it active.` });
+      setAddMsg({ ok: true, text: `Added "${sheet?.name ?? id}" and set it active.` });
       await loadForms();
     } catch (e: unknown) {
       setAddMsg({ ok: false, text: e instanceof Error ? e.message : "Could not add sheet." });
@@ -275,11 +311,12 @@ export default function ManagePage() {
           shareEmails: shareEmail ? [shareEmail] : [],
         }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Create failed.");
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Create failed."));
       setNewName("");
       setShareEmail("");
-      setCreateMsg({ ok: true, text: `Created "${d.sheet.name}" and set it active.${d.note ? " " + d.note : ""}` });
+      const sheet = d.sheet as { name?: string } | undefined;
+      setCreateMsg({ ok: true, text: `Created "${sheet?.name ?? "form"}" and set it active.${d.note ? " " + d.note : ""}` });
       await loadForms();
       setCreateModalOpen(false);
     } catch (e: unknown) {
@@ -466,7 +503,7 @@ export default function ManagePage() {
       <PageHeader
         eyebrow="Forms workspace"
         title="Form administration"
-        description="Manage forms, sync, schema, platform assets, and approver accounts."
+        description="Sheet sources from the shared Admin Sources catalog. Use a form to work in tracker/builder; publish for public submit."
         actions={
           <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
             <IconPlus className="h-4 w-4" />
@@ -494,6 +531,7 @@ export default function ManagePage() {
             query={query}
             onQueryChange={setQuery}
             onUseForm={useForm}
+            onEdit={editForm}
             onPublish={publishForm}
             onUnpublish={unpublishForm}
             busyId={publishBusyId}

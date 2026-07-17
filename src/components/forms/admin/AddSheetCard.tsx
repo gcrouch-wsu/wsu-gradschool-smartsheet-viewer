@@ -35,7 +35,7 @@ export function AddSheetCard({
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Add existing sheet</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
         {sheetsLive
-          ? `${addableCount} sheet${addableCount === 1 ? "" : "s"} available to add.`
+          ? `${addableCount} sheet${addableCount === 1 ? "" : "s"} available. Adds to the shared Sources catalog and activates Forms.`
           : "Demo mode — showing sample sheets only."}
       </p>
 

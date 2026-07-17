@@ -42,6 +42,19 @@ export function IconCheck({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function IconPencil({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconFile({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

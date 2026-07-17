@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FormFieldConfig } from "@/lib/forms/form-field-config";
 import type { ConditionalRule } from "@/lib/forms/types";
@@ -50,7 +50,9 @@ function perSheetFileName(prefix: string, sheetId: string) {
 async function readJsonFile<T>(fileName: string, fallback: T): Promise<T> {
   try {
     const raw = await readFile(formsConfigPath(fileName), "utf8");
-    return JSON.parse(stripBom(raw)) as T;
+    const trimmed = stripBom(raw).trim();
+    if (!trimmed) return fallback;
+    return JSON.parse(trimmed) as T;
   } catch {
     return fallback;
   }
@@ -58,7 +60,16 @@ async function readJsonFile<T>(fileName: string, fallback: T): Promise<T> {
 
 async function writeJsonFile(fileName: string, value: unknown) {
   await ensureFormsConfigDir();
-  await writeFile(formsConfigPath(fileName), `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  const target = formsConfigPath(fileName);
+  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  await writeFile(temp, payload, "utf8");
+  try {
+    await rename(temp, target);
+  } catch {
+    await unlink(target).catch(() => undefined);
+    await rename(temp, target);
+  }
 }
 
 export interface FormEntry {
@@ -71,11 +82,18 @@ export interface FormEntry {
   /** When true, anonymous users may load/submit via the public URL. Independent of activeSheetId. */
   public?: boolean;
   publishedAt?: string;
+  /** Unified catalog: Admin source slug when backed by SourceConfig. */
+  sourceConfigId?: string;
 }
 
 export interface RegistryShape {
+  /** Preferred: Admin source id (slug) for the Forms workspace. */
+  activeSourceId?: string;
+  /** Legacy: Smartsheet sheet id string. Used as fallback until migration. */
   activeSheetId: string;
+  /** Legacy forms list — read for migration; new writes keep this empty after migrate. */
   forms: FormEntry[];
+  migratedToSourcesAt?: string;
 }
 
 export type FormFieldsFile = Record<string, FormFieldConfig>;
@@ -94,8 +112,11 @@ const DEFAULT_WEBHOOK_STATE: WebhookState = { recentEvents: [] };
 export async function readRegistry(): Promise<RegistryShape> {
   const data = await readJsonFile<RegistryShape>(REGISTRY_FILE, DEFAULT_REGISTRY);
   return {
+    activeSourceId: typeof data.activeSourceId === "string" ? data.activeSourceId : undefined,
     activeSheetId: data.activeSheetId ?? "",
     forms: Array.isArray(data.forms) ? data.forms : [],
+    migratedToSourcesAt:
+      typeof data.migratedToSourcesAt === "string" ? data.migratedToSourcesAt : undefined,
   };
 }
 

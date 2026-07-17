@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCheck, IconFile, IconSearch } from "@/components/forms/icons";
+import { IconCheck, IconFile, IconPencil, IconSearch } from "@/components/forms/icons";
 
 export interface FormEntryRow {
   id: string;
@@ -10,6 +10,7 @@ export interface FormEntryRow {
   slug?: string;
   public?: boolean;
   publishedAt?: string;
+  sourceConfigId?: string;
 }
 
 const SOURCE_LABEL: Record<FormEntryRow["source"], string> = {
@@ -31,6 +32,7 @@ interface FormsTableProps {
   query: string;
   onQueryChange: (value: string) => void;
   onUseForm: (id: string) => void;
+  onEdit: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   busyId?: string | null;
@@ -43,6 +45,7 @@ export function FormsTable({
   query,
   onQueryChange,
   onUseForm,
+  onEdit,
   onPublish,
   onUnpublish,
   busyId,
@@ -53,7 +56,7 @@ export function FormsTable({
         <div>
           <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Your forms</h2>
           <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">
-            Active = testing workspace at /forms. Published = public submit URL (independent).
+            Sheet sources from Admin Sources. Active = Forms workspace. Published = public /f URL.
           </p>
           <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Active path: {activePath || "—"}</p>
         </div>
@@ -107,8 +110,26 @@ export function FormsTable({
                       <p className="mt-0.5 font-mono text-[10px] text-[color:var(--wsu-muted)]" title={form.id}>
                         {truncateSheetId(form.id)}
                       </p>
+                      {form.sourceConfigId ? (
+                        <a
+                          href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
+                          className="mt-1 inline-block text-[10px] font-medium text-wsu-crimson hover:underline"
+                        >
+                          Admin source →
+                        </a>
+                      ) : null}
                     </td>
-                    <td className="px-4 py-3 text-[color:var(--wsu-muted)]">{SOURCE_LABEL[form.source]}</td>
+                    <td className="px-4 py-3 text-[color:var(--wsu-muted)]">
+                      <span>{SOURCE_LABEL[form.source]}</span>
+                      {form.sourceConfigId ? (
+                        <a
+                          href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
+                          className="mt-1 block text-[10px] font-medium text-wsu-crimson hover:underline"
+                        >
+                          Edit source / views →
+                        </a>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-[color:var(--wsu-muted)]">{form.slug || "—"}</td>
                     <td className="px-4 py-3 text-[color:var(--wsu-muted)]">
                       {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : ""}
@@ -142,6 +163,16 @@ export function FormsTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap justify-end gap-1.5">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-lg border border-[color:var(--wsu-border)] p-1.5 text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                          disabled={busy}
+                          onClick={() => onEdit(form.id)}
+                          aria-label={`Edit ${form.name}`}
+                          title="Edit in builder"
+                        >
+                          <IconPencil className="h-3.5 w-3.5" />
+                        </button>
                         {isPublished && publicUrl ? (
                           <button
                             type="button"

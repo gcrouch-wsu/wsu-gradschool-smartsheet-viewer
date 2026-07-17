@@ -10,9 +10,8 @@ export async function GET() {
   const access = await requireFormsAdminAccess();
   if ("response" in access) return access.response;
 
-  await ensureBootstrapped();
-
   try {
+    await ensureBootstrapped();
     const sheets = await ss.listSheets();
     return Response.json({ sheets, defaultTemplateId: config.templateSheetId, demo: config.demo });
   } catch (e) {

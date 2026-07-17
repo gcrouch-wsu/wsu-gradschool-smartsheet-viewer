@@ -10,5 +10,11 @@
     "includeObjectValue": true,
     "includeColumnOptions": true,
     "level": 2
-  }
+  },
+  "formsEnabled": true,
+  "formSlug": "test-list",
+  "formPublic": true,
+  "formPublishedAt": "2026-07-15T18:55:38.423Z",
+  "formProvenance": "imported",
+  "formRegisteredAt": "2026-07-14T16:59:26.361Z"
 }

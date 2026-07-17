@@ -61,9 +61,21 @@ function SmartsheetResourcePicker({
       const response = await fetch(`/api/admin/smartsheet/catalog?${params}`, {
         credentials: "include",
       });
-      const payload = (await response.json()) as { items?: CatalogItem[]; error?: string };
+      const text = await response.text();
+      let payload: { items?: CatalogItem[]; error?: string; message?: string } = {};
+      if (text) {
+        try {
+          payload = JSON.parse(text) as { items?: CatalogItem[]; error?: string; message?: string };
+        } catch {
+          throw new Error(
+            response.ok
+              ? `Could not load ${sourceType}s.`
+              : `Could not load ${sourceType}s (${response.status}). Sign in again if needed.`,
+          );
+        }
+      }
       if (!response.ok) {
-        throw new Error(payload.error || `Could not load ${sourceType}s (${response.status}).`);
+        throw new Error(payload.error || payload.message || `Could not load ${sourceType}s (${response.status}).`);
       }
       setItems(Array.isArray(payload.items) ? payload.items : []);
     } catch (e: unknown) {
