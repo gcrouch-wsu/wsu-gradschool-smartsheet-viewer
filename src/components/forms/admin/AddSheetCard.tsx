@@ -15,6 +15,7 @@ interface AddSheetCardProps {
   onAddIdChange: (value: string) => void;
   onAdd: () => void;
   sheetsError: string;
+  sheetsLoading?: boolean;
   addMsg: { ok: boolean; text: string } | null;
   allSheetsRegistered: boolean;
 }
@@ -27,6 +28,7 @@ export function AddSheetCard({
   onAddIdChange,
   onAdd,
   sheetsError,
+  sheetsLoading = false,
   addMsg,
   allSheetsRegistered,
 }: AddSheetCardProps) {
@@ -34,9 +36,11 @@ export function AddSheetCard({
     <div className="flex h-full flex-col rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Add existing sheet</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-        {sheetsLive
-          ? `${addableCount} sheet${addableCount === 1 ? "" : "s"} available. Adds to the shared Sources catalog and activates Forms.`
-          : "Demo mode — showing sample sheets only."}
+        {sheetsLoading
+          ? "Loading sheets from Smartsheet…"
+          : sheetsLive
+            ? `${addableCount} sheet${addableCount === 1 ? "" : "s"} available. Adds to the shared Sources catalog and activates Forms.`
+            : "Demo mode — showing sample sheets only."}
       </p>
 
       <div className="mt-4 flex flex-1 flex-col gap-3">
@@ -44,11 +48,12 @@ export function AddSheetCard({
           <label htmlFor="addSheet" className="sr-only">
             Select a sheet
           </label>
-          <select
+            <select
             id="addSheet"
             value={addId}
             onChange={(e) => onAddIdChange(e.target.value)}
-            className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+            disabled={sheetsLoading}
+            className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson disabled:opacity-60"
           >
             <option value="">Select a sheet…</option>
             {sheets.map((s) => (

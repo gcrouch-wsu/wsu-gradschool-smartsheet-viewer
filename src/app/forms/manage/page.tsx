@@ -97,6 +97,8 @@ export default function ManagePage() {
   const [resetPasswordId, setResetPasswordId] = useState("");
   const [resetPassword, setResetPassword] = useState("");
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
+  const [formsLoading, setFormsLoading] = useState(true);
+  const [sheetsLoading, setSheetsLoading] = useState(true);
 
   async function publishForm(id: string) {
     setPublishBusyId(id);
@@ -137,18 +139,23 @@ export default function ManagePage() {
   }
 
   async function loadForms() {
+    setFormsLoading(true);
     try {
       const r = await fetch("/api/forms/registry");
       const d = await parseJson(r);
       if (!r.ok) throw new Error(String(d.error || d.message || "Could not load forms."));
       setForms((d.forms as FormEntry[]) ?? []);
       setActiveId(String(d.activeSheetId || ""));
+      setFormsError("");
     } catch (e: unknown) {
       setFormsError(e instanceof Error ? e.message : "Could not load forms.");
+    } finally {
+      setFormsLoading(false);
     }
   }
 
   async function loadSheets() {
+    setSheetsLoading(true);
     try {
       const r = await fetch("/api/forms/platform/sheets");
       const d = await parseJson(r);
@@ -160,6 +167,8 @@ export default function ManagePage() {
     } catch (e: unknown) {
       setSheets([]);
       setSheetsError(e instanceof Error ? e.message : "Could not load sheets.");
+    } finally {
+      setSheetsLoading(false);
     }
   }
 
@@ -176,9 +185,12 @@ export default function ManagePage() {
   }
 
   useEffect(() => {
-    loadForms();
-    loadSheets();
-    loadApprovers();
+    void loadForms();
+    // Smartsheet catalog is slow — load after the forms list so the main table can paint first.
+    const timer = window.setTimeout(() => {
+      void loadSheets();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -456,9 +468,8 @@ export default function ManagePage() {
       {tab === "forms" ? (
         <div className="space-y-4">
           <MetricsStrip
-            activeForms={forms.length}
-            sheetsAvailable={sheets.length}
-            approvers={approvers.length}
+            activeForms={formsLoading ? null : forms.length}
+            sheetsAvailable={sheetsLoading ? null : sheets.length}
           />
 
           <FormsTable
@@ -472,6 +483,7 @@ export default function ManagePage() {
             onPublish={publishForm}
             onUnpublish={unpublishForm}
             busyId={publishBusyId}
+            loading={formsLoading}
           />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -483,8 +495,9 @@ export default function ManagePage() {
               onAddIdChange={setAddId}
               onAdd={addExisting}
               sheetsError={sheetsError}
+              sheetsLoading={sheetsLoading}
               addMsg={addMsg}
-              allSheetsRegistered={!sheetsError && sheets.length > 0 && addableSheets.length === 0}
+              allSheetsRegistered={!sheetsLoading && !sheetsError && sheets.length > 0 && addableSheets.length === 0}
             />
             <AutomationsCard
               rules={rules}

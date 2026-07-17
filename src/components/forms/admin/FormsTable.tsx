@@ -36,6 +36,7 @@ interface FormsTableProps {
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   busyId?: string | null;
+  loading?: boolean;
 }
 
 export function FormsTable({
@@ -49,6 +50,7 @@ export function FormsTable({
   onPublish,
   onUnpublish,
   busyId,
+  loading = false,
 }: FormsTableProps) {
   return (
     <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
@@ -73,7 +75,9 @@ export function FormsTable({
         </div>
       </div>
 
-      {forms.length === 0 ? (
+      {loading ? (
+        <p className="px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">Loading forms…</p>
+      ) : forms.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">No forms yet.</p>
       ) : (
         <div className="overflow-x-auto">

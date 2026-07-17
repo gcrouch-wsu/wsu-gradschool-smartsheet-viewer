@@ -27,16 +27,33 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<FormsSessionInfo | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [signingOut, setSigningOut] = useState(false);
 
+  const isFormsAdminRoute =
+    pathname.startsWith("/forms/manage") || pathname.startsWith("/forms/builder");
+
   useEffect(() => {
+    let cancelled = false;
+    setSessionLoaded(false);
     fetch("/api/forms/session")
       .then((r) => r.json())
-      .then(setSession)
-      .catch(() => null);
+      .then((payload) => {
+        if (!cancelled) setSession(payload as FormsSessionInfo);
+      })
+      .catch(() => {
+        if (!cancelled) setSession(null);
+      })
+      .finally(() => {
+        if (!cancelled) setSessionLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [pathname]);
 
+  const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
   const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
@@ -68,11 +85,16 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductShell
-      globalNav={productNav(Boolean(session?.isAdmin))}
+      globalNav={productNav(showAdminNav)}
       title="Smartsheet Workspace"
       description="Submit forms, track approvals, and manage Smartsheet workflows."
       identity={
-        session?.user ? (
+        !sessionLoaded ? (
+          <div
+            className="h-11 w-36 animate-pulse rounded-full border border-line-strong bg-[color:var(--wsu-stone)]"
+            aria-hidden
+          />
+        ) : session?.user ? (
           <button
             type="button"
             onClick={handleSignOut}
