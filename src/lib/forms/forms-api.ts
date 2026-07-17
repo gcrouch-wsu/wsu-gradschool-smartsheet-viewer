@@ -1,13 +1,7 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE_NAME, readAdminSessionToken } from "@/lib/admin-auth";
 import { requireAdminApiAccess } from "@/lib/admin-api";
-import {
-  FORM_APPROVER_SESSION_COOKIE_NAME,
-  readFormApproverSessionFromRequest,
-  readFormApproverSessionToken,
-} from "@/lib/forms/approver-auth";
 import { config as formsConfig } from "@/lib/forms/config";
+import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 
 export type FormsRole = "admin" | "approver" | "viewer";
 
@@ -29,49 +23,23 @@ export interface FormsAccessError {
   response: NextResponse;
 }
 
-async function readAdminSessionFromCookies() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const result = await readAdminSessionToken(token);
-  if (!result.ok || !result.payload) return null;
-  return result.payload;
-}
-
-async function readApproverSessionFromCookies() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const result = await readFormApproverSessionToken(token);
-  if (!result.ok || !result.payload) return null;
-  return result.payload;
-}
-
 export async function getFormsSessionUserFromRequest(request?: Request): Promise<FormsSessionUser | null> {
-  let adminPayload = await readAdminSessionFromCookies();
-  let approverPayload = await readApproverSessionFromCookies();
-
-  if (request && !approverPayload) {
-    const approverResult = await readFormApproverSessionFromRequest(request);
-    if (approverResult.ok && approverResult.payload) {
-      approverPayload = approverResult.payload;
-    }
-  }
-
-  if (adminPayload) {
+  const admin = await resolveAdminPrincipal();
+  if (admin) {
     return {
-      email: adminPayload.username,
-      name: adminPayload.username,
+      email: admin.identifier,
+      name: admin.displayName,
       roles: ["admin", "approver", "viewer"],
       isAdmin: true,
       isApprover: true,
     };
   }
 
-  if (approverPayload) {
+  const approver = await resolveApproverPrincipal(request);
+  if (approver) {
     return {
-      email: approverPayload.email,
-      name: approverPayload.email,
+      email: approver.email ?? approver.identifier,
+      name: approver.displayName,
       roles: ["approver", "viewer"],
       isAdmin: false,
       isApprover: true,

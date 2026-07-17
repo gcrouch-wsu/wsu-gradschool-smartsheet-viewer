@@ -1,14 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
+import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
 import { AdminSectionNav, type AdminTab } from "@/components/forms/admin/AdminSectionNav";
+import { ApproversCard } from "@/components/forms/admin/ApproversCard";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
+import { OrgSharingCard } from "@/components/forms/admin/OrgSharingCard";
+import { PlatformAssetsCard } from "@/components/forms/admin/PlatformAssetsCard";
+import { SchemaCard } from "@/components/forms/admin/SchemaCard";
+import { WebhooksCard } from "@/components/forms/admin/WebhooksCard";
 import { IconPlus } from "@/components/forms/icons";
 import { PageHeader } from "@/components/layout/PageHeader";
 
@@ -41,33 +45,6 @@ interface ApproverSummary {
   email: string;
   createdAt: string;
   updatedAt: string;
-}
-
-const inputClass =
-  "w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson";
-
-const secondaryBtnClass =
-  "rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50";
-
-const primaryBtnClass =
-  "rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson-dark disabled:opacity-60";
-
-function Alert({ ok, text }: { ok?: boolean; text: string }) {
-  return (
-    <p className={`rounded-lg px-3 py-2 text-xs ${ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
-      {text}
-    </p>
-  );
-}
-
-function Card({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
-      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">{title}</h2>
-      {description ? <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">{description}</p> : null}
-      <div className="mt-4 space-y-4">{children}</div>
-    </section>
-  );
 }
 
 export default function ManagePage() {
@@ -545,269 +522,62 @@ export default function ManagePage() {
       ) : null}
 
       {tab === "org" ? (
-        <Card title="Organization & sharing" description="Workspaces and folder placement for cloned forms.">
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Workspaces</h3>
-            <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
-              {workspaces.map((w) => (
-                <li key={w.id}>
-                  {w.name} (ID {w.id})
-                </li>
-              ))}
-            </ul>
-          </div>
-          {folderChildren.length ? (
-            <div>
-              <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Folder contents</h3>
-              <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
-                {folderChildren.map((c) => (
-                  <li key={c.id}>
-                    {c.name} — {c.type} (ID {c.id})
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Share active sheet</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <input
-                type="email"
-                placeholder="user@wsu.edu"
-                value={shareSheetEmail}
-                onChange={(e) => setShareSheetEmail(e.target.value)}
-                className={`min-w-0 flex-1 ${inputClass}`}
-              />
-              <button type="button" onClick={shareActiveSheet} className={secondaryBtnClass}>
-                Share
-              </button>
-            </div>
-            {shareMsg ? <p className="mt-2 text-xs text-[color:var(--wsu-muted)]">{shareMsg}</p> : null}
-          </div>
-        </Card>
+        <OrgSharingCard
+          workspaces={workspaces}
+          folderChildren={folderChildren}
+          shareSheetEmail={shareSheetEmail}
+          onShareSheetEmailChange={setShareSheetEmail}
+          onShare={shareActiveSheet}
+          shareMsg={shareMsg}
+        />
       ) : null}
 
       {tab === "webhooks" ? (
-        <Card
-          title="Live sync (webhooks)"
-          description="Register a webhook so the tracker refreshes when Smartsheet changes. Set WEBHOOK_CALLBACK_URL in .env for production."
-        >
-          <button type="button" onClick={registerWebhook} className={secondaryBtnClass}>
-            Register webhook for active sheet
-          </button>
-          {webhookInfo ? (
-            <div className="text-sm text-[color:var(--wsu-muted)]">
-              <p>Registered webhooks: {webhookInfo.webhooks?.length ?? 0}</p>
-              <p>Last webhook: {webhookInfo.state?.lastWebhookAt ?? "none"}</p>
-            </div>
-          ) : null}
-        </Card>
+        <WebhooksCard webhookInfo={webhookInfo} onRegister={registerWebhook} />
       ) : null}
 
       {tab === "schema" ? (
-        <Card title="Column schema" description="Add columns to the active sheet. Changes affect the live form immediately.">
-          <Link href="/forms/builder" className="inline-flex text-sm font-medium text-wsu-crimson hover:underline">
-            Open form builder →
-          </Link>
-          <button type="button" onClick={loadSchema} className={secondaryBtnClass}>
-            Refresh columns
-          </button>
-          <ul className="space-y-1 text-sm text-[color:var(--wsu-ink)]">
-            {columns.map((c) => (
-              <li key={c.id}>
-                {c.title} ({c.type}) — ID {c.id}
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="text"
-              placeholder="New column title"
-              value={newColTitle}
-              onChange={(e) => setNewColTitle(e.target.value)}
-              className={`min-w-0 flex-1 ${inputClass}`}
-            />
-            <button type="button" onClick={addColumn} className={secondaryBtnClass}>
-              Add column
-            </button>
-          </div>
-        </Card>
+        <SchemaCard
+          columns={columns}
+          newColTitle={newColTitle}
+          onNewColTitleChange={setNewColTitle}
+          onLoadSchema={loadSchema}
+          onAddColumn={addColumn}
+        />
       ) : null}
 
       {tab === "platform" ? (
-        <Card title="Reports, dashboards & native forms">
-          <button type="button" onClick={loadPlatform} className={secondaryBtnClass}>
-            Load platform assets
-          </button>
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Reports</h3>
-            <ul className="mt-2 space-y-1 text-sm">
-              {reports.map((r) => (
-                <li key={r.id}>
-                  <a href={r.permalink || "#"} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
-                    {r.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Dashboards</h3>
-            <ul className="mt-2 space-y-1 text-sm">
-              {dashboards.map((d) => (
-                <li key={d.id}>
-                  <a href={d.permalink || "#"} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
-                    {d.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Native Smartsheet forms</h3>
-            <ul className="mt-2 space-y-1 text-sm text-[color:var(--wsu-ink)]">
-              {nativeForms.map((f) => (
-                <li key={f.id}>
-                  {f.name}{" "}
-                  {f.url ? (
-                    <a href={f.url} target="_blank" rel="noreferrer" className="text-wsu-crimson hover:underline">
-                      Open
-                    </a>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Row tools</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <input
-                type="text"
-                placeholder="Row ID"
-                value={rowToolRowId}
-                onChange={(e) => setRowToolRowId(e.target.value)}
-                className={`min-w-[8rem] flex-1 ${inputClass}`}
-              />
-              <input
-                type="text"
-                placeholder="Target sheet ID"
-                value={rowToolSheetId}
-                onChange={(e) => setRowToolSheetId(e.target.value)}
-                className={`min-w-[8rem] flex-1 ${inputClass}`}
-              />
-              <button type="button" onClick={copyRowTool} className={secondaryBtnClass}>
-                Copy row
-              </button>
-            </div>
-            {rowToolMsg ? <p className="text-xs text-[color:var(--wsu-muted)]">{rowToolMsg}</p> : null}
-          </div>
-        </Card>
+        <PlatformAssetsCard
+          reports={reports}
+          dashboards={dashboards}
+          nativeForms={nativeForms}
+          rowToolRowId={rowToolRowId}
+          onRowToolRowIdChange={setRowToolRowId}
+          rowToolSheetId={rowToolSheetId}
+          onRowToolSheetIdChange={setRowToolSheetId}
+          rowToolMsg={rowToolMsg}
+          onLoadPlatform={loadPlatform}
+          onCopyRow={copyRowTool}
+        />
       ) : null}
 
       {tab === "approvers" ? (
-        <Card
-          title="Approver accounts"
-          description={`Create email/password accounts for approvers who need tracker access without admin credentials. Password requirement: ${ADMIN_PASSWORD_POLICY_MESSAGE.replace("Admin password must be ", "")}`}
-        >
-          <button type="button" onClick={loadApprovers} className={secondaryBtnClass}>
-            Refresh list
-          </button>
-          {approvers.length === 0 ? (
-            <p className="text-sm text-[color:var(--wsu-muted)]">No approver accounts yet.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-[color:var(--wsu-border)]">
-              <table className="w-full min-w-[400px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[color:var(--wsu-border)] text-xs text-[color:var(--wsu-muted)]">
-                    <th className="px-3 py-2 font-medium">Email</th>
-                    <th className="px-3 py-2 font-medium">Created</th>
-                    <th className="px-3 py-2 font-medium">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {approvers.map((a) => (
-                    <tr key={a.id} className="border-b border-[color:var(--wsu-border)] last:border-0 hover:bg-[color:var(--wsu-stone)]/60">
-                      <td className="px-3 py-2 font-medium text-[color:var(--wsu-ink)]">{a.email}</td>
-                      <td className="px-3 py-2 text-[color:var(--wsu-muted)]">{new Date(a.createdAt).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => deleteApprover(a.id)}
-                          className="text-xs font-medium text-red-700 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Create approver</h3>
-            <div className="mt-2 space-y-3">
-              <div>
-                <label htmlFor="approverEmail" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                  Email
-                </label>
-                <input
-                  id="approverEmail"
-                  type="email"
-                  value={approverEmail}
-                  onChange={(e) => setApproverEmail(e.target.value)}
-                  placeholder="approver@wsu.edu"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="approverPassword" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                  Password
-                </label>
-                <input
-                  id="approverPassword"
-                  type="password"
-                  value={approverPassword}
-                  onChange={(e) => setApproverPassword(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <button type="button" onClick={createApprover} className={primaryBtnClass}>
-                Create approver
-              </button>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Reset password</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <select
-                value={resetPasswordId}
-                onChange={(e) => setResetPasswordId(e.target.value)}
-                className={`min-w-[10rem] flex-1 ${inputClass}`}
-              >
-                <option value="">Select approver…</option>
-                {approvers.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.email}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="password"
-                placeholder="New password"
-                value={resetPassword}
-                onChange={(e) => setResetPassword(e.target.value)}
-                className={`min-w-[10rem] flex-1 ${inputClass}`}
-              />
-              <button type="button" onClick={resetApproverPassword} className={secondaryBtnClass}>
-                Reset
-              </button>
-            </div>
-          </div>
-          {approverMsg ? <Alert ok={approverMsg.ok} text={approverMsg.text} /> : null}
-        </Card>
+        <ApproversCard
+          approvers={approvers}
+          approverEmail={approverEmail}
+          onApproverEmailChange={setApproverEmail}
+          approverPassword={approverPassword}
+          onApproverPasswordChange={setApproverPassword}
+          approverMsg={approverMsg}
+          resetPasswordId={resetPasswordId}
+          onResetPasswordIdChange={setResetPasswordId}
+          resetPassword={resetPassword}
+          onResetPasswordChange={setResetPassword}
+          onLoadApprovers={loadApprovers}
+          onCreateApprover={createApprover}
+          onDeleteApprover={deleteApprover}
+          onResetPassword={resetApproverPassword}
+        />
       ) : null}
 
       <CreateFormModal

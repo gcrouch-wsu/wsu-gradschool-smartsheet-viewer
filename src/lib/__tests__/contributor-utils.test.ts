@@ -162,7 +162,10 @@ describe("isEditableFieldDirectMapped and picklist / hidden campus-style fields"
     };
     const column = col({ id: 101, title: "Grad Campus", type: "PICKLIST", options: ["Pullman", "Spokane"] });
     expect(isEditableFieldDirectMapped(field, column)).toBe(true);
-    const eligible = getEligibleEditableFieldDefinitions({ id: "v", fields: [field] } as ViewConfig, [column]);
+    const eligible = getEligibleEditableFieldDefinitions(
+      { id: "v", fields: [field] } as unknown as ViewConfig,
+      [column],
+    );
     expect(eligible.some((e) => e.fieldKey === "campus" && e.columnType === "PICKLIST")).toBe(true);
   });
 

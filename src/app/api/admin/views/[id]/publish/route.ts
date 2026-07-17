@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { AdminActionError, updateAdminViewPublication } from "@/lib/admin-management";
+import { auditFromPrincipal } from "@/lib/audit";
+import { adminPrincipalToPrincipal } from "@/lib/identity";
 import { revalidatePublicCatalog } from "@/lib/revalidate-public-catalog";
 
 export async function POST(
@@ -18,6 +20,13 @@ export async function POST(
   try {
     const view = await updateAdminViewPublication(id, Boolean(body.public));
     revalidatePublicCatalog();
+    await auditFromPrincipal(
+      auth.principal ? adminPrincipalToPrincipal(auth.principal) : null,
+      body.public ? "view.publish" : "view.unpublish",
+      "view",
+      id,
+      { public: Boolean(body.public) },
+    );
     return NextResponse.json({ view });
   } catch (error) {
     if (error instanceof AdminActionError) {

@@ -1,13 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import {
-  ADMIN_SESSION_COOKIE_NAME,
-  authorizeAdminSession,
-} from "@/lib/admin-auth";
-import {
-  FORM_APPROVER_SESSION_COOKIE_NAME,
-  readFormApproverSessionToken,
-} from "@/lib/forms/approver-auth";
+import { ADMIN_SESSION_COOKIE_NAME } from "@/lib/admin-auth";
+import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/approver-auth";
+import { hasAdminSessionToken, hasApproverSessionToken } from "@/lib/identity";
 import { validateWebhookSecret } from "@/lib/forms/webhook-auth";
 
 const FORMS_PUBLIC_PATHS = new Set([
@@ -51,16 +46,11 @@ function normalizeFormsNextPath(pathname: string, search: string) {
 }
 
 async function hasAdminSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-  const result = await authorizeAdminSession(token ?? null);
-  return result.ok;
+  return hasAdminSessionToken(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value);
 }
 
 async function hasApproverSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value;
-  if (!token) return false;
-  const result = await readFormApproverSessionToken(token);
-  return result.ok;
+  return hasApproverSessionToken(request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value);
 }
 
 export async function handleFormsMiddleware(request: NextRequest): Promise<NextResponse | null> {

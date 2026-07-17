@@ -33,7 +33,10 @@ export function listConfiguredSmartsheetConnectionKeys(): string[] {
     }
   }
 
-  if (process.env.SMARTSHEET_API_TOKEN?.trim() && !keys.includes("default")) {
+  if (
+    (process.env.SMARTSHEET_API_TOKEN?.trim() || process.env.SMARTSHEET_TOKEN?.trim()) &&
+    !keys.includes("default")
+  ) {
     keys.unshift("default");
   }
   return keys.length > 0 ? keys : ["default"];

@@ -1,6 +1,13 @@
 import { config } from "@/lib/forms/config";
 import * as mock from "@/lib/forms/mock-data";
 import type { SmartsheetColumn } from "@/lib/forms/types";
+import {
+  SmartsheetRequestError,
+  listAllPages as clientListAllPages,
+  listAllTokenPages as clientListAllTokenPages,
+  smartsheetRequest,
+  type ConnectionConfig,
+} from "@/lib/smartsheet-client";
 import { normalizeSmartsheetApiBaseUrl } from "@/lib/smartsheet-api-url";
 
 /** Columns Smartsheet fills in automatically — never shown on the form or written to. */
@@ -21,74 +28,51 @@ export const DEFAULT_COLUMNS = [
   { title: "Status", type: "PICKLIST", options: ["New", "In Progress", "Done"] },
 ];
 
-function apiBaseUrl(): string {
-  return normalizeSmartsheetApiBaseUrl(config.smartsheetBaseUrl);
+/** Forms connection: prefer config token/base (supports SMARTSHEET_TOKEN alias + demo). */
+function formsConnection(): ConnectionConfig {
+  return {
+    token: config.smartsheetToken,
+    apiBaseUrl: normalizeSmartsheetApiBaseUrl(config.smartsheetBaseUrl),
+  };
 }
 
-async function api(path: string, init: RequestInit = {}): Promise<unknown> {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${config.smartsheetToken}`,
-    ...(init.headers as Record<string, string> | undefined),
-  };
-  if (!(init.body instanceof FormData)) {
-    headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
-  }
-  const res = await fetch(`${apiBaseUrl()}${path}`, {
-    ...init,
-    cache: "no-store",
-    headers,
-  });
-  const text = await res.text();
-  let data: Record<string, unknown> = {};
-  if (text) {
-    try {
-      data = JSON.parse(text) as Record<string, unknown>;
-    } catch {
-      const err = new Error(`Smartsheet API ${res.status}: invalid JSON response`) as Error & { status?: number };
-      err.status = res.status;
+/** Preserve Forms error shape (`Error` with `.status` / `.smartsheetErrorCode`) for existing callers. */
+async function withFormsErrors<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof SmartsheetRequestError) {
+      const err = new Error(`Smartsheet API ${error.status}: ${error.message}`) as Error & {
+        status?: number;
+        smartsheetErrorCode?: unknown;
+      };
+      err.status = error.status;
+      err.smartsheetErrorCode = error.smartsheetErrorCode;
       throw err;
     }
+    throw error;
   }
-  if (!res.ok) {
-    const err = new Error(`Smartsheet API ${res.status}: ${(data?.message as string | undefined) ?? res.statusText}`) as Error & {
-      status?: number;
-      smartsheetErrorCode?: unknown;
-    };
-    err.status = res.status;
-    err.smartsheetErrorCode = data?.errorCode;
-    throw err;
-  }
-  return data;
 }
 
-/** Walk offset-based pages until every item is collected. */
+/** Thin wrapper over the canonical Smartsheet client. */
+async function api(path: string, init: RequestInit = {}): Promise<unknown> {
+  return withFormsErrors(() =>
+    smartsheetRequest(path, {
+      connection: formsConnection(),
+      method: init.method,
+      body: init.body,
+      headers: init.headers as Record<string, string> | undefined,
+      cache: "no-store",
+    }),
+  );
+}
+
 async function listAllPages(path: string, pageSize = 100): Promise<unknown[]> {
-  const items: unknown[] = [];
-  let page = 1;
-  while (true) {
-    const sep = path.includes("?") ? "&" : "?";
-    const data = (await api(`${path}${sep}pageSize=${pageSize}&page=${page}`)) as { data?: unknown[]; totalPages?: number };
-    items.push(...(data.data ?? []));
-    const totalPages = data.totalPages ?? 1;
-    if (page >= totalPages) break;
-    page++;
-  }
-  return items;
+  return withFormsErrors(() => clientListAllPages(path, pageSize, { connection: formsConnection() }));
 }
 
-/** Token-based pagination (workspaces, webhooks, etc.). */
 async function listAllTokenPages(path: string, maxItems = 100): Promise<unknown[]> {
-  const items: unknown[] = [];
-  let lastKey: string | undefined;
-  while (true) {
-    const sep = path.includes("?") ? "&" : "?";
-    const keyPart = lastKey ? `&lastKey=${encodeURIComponent(lastKey)}` : "";
-    const data = (await api(`${path}${sep}maxItems=${maxItems}${keyPart}`)) as { data?: unknown[]; lastKey?: string };
-    items.push(...(data.data ?? []));
-    lastKey = data.lastKey;
-    if (!lastKey) break;
-  }
-  return items;
+  return withFormsErrors(() => clientListAllTokenPages(path, maxItems, { connection: formsConnection() }));
 }
 
 export interface SheetSummary {
@@ -113,7 +97,7 @@ export async function getSheet(sheetId: string | number): Promise<Record<string,
 
   const sheet = (await api(`/sheets/${sheetId}`)) as Record<string, unknown>;
   const pageSize = 5000;
-  let rows: unknown[] = [...((sheet.rows as unknown[]) ?? [])];
+  const rows: unknown[] = [...((sheet.rows as unknown[]) ?? [])];
   const reportedTotal = Math.max((sheet.totalRowCount as number | undefined) ?? 0, rows.length);
 
   if (reportedTotal > rows.length) {

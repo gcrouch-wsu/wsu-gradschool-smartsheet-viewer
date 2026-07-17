@@ -144,6 +144,9 @@ export default async function PublicViewPage({
   const showContributorInstructions =
     editingEnabled && activeViewConfig.editing?.showContributorInstructions !== false;
   const printHref = !embed ? publicPrintHref(slug, activeView.id, singlePublishedView) : null;
+  const exportCsvHref = !embed
+    ? `/api/public/views/${encodeURIComponent(slug)}/export?viewId=${encodeURIComponent(activeView.id)}`
+    : null;
   const publicPath = publicInteractiveHref(slug, activeView.id, singlePublishedView);
   const publicOrigin = getPublicOrigin(await headers());
   const headerPublicUrl = publicOrigin ? `${publicOrigin}${publicPath}` : publicPath;
@@ -321,7 +324,7 @@ export default async function PublicViewPage({
                     !activeView.presentation?.hideHeaderRows ||
                     !activeView.presentation?.hideHeaderRefreshed)) ||
                   layoutSwitcher ||
-                  ((loginHref && !showPublicEditingChrome) || printHref || contributorInstructionsHref)) && (
+                  ((loginHref && !showPublicEditingChrome) || printHref || exportCsvHref || contributorInstructionsHref)) && (
                   <div className="shrink-0">
                     <div className="view-surface-muted min-w-[18rem] rounded-[1.75rem] border border-[color:var(--wsu-border)] px-4 py-4 text-sm text-[color:var(--wsu-muted)]">
                       {!activeView.presentation?.hideHeaderInfoBox &&
@@ -371,11 +374,12 @@ export default async function PublicViewPage({
                         </div>
                       ) : null}
 
-                      {!showPublicEditingChrome && (loginHref || printHref || contributorInstructionsHref) ? (
+                      {!showPublicEditingChrome && (loginHref || printHref || exportCsvHref || contributorInstructionsHref) ? (
                         <div className={`${(!activeView.presentation?.hideHeaderInfoBox || layoutSwitcher) ? "mt-4 border-t border-[color:var(--wsu-border)]/60 pt-4" : ""}`}>
                           <div className="flex flex-col gap-2">
                             {loginHref ? <PublicActionLink href={loginHref} label="Contributor sign in" primary compact /> : null}
                             {printHref ? <PublicActionLink href={printHref} label="Print / PDF" compact /> : null}
+                            {exportCsvHref ? <PublicActionLink href={exportCsvHref} label="Export CSV" compact /> : null}
                             {contributorInstructionsHref ? (
                               <PublicActionLink href={contributorInstructionsHref} label="Contributor instructions" newWindow compact />
                             ) : null}
@@ -423,10 +427,11 @@ export default async function PublicViewPage({
                 {!embed &&
                   !showPublicEditingChrome &&
                   activeView.presentation?.hideHeader &&
-                  (loginHref || printHref || contributorInstructionsHref) && (
+                  (loginHref || printHref || exportCsvHref || contributorInstructionsHref) && (
                   <div className={`${!activeView.presentation?.hideViewTitleSection ? "mt-3 " : ""}flex flex-wrap gap-2`}>
                     {loginHref ? <PublicActionLink href={loginHref} label="Contributor sign in" primary /> : null}
                     {printHref ? <PublicActionLink href={printHref} label="Print / PDF" /> : null}
+                    {exportCsvHref ? <PublicActionLink href={exportCsvHref} label="Export CSV" /> : null}
                     {contributorInstructionsHref ? (
                       <PublicActionLink href={contributorInstructionsHref} label="Contributor instructions" newWindow />
                     ) : null}

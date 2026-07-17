@@ -11,6 +11,8 @@
     "build": "next build --webpack",
     "start": "node scripts/start.mjs",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "migrate": "node scripts/migrate.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

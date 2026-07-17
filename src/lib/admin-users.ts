@@ -3,7 +3,6 @@ import path from "node:path";
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
 import { cookies } from "next/headers";
-import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 import { buildPgPoolOptions } from "@/lib/pg-connection";
 import { NextResponse } from "next/server";
 import {
@@ -374,30 +373,8 @@ async function ensureManagedAdminsTable() {
 
   if (!ensureManagedAdminsTablePromise) {
     ensureManagedAdminsTablePromise = (async () => {
-      await query(`
-        CREATE TABLE IF NOT EXISTS admin_users (
-          id TEXT PRIMARY KEY,
-          username TEXT NOT NULL UNIQUE,
-          display_name TEXT,
-          password_hash TEXT NOT NULL,
-          password_salt TEXT NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          is_active BOOLEAN NOT NULL DEFAULT true
-        )
-      `);
-      await query(`
-        CREATE TABLE IF NOT EXISTS admin_login_attempts (
-          ip TEXT NOT NULL,
-          attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
-      `);
-      await query(`
-        CREATE INDEX IF NOT EXISTS idx_admin_login_attempts_ip_at
-        ON admin_login_attempts(ip, attempted_at)
-      `);
-      await ensureCurrentAppRoleRls(query, "admin_users");
-      await ensureCurrentAppRoleRls(query, "admin_login_attempts");
+      const { runDatabaseMigrations } = await import("@/lib/db-migrations");
+      await runDatabaseMigrations();
       await migrateFileManagedAdminsToDatabaseIfNeeded();
     })().catch((error) => {
       ensureManagedAdminsTablePromise = null;

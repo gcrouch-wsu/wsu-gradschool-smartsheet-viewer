@@ -108,3 +108,66 @@ describe("webhook auth", () => {
     expect(validateWebhookSecret(request)).toBe(false);
   });
 });
+
+describe("multi-select and contact cells", () => {
+  it("emits MULTI_PICKLIST objectValue", () => {
+    const columns: SmartsheetColumn[] = [
+      { id: 1, title: "Tags", type: "MULTI_PICKLIST", options: ["A", "B", "C"] },
+    ];
+    const result = validateSubmission(columns, { "1": "A, B" }, []);
+    expect(result.ok).toBe(true);
+    expect(result.cells).toEqual([
+      { columnId: 1, objectValue: { objectType: "MULTI_PICKLIST", values: ["A", "B"] } },
+    ]);
+  });
+
+  it("emits CONTACT objectValue for CONTACT_LIST", () => {
+    const columns: SmartsheetColumn[] = [{ id: 1, title: "Contact", type: "CONTACT_LIST" }];
+    const result = validateSubmission(columns, { "1": "jane@wsu.edu" }, []);
+    expect(result.ok).toBe(true);
+    expect(result.cells).toEqual([
+      { columnId: 1, objectValue: { objectType: "CONTACT", email: "jane@wsu.edu" } },
+    ]);
+  });
+});
+
+describe("form field config normalize", () => {
+  it("derives columns from visible field items", async () => {
+    const { normalizeFormFieldConfig } = await import("@/lib/forms/form-field-config");
+    const normalized = normalizeFormFieldConfig({
+      columns: [],
+      fields: [
+        { columnTitle: "Name", order: 0 },
+        { columnTitle: "Hidden", order: 1, hiddenOnForm: true },
+        { columnTitle: "__heading:1", order: 2, itemKind: "heading", text: "Section" },
+      ],
+    });
+    expect(normalized.columns).toEqual(["Name"]);
+  });
+});
+
+describe("identity roles", () => {
+  it("maps admin owner to expected roles", async () => {
+    const { rolesFromPrincipal } = await import("@/lib/identity/roles");
+    const roles = rolesFromPrincipal({
+      kind: "admin",
+      id: "1",
+      identifier: "owner",
+      displayName: "Owner",
+      role: "owner",
+      source: "env",
+      capabilities: ["admin.manage", "admin.owner", "forms.admin", "forms.approver", "contributor.edit", "viewer"],
+      session: { issuedAt: 0, expiresAt: 1 },
+    });
+    expect(roles).toContain("owner");
+    expect(roles).toContain("forms_admin");
+  });
+});
+
+describe("csv export helper", () => {
+  it("escapes quotes and commas", async () => {
+    const { rowsToCsv } = await import("@/lib/export-csv");
+    const csv = rowsToCsv(["Name", "Note"], [["Ada", 'Hello, "world"']]);
+    expect(csv).toContain('"Hello, ""world"""');
+  });
+});

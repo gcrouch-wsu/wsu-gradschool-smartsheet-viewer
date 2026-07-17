@@ -83,6 +83,12 @@ function NavIcon({ name, className = "h-[15px] w-[15px]" }: { name: ProductNavIc
         <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z" />
       </>
     ),
+    activity: (
+      <>
+        <path d="M12 8v4l3 3" />
+        <circle cx="12" cy="12" r="9" />
+      </>
+    ),
   };
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -136,7 +142,7 @@ export function ProductNav({ items, variant = "global", label }: ProductNavProps
               "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-medium transition",
               active
                 ? "bg-crimson !text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)]"
-                : "text-sub hover:bg-[#f4f0f1] hover:text-ink",
+                : "text-sub hover:bg-[var(--wsu-stone)] hover:text-ink",
             ].join(" ")}
           >
             {item.icon ? <NavIcon name={item.icon} /> : null}

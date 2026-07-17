@@ -13,6 +13,7 @@ import {
 } from "@/lib/forms/form-field-meta";
 import type { FormFieldDefinition, FormFieldKindHint, FormItemKind } from "@/lib/forms/form-field-config";
 import { isLayoutFormItem } from "@/lib/forms/form-field-config";
+import { auditFromPrincipal } from "@/lib/audit";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import * as registry from "@/lib/forms/registry";
@@ -20,6 +21,7 @@ import { saveConditionalRules } from "@/lib/forms/store/conditional-rules";
 import { loadFormFields, saveFormFields } from "@/lib/forms/store/field-config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import type { ConditionalRule } from "@/lib/forms/types";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -222,6 +224,9 @@ export async function PUT(request: Request) {
         .filter((rule) => rule.whenColumn && rule.equals.length && rule.showColumns.length);
       await saveConditionalRules(cleaned, sheetId);
     }
+
+    const principal = await resolveAdminPrincipal();
+    await auditFromPrincipal(principal, "forms.builder.save", "form", sheetId);
 
     return Response.json({ ok: true, demo: config.demo });
   } catch (e) {

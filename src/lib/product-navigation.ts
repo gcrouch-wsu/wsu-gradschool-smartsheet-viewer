@@ -9,7 +9,8 @@ export type ProductNavIcon =
   | "tracker"
   | "grid"
   | "manage"
-  | "builder";
+  | "builder"
+  | "activity";
 
 export interface ProductNavItem {
   href: string;
@@ -42,6 +43,7 @@ export function productNav(isAdmin: boolean, isOwner = false): ProductNavItem[] 
     { href: "/admin/sources", label: "Sources", icon: "sources" },
     { href: "/admin/views", label: "Views", icon: "views" },
     { href: "/admin/contributors", label: "Contributors", icon: "contributors" },
+    { href: "/admin/activity", label: "Activity", icon: "activity" },
     { href: "/forms/manage", label: "Forms", icon: "forms" },
   ];
 

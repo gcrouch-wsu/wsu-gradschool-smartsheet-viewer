@@ -5,13 +5,21 @@ import type {
   SmartsheetRow,
   SourceConfig,
 } from "@/lib/config/types";
-import { listConfiguredSmartsheetConnectionKeys } from "@/lib/smartsheet-connection-keys";
-import { normalizeSmartsheetApiBaseUrl } from "@/lib/smartsheet-api-url";
+import {
+  type ConnectionConfig,
+  SmartsheetRequestError,
+  hasConfiguredConnection,
+  listConfiguredConnectionKeys,
+  resolveConnection,
+} from "@/lib/smartsheet-client";
 
-export interface ConnectionConfig {
-  token: string;
-  apiBaseUrl: string;
-}
+export type { ConnectionConfig };
+export {
+  SmartsheetRequestError,
+  hasConfiguredConnection,
+  listConfiguredConnectionKeys,
+  resolveConnection,
+};
 
 interface SmartsheetApiColumn {
   id: number;
@@ -60,18 +68,6 @@ interface EffectiveFetchOptions {
 export interface FetchBehaviorOptions {
   fresh?: boolean;
   fetchOptionsOverride?: Partial<SourceConfig["fetchOptions"]>;
-}
-
-export class SmartsheetRequestError extends Error {
-  status: number;
-  body: string;
-
-  constructor(status: number, body: string) {
-    super(body || `Smartsheet request failed with HTTP ${status}`);
-    this.name = "SmartsheetRequestError";
-    this.status = status;
-    this.body = body;
-  }
 }
 
 const DEFAULT_SMARTSHEET_CLIENT_ERROR = "Update failed. Try again.";
@@ -173,86 +169,8 @@ export function httpStatusForSmartsheetContributorError(smartsheetStatus: number
   return 502;
 }
 
-function parseConnectionsEnv() {
-  const raw = process.env.SMARTSHEET_CONNECTIONS_JSON?.trim();
-  if (!raw) {
-    return new Map<string, ConnectionConfig>();
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, string | { token: string; apiBaseUrl?: string }>;
-    return new Map(
-      Object.entries(parsed).flatMap(([key, value]) => {
-        if (typeof value === "string") {
-          return [[key, { token: value, apiBaseUrl: normalizeSmartsheetApiBaseUrl(undefined) } satisfies ConnectionConfig]];
-        }
-        if (!value?.token) {
-          return [];
-        }
-        return [
-          [
-            key,
-            {
-              token: value.token,
-              apiBaseUrl: normalizeSmartsheetApiBaseUrl(value.apiBaseUrl),
-            } satisfies ConnectionConfig,
-          ],
-        ];
-      })
-    );
-  } catch (error) {
-    throw new Error(
-      `SMARTSHEET_CONNECTIONS_JSON is not valid JSON: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
-}
-
-export function listConfiguredConnectionKeys() {
-  return listConfiguredSmartsheetConnectionKeys();
-}
-
-export function hasConfiguredConnection() {
-  return Boolean(process.env.SMARTSHEET_API_TOKEN?.trim() || process.env.SMARTSHEET_CONNECTIONS_JSON?.trim());
-}
-
 export function normalizeColumnKey(value: string) {
   return value.trim().toLowerCase();
-}
-
-function resolveConnection(connectionKey = "default", sourceApiBaseUrl?: string): ConnectionConfig {
-  const namedConnections = parseConnectionsEnv();
-  const keyTrim = (connectionKey ?? "").trim();
-  const key = keyTrim || "default";
-
-  if (key !== "default" && !namedConnections.has(key)) {
-    throw new Error(
-      `Unknown Smartsheet connectionKey "${key}". Add it to SMARTSHEET_CONNECTIONS_JSON or clear connectionKey to use the default token.`,
-    );
-  }
-
-  const named = namedConnections.get(key);
-  if (named) {
-    const base = sourceApiBaseUrl?.trim() || named.apiBaseUrl;
-    return {
-      token: named.token,
-      apiBaseUrl: normalizeSmartsheetApiBaseUrl(base),
-    };
-  }
-
-  const token = process.env.SMARTSHEET_API_TOKEN?.trim();
-  if (!token) {
-    throw new Error(
-      "No Smartsheet API token is configured. Set SMARTSHEET_API_TOKEN or SMARTSHEET_CONNECTIONS_JSON."
-    );
-  }
-
-  const base = sourceApiBaseUrl?.trim() || process.env.SMARTSHEET_API_BASE_URL?.trim();
-  return {
-    token,
-    apiBaseUrl: normalizeSmartsheetApiBaseUrl(base),
-  };
 }
 
 function resolveFetchOptions(source: SourceConfig, options?: FetchBehaviorOptions): EffectiveFetchOptions {
@@ -793,17 +711,17 @@ export async function testSmartsheetConnection(): Promise<boolean> {
     return false;
   }
   try {
-    let conn: ConnectionConfig;
-    try {
-      conn = resolveConnection();
-    } catch {
-      const named = parseConnectionsEnv();
-      const first = named.values().next().value as ConnectionConfig | undefined;
-      if (!first) return false;
-      conn = {
-        token: first.token,
-        apiBaseUrl: normalizeSmartsheetApiBaseUrl(first.apiBaseUrl),
-      };
+    let conn: ConnectionConfig | null = null;
+    for (const key of listConfiguredConnectionKeys()) {
+      try {
+        conn = resolveConnection(key);
+        break;
+      } catch {
+        /* try next key */
+      }
+    }
+    if (!conn) {
+      return false;
     }
     const response = await fetchCurrentUser(conn);
     return response.ok;

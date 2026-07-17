@@ -1,17 +1,7 @@
+/* Tokens live in globals.css; .forms-module scopes component styles only. */
 .forms-module {
-  --forms-crimson: var(--wsu-crimson);
-  --forms-crimson-dark: var(--wsu-crimson-dark);
-  --forms-gray: var(--wsu-muted);
-  --forms-gray-soft: color-mix(in srgb, var(--wsu-muted) 72%, white);
-  --forms-ink: var(--wsu-ink);
-  --forms-field: color-mix(in srgb, var(--wsu-stone) 55%, white);
-  --forms-line: var(--wsu-border);
-  --forms-line-strong: color-mix(in srgb, var(--wsu-border) 80%, var(--wsu-ink));
-  --forms-white: #ffffff;
-  --forms-ok: #1f7a4d;
-  --forms-err: #b3261e;
-  --forms-radius: 1rem;
-  --forms-shadow: 0 1px 2px rgba(35, 31, 32, 0.06), 0 8px 24px rgba(35, 31, 32, 0.06);
+  /* Inherit shared product tokens; keep aliases for existing rules. */
+  color: var(--forms-ink);
 }
 
 .forms-module a {
@@ -876,16 +866,19 @@
 }
 
 .forms-module .forms-page-title {
+  /* Align with shared .product-page-title */
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-workspace-serif), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--forms-ink);
 }
 
 .forms-module .forms-page-subtitle {
-  margin: 0.5rem 0 0;
+  margin: 0.35rem 0 0;
   font-size: 0.875rem;
+  line-height: 1.45;
   color: var(--forms-gray);
   max-width: 48rem;
 }
@@ -897,6 +890,25 @@
 
   .forms-module .step__name {
     font-size: 0.75rem;
+  }
+
+  /* Mobile-first submit: full-width controls, comfortable tap targets */
+  .forms-module .field input,
+  .forms-module .field select,
+  .forms-module .field textarea {
+    font-size: 16px; /* avoid iOS zoom */
+    min-height: 2.75rem;
+  }
+
+  .forms-module .btn {
+    width: 100%;
+    min-height: 2.75rem;
+    justify-content: center;
+  }
+
+  .forms-module .toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

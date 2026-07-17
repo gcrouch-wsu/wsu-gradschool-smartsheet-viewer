@@ -40,32 +40,26 @@ function compareUsers(left: MockDbUser, right: MockDbUser) {
 async function runMockQuery(text: string, params: unknown[] = []) {
   const sql = text.replace(/\s+/g, " ").trim();
 
-  if (sql.startsWith("CREATE TABLE IF NOT EXISTS admin_users")) {
+  // Versioned migrations + RLS DDL (idempotent no-ops in unit tests).
+  if (
+    sql.includes("CREATE TABLE IF NOT EXISTS schema_migrations") ||
+    sql.includes("CREATE TABLE IF NOT EXISTS config_sources") ||
+    sql.includes("CREATE TABLE IF NOT EXISTS admin_users") ||
+    sql.startsWith("CREATE TABLE IF NOT EXISTS") ||
+    sql.startsWith("CREATE INDEX IF NOT EXISTS") ||
+    sql.startsWith("ALTER TABLE") ||
+    sql.startsWith("DO $$ BEGIN") ||
+    sql.includes("-- Platform schema")
+  ) {
     return { rows: [], rowCount: 0 };
   }
 
-  if (sql.startsWith("CREATE TABLE IF NOT EXISTS admin_login_attempts")) {
+  if (sql.startsWith("SELECT id FROM schema_migrations")) {
     return { rows: [], rowCount: 0 };
   }
 
-  if (sql.startsWith("CREATE INDEX IF NOT EXISTS idx_admin_login_attempts_ip_at")) {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (sql === "ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY") {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (sql === "ALTER TABLE admin_login_attempts ENABLE ROW LEVEL SECURITY") {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (sql.startsWith("DO $$ BEGIN") && sql.includes("admin_users_app_role_access")) {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (sql.startsWith("DO $$ BEGIN") && sql.includes("admin_login_attempts_app_role_access")) {
-    return { rows: [], rowCount: 0 };
+  if (sql.startsWith("INSERT INTO schema_migrations")) {
+    return { rows: [], rowCount: 1 };
   }
 
   if (sql.startsWith("SELECT COUNT(*)::int AS count FROM admin_users")) {
@@ -215,6 +209,7 @@ beforeEach(async () => {
   process.chdir(tempDir);
   resetMockDb();
   delete (globalThis as { __smartsheetsViewAdminPool?: unknown }).__smartsheetsViewAdminPool;
+  delete (globalThis as { __smartsheetsViewConfigPool?: unknown }).__smartsheetsViewConfigPool;
   vi.resetModules();
   vi.stubEnv("SMARTSHEETS_VIEW_ADMIN_USERNAME", "owner");
   vi.stubEnv("SMARTSHEETS_VIEW_ADMIN_PASSWORD", "Owner!234");
