@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
 import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
 import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
-import { ApproversCard } from "@/components/forms/admin/ApproversCard";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
@@ -39,13 +38,6 @@ interface Rule {
   createdBy?: { name?: string };
 }
 
-interface ApproverSummary {
-  id: string;
-  email: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 async function parseJson(r: Response): Promise<Record<string, unknown>> {
   const text = await r.text();
   if (!text) return {};
@@ -60,7 +52,7 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
   }
 }
 
-const MANAGE_TABS: AdminTab[] = ["forms", "webhooks", "approvers"];
+const MANAGE_TABS: AdminTab[] = ["forms", "webhooks"];
 
 function tabFromSearchParam(value: string | null): AdminTab {
   if (value && MANAGE_TABS.includes(value as AdminTab)) return value as AdminTab;
@@ -107,12 +99,6 @@ function ManagePageContent() {
   const [autoLoading, setAutoLoading] = useState(false);
   const [paths, setPaths] = useState<Record<string, string>>({});
   const [webhookInfo, setWebhookInfo] = useState<{ webhooks?: unknown[]; state?: { lastWebhookAt?: string } } | null>(null);
-  const [approvers, setApprovers] = useState<ApproverSummary[]>([]);
-  const [approverEmail, setApproverEmail] = useState("");
-  const [approverPassword, setApproverPassword] = useState("");
-  const [approverMsg, setApproverMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [resetPasswordId, setResetPasswordId] = useState("");
-  const [resetPassword, setResetPassword] = useState("");
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [formsLoading, setFormsLoading] = useState(true);
   const [sheetsLoading, setSheetsLoading] = useState(true);
@@ -188,18 +174,6 @@ function ManagePageContent() {
     }
   }
 
-  async function loadApprovers() {
-    setApproverMsg(null);
-    try {
-      const r = await fetch("/api/forms/registry/approvers");
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load approvers."));
-      setApprovers((d.approvers as ApproverSummary[]) ?? []);
-    } catch (e: unknown) {
-      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Could not load approvers." });
-    }
-  }
-
   useEffect(() => {
     void loadForms();
     // Smartsheet catalog is slow — load after the forms list so the main table can paint first.
@@ -251,7 +225,6 @@ function ManagePageContent() {
 
   useEffect(() => {
     if (tab === "webhooks") loadWebhooks();
-    if (tab === "approvers") loadApprovers();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load helpers are stable closures over setters
   }, [tab]);
 
@@ -399,62 +372,6 @@ function ManagePageContent() {
     else await loadWebhooks();
   }
 
-  async function createApprover() {
-    setApproverMsg(null);
-    if (!approverEmail.trim() || !approverPassword) {
-      setApproverMsg({ ok: false, text: "Email and password are required." });
-      return;
-    }
-    try {
-      const r = await fetch("/api/forms/registry/approvers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: approverEmail.trim(), password: approverPassword }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not create approver.");
-      setApproverEmail("");
-      setApproverPassword("");
-      setApproverMsg({ ok: true, text: `Created approver account for ${d.approver?.email ?? approverEmail}.` });
-      await loadApprovers();
-    } catch (e: unknown) {
-      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Could not create approver." });
-    }
-  }
-
-  async function deleteApprover(id: string) {
-    if (!confirm("Delete this approver account?")) return;
-    try {
-      const r = await fetch(`/api/forms/registry/approvers/${id}`, { method: "DELETE" });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Delete failed.");
-      await loadApprovers();
-    } catch (e: unknown) {
-      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Delete failed." });
-    }
-  }
-
-  async function resetApproverPassword() {
-    setApproverMsg(null);
-    if (!resetPasswordId || !resetPassword) {
-      setApproverMsg({ ok: false, text: "Select an approver and enter a new password." });
-      return;
-    }
-    try {
-      const r = await fetch(`/api/forms/registry/approvers/${resetPasswordId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: resetPassword }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Password reset failed.");
-      setResetPassword("");
-      setApproverMsg({ ok: true, text: "Password reset successfully." });
-    } catch (e: unknown) {
-      setApproverMsg({ ok: false, text: e instanceof Error ? e.message : "Password reset failed." });
-    }
-  }
-
   return (
     <FormsWorkspaceChrome
       activeTab={tab}
@@ -515,25 +432,6 @@ function ManagePageContent() {
 
       {tab === "webhooks" ? (
         <WebhooksCard webhookInfo={webhookInfo} onRegister={registerWebhook} />
-      ) : null}
-
-      {tab === "approvers" ? (
-        <ApproversCard
-          approvers={approvers}
-          approverEmail={approverEmail}
-          onApproverEmailChange={setApproverEmail}
-          approverPassword={approverPassword}
-          onApproverPasswordChange={setApproverPassword}
-          approverMsg={approverMsg}
-          resetPasswordId={resetPasswordId}
-          onResetPasswordIdChange={setResetPasswordId}
-          resetPassword={resetPassword}
-          onResetPasswordChange={setResetPassword}
-          onLoadApprovers={loadApprovers}
-          onCreateApprover={createApprover}
-          onDeleteApprover={deleteApprover}
-          onResetPassword={resetApproverPassword}
-        />
       ) : null}
 
       <CreateFormModal
