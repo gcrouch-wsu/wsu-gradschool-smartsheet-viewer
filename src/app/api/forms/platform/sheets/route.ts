@@ -13,7 +13,7 @@ export async function GET() {
   try {
     await ensureBootstrapped();
     const sheets = await ss.listSheets();
-    return Response.json({ sheets, defaultTemplateId: config.templateSheetId, demo: config.demo });
+    return Response.json({ sheets, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

@@ -93,7 +93,8 @@ export function CreateFormModal({
               Create a form
             </h2>
             <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">
-              Clone a template or start from scratch on Smartsheet.
+              Prefer a template when approval emails should go to the address entered on the form. Scratch sheets
+              need Approval Request automations added later in Smartsheet.
             </p>
           </div>
           <button
@@ -169,11 +170,22 @@ export function CreateFormModal({
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-xs text-[color:var(--wsu-muted)]">
+                Best for approval notifications: clone a sheet whose Smartsheet automations request approval from
+                contacts in the form’s Contact column. Rules copy when the API allows; you can still edit them in
+                Smartsheet afterward.
+              </p>
               {sheetsError ? (
                 <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800">{sheetsError}</p>
               ) : null}
             </div>
-          ) : null}
+          ) : (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+              From scratch creates columns only — no Approval Request automations. After create, open the sheet in
+              Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or
+              use a template instead.
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>

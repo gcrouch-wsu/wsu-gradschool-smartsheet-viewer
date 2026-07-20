@@ -180,7 +180,6 @@ function ManagePageContent() {
       setSheets((d.sheets as SheetOption[]) ?? []);
       setSheetsLive(!d.demo);
       setSheetsError("");
-      if (d.defaultTemplateId) setTemplateId(String(d.defaultTemplateId));
     } catch (e: unknown) {
       setSheets([]);
       setSheetsError(e instanceof Error ? e.message : "Could not load sheets.");

@@ -196,38 +196,46 @@ export function SubmissionCard({
       </div>
 
       {(showActions || admin) && (
-        <div className="flex flex-wrap gap-2 px-5 pt-4">
+        <div className="space-y-2 px-5 pt-4">
           {showActions ? (
-            <>
+            <p className="text-xs text-[color:var(--wsu-muted)]">
+              Primary path: Smartsheet emails the approver address from this submission. Approve / Decline here
+              is a staff override on the same status columns.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {showActions ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onApprove}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-wsu-crimson px-3 py-1.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                >
+                  <IconCheck className="h-4 w-4" />
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onDecline}
+                  className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+                >
+                  Decline
+                </button>
+              </>
+            ) : null}
+            {admin ? (
               <button
                 type="button"
                 disabled={busy}
-                onClick={onApprove}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-wsu-crimson px-3 py-1.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                onClick={onDelete}
+                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
-                <IconCheck className="h-4 w-4" />
-                Approve
+                Delete
               </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onDecline}
-                className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
-              >
-                Decline
-              </button>
-            </>
-          ) : null}
-          {admin ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onDelete}
-              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-            >
-              Delete
-            </button>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       )}
 

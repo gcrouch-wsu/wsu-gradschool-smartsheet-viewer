@@ -21,8 +21,19 @@ export function AutomationsCard({ rules, autoNotice, autoLoading, onLoad }: Auto
     <div className="flex h-full flex-col rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Automations</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-        View single-action automation rules on the active sheet.
+        Approval emails are sent by Smartsheet, not this app. The recipient is whoever’s email was entered
+        on the form (a Contact column on the row). Configure Approval Request workflows on the sheet in
+        Smartsheet; this card only lists API-visible single-action rules.
       </p>
+
+      <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-[color:var(--wsu-muted)]">
+        <li>Put a Contact (or Email) field on the public form for the approver.</li>
+        <li>
+          In Smartsheet → Automation, request approval from <span className="font-medium text-[color:var(--wsu-ink)]">contacts in that column</span>.
+        </li>
+        <li>Prefer cloning a template that already has those rules, or add rules on the new sheet afterward.</li>
+        <li>Load below and confirm rules show as enabled.</li>
+      </ol>
 
       <div className="mt-4 flex-1">
         {!hasRules ? (

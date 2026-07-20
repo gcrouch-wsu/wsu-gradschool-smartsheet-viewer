@@ -16,7 +16,6 @@ export const config = {
   demo,
   smartsheetToken: token,
   smartsheetBaseUrl,
-  templateSheetId: process.env.TEMPLATE_SHEET_ID ?? "",
   allowedDomains: (process.env.ALLOWED_DOMAINS ?? "wsu.edu")
     .split(",")
     .map((d) => d.trim().toLowerCase())

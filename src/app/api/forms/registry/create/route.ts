@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     let note = "";
 
     if (mode === "template") {
-      const tid = templateId || config.templateSheetId;
+      const tid = templateId ? String(templateId).trim() : "";
       if (!tid) return Response.json({ error: "Choose a template sheet first." }, { status: 400 });
       const include = ["forms", "rules", "ruleRecipients", "filters"];
       try {
