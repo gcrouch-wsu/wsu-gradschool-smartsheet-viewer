@@ -1,4 +1,5 @@
 import { resolveFormColumns } from "@/lib/forms/form-fields";
+import { isResendColumnTitle } from "@/lib/forms/resend";
 import { resolveWorkflow } from "@/lib/forms/workflow";
 
 export interface SheetViewColumn {
@@ -6,7 +7,7 @@ export interface SheetViewColumn {
   title: string;
   type: string;
   primary?: boolean;
-  workflowRole: "stage" | "overall" | "form" | null;
+  workflowRole: "stage" | "overall" | "form" | "resend" | null;
 }
 
 export interface SheetViewRow {
@@ -65,6 +66,7 @@ export async function buildSheetView(sheet: { id?: string | number; columns?: un
     let workflowRole: SheetViewColumn["workflowRole"] = null;
     if (overallLower && lower === overallLower) workflowRole = "overall";
     else if (stageSet.has(lower)) workflowRole = "stage";
+    else if (isResendColumnTitle(title)) workflowRole = "resend";
     else if (formSet.has(col.id)) workflowRole = "form";
     return {
       id: col.id,

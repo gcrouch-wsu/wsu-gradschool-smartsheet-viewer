@@ -3,14 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { approvalTone, approvalToneLabel, type ApprovalTone } from "@/lib/forms/approval-style";
-import { IconSearch } from "@/components/forms/icons";
+import { findResendColumnForStage } from "@/lib/forms/resend";
+import { IconRefresh, IconSearch } from "@/components/forms/icons";
 
 export interface SheetGridColumn {
   id: number;
   title: string;
   type: string;
   primary?: boolean;
-  workflowRole: "stage" | "overall" | "form" | null;
+  workflowRole: "stage" | "overall" | "form" | "resend" | null;
 }
 
 export interface SheetGridRow {
@@ -43,6 +44,9 @@ interface SheetGridViewProps {
   approvedValues: string[];
   declinedValues: string[];
   onRowClick?: (row: SheetGridRow) => void;
+  /** Pulse the RESEND checkbox for a row (re-triggers Smartsheet approval email). */
+  onResend?: (row: SheetGridRow, column: SheetGridColumn) => void | Promise<void>;
+  resendBusyRowId?: number | null;
 }
 
 type ColumnFilter = "all" | "form" | "workflow";
@@ -141,6 +145,8 @@ export function SheetGridView({
   approvedValues,
   declinedValues,
   onRowClick,
+  onResend,
+  resendBusyRowId,
 }: SheetGridViewProps) {
   const [query, setQuery] = useState("");
   const [highlightApprovals, setHighlightApprovals] = useState(true);
@@ -155,7 +161,13 @@ export function SheetGridView({
   const visibleColumns = useMemo(() => {
     if (columnFilter === "form") return columns.filter((c) => c.workflowRole === "form" || c.primary);
     if (columnFilter === "workflow") {
-      return columns.filter((c) => c.workflowRole === "stage" || c.workflowRole === "overall" || c.primary);
+      return columns.filter(
+        (c) =>
+          c.workflowRole === "stage" ||
+          c.workflowRole === "overall" ||
+          c.workflowRole === "resend" ||
+          c.primary,
+      );
     }
     return columns;
   }, [columns, columnFilter]);
@@ -388,7 +400,9 @@ export function SheetGridView({
                         ? "bg-rose-50/80 text-wsu-crimson"
                         : col.workflowRole === "overall"
                           ? "bg-sky-50/80 text-sky-900"
-                          : "bg-[#eef0f4] text-[color:var(--wsu-muted)]";
+                          : col.workflowRole === "resend"
+                            ? "bg-amber-50/80 text-amber-950"
+                            : "bg-[#eef0f4] text-[color:var(--wsu-muted)]";
 
                     return (
                       <th
@@ -410,6 +424,8 @@ export function SheetGridView({
                           <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide opacity-80">Stage</span>
                         ) : col.workflowRole === "overall" ? (
                           <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide opacity-80">Overall</span>
+                        ) : col.workflowRole === "resend" ? (
+                          <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide opacity-80">Resend</span>
                         ) : col.primary ? (
                           <span className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide opacity-80">Primary</span>
                         ) : null}
@@ -461,6 +477,13 @@ export function SheetGridView({
                       const tone =
                         isWorkflow && highlightApprovals ? approvalTone(val, approvedValues, declinedValues) : null;
                       const stickyPrimary = col.primary && hasPrimarySticky;
+                      const canResendHere =
+                        Boolean(onResend) &&
+                        col.workflowRole === "resend" &&
+                        row.approvalStatus?.state === "current" &&
+                        Boolean(
+                          findResendColumnForStage([{ id: col.id, title: col.title }], row.approvalStatus.stage),
+                        );
 
                       return (
                         <td
@@ -482,7 +505,21 @@ export function SheetGridView({
                             .filter(Boolean)
                             .join(" ")}
                         >
-                          {val ? (
+                          {canResendHere ? (
+                            <button
+                              type="button"
+                              disabled={resendBusyRowId === row.id}
+                              title={`Resend approval notification for ${row.approvalStatus?.stage ?? "pending stage"}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void onResend?.(row, col);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              <IconRefresh className="h-3 w-3" />
+                              {resendBusyRowId === row.id ? "Sending…" : "Resend"}
+                            </button>
+                          ) : val ? (
                             <span className="block max-w-[14rem] truncate">{val}</span>
                           ) : (
                             <span className="text-[color:var(--wsu-muted)]/50">—</span>

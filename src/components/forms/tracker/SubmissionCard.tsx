@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconCheck, IconFile } from "@/components/forms/icons";
+import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
 import type {
   TimelineItem,
   TrackerAttachment,
@@ -119,6 +119,9 @@ export interface SubmissionCardProps {
   onApprove: () => void;
   onDecline: () => void;
   onDelete: () => void;
+  onResend?: () => void;
+  canResend?: boolean;
+  resendHint?: string | null;
   onCommentChange: (text: string) => void;
   onPostComment: () => void;
   /** Extra classes on the root article (e.g. borderless inside a Modal). */
@@ -138,6 +141,9 @@ export function SubmissionCard({
   onApprove,
   onDecline,
   onDelete,
+  onResend,
+  canResend,
+  resendHint,
   onCommentChange,
   onPostComment,
   className,
@@ -147,6 +153,7 @@ export function SubmissionCard({
   const admin = isAdmin(roles);
   const busy = actionBusy === submission.rowId;
   const showActions = approver && submission.approvalStatus?.state === "current";
+  const showResend = showActions && Boolean(canResend && onResend);
   const state = submission.approvalStatus?.state ?? "not-started";
 
   const meta = [
@@ -201,7 +208,13 @@ export function SubmissionCard({
             <p className="text-xs text-[color:var(--wsu-muted)]">
               Primary path: Smartsheet emails the approver address from this submission. Approve / Decline here
               is a staff override on the same status columns.
+              {showResend
+                ? " Resend pulses the matching RESEND checkbox so the sheet automation notifies the person pending at this stage again."
+                : ""}
             </p>
+          ) : null}
+          {showResend && resendHint ? (
+            <p className="text-xs text-amber-900">Will notify: {resendHint}</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {showActions ? (
@@ -223,6 +236,17 @@ export function SubmissionCard({
                 >
                   Decline
                 </button>
+                {showResend ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onResend}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    <IconRefresh className="h-4 w-4" />
+                    Resend notification
+                  </button>
+                ) : null}
               </>
             ) : null}
             {admin ? (

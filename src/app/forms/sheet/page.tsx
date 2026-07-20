@@ -20,8 +20,10 @@ export default function SheetViewPage() {
   const [approvedValues, setApprovedValues] = useState<string[]>([]);
   const [declinedValues, setDeclinedValues] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+  const [resendBusyRowId, setResendBusyRowId] = useState<number | null>(null);
 
   const loadSheet = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -52,7 +54,28 @@ export default function SheetViewPage() {
     loadSheet();
   }, [loadSheet]);
 
-  if (error) {
+  async function handleResend(row: SheetGridRow, column: SheetGridColumn) {
+    setResendBusyRowId(row.id);
+    setNotice("");
+    setError("");
+    try {
+      const r = await fetch(`/api/forms/submissions/${row.id}/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columnTitle: column.title }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Resend failed.");
+      setNotice(typeof d.message === "string" ? d.message : "Resend triggered.");
+      loadSheet(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Resend failed.");
+    } finally {
+      setResendBusyRowId(null);
+    }
+  }
+
+  if (error && !sheetName) {
     return (
       <FormsWorkspaceChrome>
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
@@ -72,6 +95,12 @@ export default function SheetViewPage() {
 
   return (
     <FormsWorkspaceChrome>
+      {error ? (
+        <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+      ) : null}
+      {notice ? (
+        <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</div>
+      ) : null}
       <SheetGridView
         sheetName={sheetName}
         demo={demo}
@@ -82,6 +111,8 @@ export default function SheetViewPage() {
         approvedValues={approvedValues}
         declinedValues={declinedValues}
         onRowClick={(row) => setSelectedRowId(row.id)}
+        onResend={handleResend}
+        resendBusyRowId={resendBusyRowId}
       />
       <SubmissionDetailModal
         rowId={selectedRowId}

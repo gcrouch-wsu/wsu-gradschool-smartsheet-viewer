@@ -38,6 +38,9 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
   const [attachments, setAttachments] = useState<TrackerAttachment[] | "loading" | undefined>(undefined);
   const [discussions, setDiscussions] = useState<TrackerDiscussion[] | "loading" | undefined>(undefined);
   const [commentText, setCommentText] = useState("");
+  const [canResend, setCanResend] = useState(false);
+  const [resendHint, setResendHint] = useState<string | null>(null);
+  const [resendColumnTitle, setResendColumnTitle] = useState<string | null>(null);
 
   const loadSubmission = useCallback(async (id: number) => {
     setLoading(true);
@@ -54,9 +57,18 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
       }
       setSubmission((d.submission as TrackerSubmission) ?? null);
       setRoles(Array.isArray(d.roles) ? (d.roles as string[]) : ["viewer"]);
+      const resend = d.resend as
+        | { available?: boolean; columnTitle?: string | null; recipientEmail?: string | null }
+        | undefined;
+      setCanResend(Boolean(resend?.available));
+      setResendColumnTitle(typeof resend?.columnTitle === "string" ? resend.columnTitle : null);
+      setResendHint(typeof resend?.recipientEmail === "string" ? resend.recipientEmail : null);
       if (!d.submission) setError("Submission not found.");
     } catch (e: unknown) {
       setSubmission(null);
+      setCanResend(false);
+      setResendHint(null);
+      setResendColumnTitle(null);
       setError(e instanceof Error ? e.message : "Could not load submission.");
     } finally {
       setLoading(false);
@@ -137,6 +149,33 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
       onChanged?.();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Update failed.");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  async function resendNotification() {
+    if (rowId == null) return;
+    setActionBusy(rowId);
+    setError("");
+    try {
+      const r = await fetch(`/api/forms/submissions/${rowId}/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resendColumnTitle ? { columnTitle: resendColumnTitle } : {}),
+      });
+      const d = await parseApiJson(r);
+      if (!r.ok) {
+        throw new Error(
+          (typeof d.error === "string" && d.error) ||
+            (typeof d.message === "string" && d.message) ||
+            "Resend failed.",
+        );
+      }
+      await loadSubmission(rowId);
+      onChanged?.();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Resend failed.");
     } finally {
       setActionBusy(null);
     }
@@ -223,6 +262,9 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
               onApprove={() => void patchRow("approve")}
               onDecline={() => void patchRow("decline")}
               onDelete={() => void deleteRow()}
+              onResend={() => void resendNotification()}
+              canResend={canResend}
+              resendHint={resendHint}
               onCommentChange={setCommentText}
               onPostComment={() => void postComment()}
               className="border-0 shadow-none"

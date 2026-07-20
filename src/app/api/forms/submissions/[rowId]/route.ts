@@ -8,6 +8,7 @@ import {
   approvedValue,
   declinedValue,
 } from "@/lib/forms/submission-actions";
+import { findPendingContactEmail, findResendColumnForStage } from "@/lib/forms/resend";
 import { resolveWorkflow } from "@/lib/forms/workflow";
 import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
@@ -37,11 +38,30 @@ export async function GET(
     const sheet = await ss.getSheet(active);
     const row = await ss.getRow(active, rowId);
     const submissions = await buildSubmissions({ ...sheet, rows: [row] });
+    const submission = submissions[0] ?? null;
+
+    const columns = (sheet.columns ?? []) as Array<{ id: number; title?: string; type?: string }>;
+    const colRefs = columns.map((c) => ({
+      id: c.id,
+      title: String(c.title ?? ""),
+      type: c.type,
+    }));
+    const stageName = submission?.approvalStatus?.state === "current" ? submission.approvalStatus.stage : "";
+    const resendCol = stageName ? findResendColumnForStage(colRefs, stageName) : null;
+    const rowCells = (row as { cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }> }).cells;
+    const recipientEmail = stageName ? findPendingContactEmail(colRefs, rowCells, stageName) : "";
+
     return Response.json({
-      submission: submissions[0] ?? null,
+      submission,
       row,
       demo: config.demo,
       roles: access.user.roles,
+      resend: {
+        available: Boolean(resendCol),
+        columnTitle: resendCol?.title ?? null,
+        stage: stageName || null,
+        recipientEmail: recipientEmail || null,
+      },
     });
   } catch (e) {
     return formsAuthErrorResponse(e);
