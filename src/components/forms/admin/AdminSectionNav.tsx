@@ -39,7 +39,8 @@ function pillClass(isActive: boolean) {
 }
 
 interface AdminSectionNavProps {
-  active: AdminTab;
+  /** Active manage tab, or null when a link route (Tracker / Grid / Builder) is current. */
+  active: AdminTab | null;
   onSelect: (tab: AdminTab) => void;
 }
 

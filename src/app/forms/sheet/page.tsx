@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { SheetGridView, type SheetGridColumn, type SheetGridRow, type SheetGridWorkflow } from "@/components/forms/sheet/SheetGridView";
 
 export default function SheetViewPage() {
@@ -40,28 +41,34 @@ export default function SheetViewPage() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+      <FormsWorkspaceChrome>
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+      </FormsWorkspaceChrome>
     );
   }
 
   if (loading || !sheetName) {
     return (
-      <div className="flex min-h-[12rem] items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
-        <p className="text-sm text-[color:var(--wsu-muted)]">Loading sheet grid…</p>
-      </div>
+      <FormsWorkspaceChrome>
+        <div className="flex min-h-[12rem] items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
+          <p className="text-sm text-[color:var(--wsu-muted)]">Loading sheet grid…</p>
+        </div>
+      </FormsWorkspaceChrome>
     );
   }
 
   return (
-    <SheetGridView
-      sheetName={sheetName}
-      demo={demo}
-      columns={columns}
-      rows={rows}
-      workflow={workflow}
-      totalRowCount={totalRowCount}
-      approvedValues={approvedValues}
-      declinedValues={declinedValues}
-    />
+    <FormsWorkspaceChrome>
+      <SheetGridView
+        sheetName={sheetName}
+        demo={demo}
+        columns={columns}
+        rows={rows}
+        workflow={workflow}
+        totalRowCount={totalRowCount}
+        approvedValues={approvedValues}
+        declinedValues={declinedValues}
+      />
+    </FormsWorkspaceChrome>
   );
 }

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
 import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
-import { AdminSectionNav, type AdminTab } from "@/components/forms/admin/AdminSectionNav";
+import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
 import { ApproversCard } from "@/components/forms/admin/ApproversCard";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
@@ -12,8 +12,8 @@ import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { OrgSharingCard } from "@/components/forms/admin/OrgSharingCard";
 import { WebhooksCard } from "@/components/forms/admin/WebhooksCard";
+import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { IconPlus } from "@/components/forms/icons";
-import { PageHeader } from "@/components/layout/PageHeader";
 
 interface FormEntry {
   id: string;
@@ -61,10 +61,32 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
   }
 }
 
+const MANAGE_TABS: AdminTab[] = ["forms", "org", "webhooks", "approvers"];
+
+function tabFromSearchParam(value: string | null): AdminTab {
+  if (value && MANAGE_TABS.includes(value as AdminTab)) return value as AdminTab;
+  return "forms";
+}
+
 export default function ManagePage() {
+  return (
+    <Suspense
+      fallback={
+        <FormsWorkspaceChrome>
+          <p className="text-sm text-[color:var(--wsu-muted)]">Loading…</p>
+        </FormsWorkspaceChrome>
+      }
+    >
+      <ManagePageContent />
+    </Suspense>
+  );
+}
+
+function ManagePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [tab, setTab] = useState<AdminTab>("forms");
+  const [tab, setTab] = useState<AdminTab>(() => tabFromSearchParam(searchParams.get("tab")));
   const [forms, setForms] = useState<FormEntry[]>([]);
   const [activeId, setActiveId] = useState("");
   const [query, setQuery] = useState("");
@@ -225,10 +247,20 @@ export default function ManagePage() {
 
   function handleSectionSelect(id: AdminTab) {
     setTab(id);
-    if (id === "org") loadOrg();
-    if (id === "webhooks") loadWebhooks();
-    if (id === "approvers") loadApprovers();
+    const href = id === "forms" ? "/forms/manage" : `/forms/manage?tab=${id}`;
+    router.replace(href);
   }
+
+  useEffect(() => {
+    setTab(tabFromSearchParam(searchParams.get("tab")));
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (tab === "org") loadOrg();
+    if (tab === "webhooks") loadWebhooks();
+    if (tab === "approvers") loadApprovers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load helpers are stable closures over setters
+  }, [tab]);
 
   function openCreateModal() {
     setCreateMsg(null);
@@ -448,21 +480,16 @@ export default function ManagePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Forms workspace"
-        title="Form administration"
-        description="Sheet sources from the shared Admin Sources catalog. Use a form to work in tracker/builder; publish for public submit."
-        actions={
-          <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
-            <IconPlus className="h-4 w-4" />
-            Create form
-          </button>
-        }
-      />
-
-      <AdminSectionNav active={tab} onSelect={handleSectionSelect} />
-
+    <FormsWorkspaceChrome
+      activeTab={tab}
+      onSelectTab={handleSectionSelect}
+      actions={
+        <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
+          <IconPlus className="h-4 w-4" />
+          Create form
+        </button>
+      }
+    >
       {formsError ? <Alert text={formsError} /> : null}
 
       {tab === "forms" ? (
@@ -562,6 +589,6 @@ export default function ManagePage() {
         onCreate={createForm}
         createMsg={createMsg}
       />
-    </div>
+    </FormsWorkspaceChrome>
   );
 }
