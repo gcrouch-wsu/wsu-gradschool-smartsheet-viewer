@@ -10,11 +10,17 @@
       "Degree",
       "Program",
       "Campus",
+      "Academic Coordinator Name",
+      "Academic Coordinator Email",
+      "POS Status",
+      "CHR Name",
+      "CHR Email",
+      "OTHER REASON",
+      "ASE Status",
       "LEAVE START",
       "LEAVE END",
       "LIBRARY",
-      "LEAVE REASONS",
-      "OTHER REASON"
+      "LEAVE REASONS"
     ],
     "fields": [
       {
@@ -65,46 +71,119 @@
         "hiddenOnForm": false
       },
       {
-        "columnTitle": "Degree",
+        "columnTitle": "__heading:0726f206",
         "order": 7,
-        "itemKind": "field",
+        "itemKind": "heading",
+        "text": "<h2>Graduate Leave Request Details</h2><p></p>",
         "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "__description:a473e7bd",
+        "order": 8,
+        "itemKind": "description",
+        "text": "<p><span style=\"color: rgb(17, 17, 17); font-family: &quot;Inter var&quot;, Arial, Helvetica, sans-serif, &quot;Segoe UI Emoji&quot;, &quot;Segoe UI Symbol&quot;; font-size: 16px;\">Please answer the following questions regarding your graduate leave request.</span></p>",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Degree",
+        "order": 9,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "kindHint": "dropdown"
       },
       {
         "columnTitle": "Program",
-        "order": 8,
+        "order": 10,
         "itemKind": "field",
-        "hiddenOnForm": false
+        "hiddenOnForm": false,
+        "label": "Enter your academic program: ",
+        "helpText": "Examples: Anthropology, Molecular Bioscience, Soil Science, etc."
       },
       {
         "columnTitle": "Campus",
-        "order": 9,
-        "itemKind": "field",
-        "hiddenOnForm": false
-      },
-      {
-        "columnTitle": "LEAVE START",
-        "order": 10,
-        "itemKind": "field",
-        "hiddenOnForm": false
-      },
-      {
-        "columnTitle": "LEAVE END",
         "order": 11,
         "itemKind": "field",
-        "hiddenOnForm": false
+        "hiddenOnForm": false,
+        "label": "Select your campus:"
       },
       {
-        "columnTitle": "LIBRARY",
+        "columnTitle": "Academic Coordinator Name",
         "order": 12,
         "itemKind": "field",
         "hiddenOnForm": false
       },
       {
-        "columnTitle": "LEAVE REASONS",
+        "columnTitle": "Academic Coordinator Email",
         "order": 13,
         "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "POS Status",
+        "order": 14,
+        "itemKind": "field",
         "hiddenOnForm": false,
+        "label": "Do you have an approved Program of Study on file with the Graduate School?",
+        "helpText": "If you have submitted your Program of Study and you have not received an approval notice from the Graduate School, please indicate \"No\"."
+      },
+      {
+        "columnTitle": "CHR Name",
+        "order": 15,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Advisor / Committee Chair Name: ",
+        "required": true
+      },
+      {
+        "columnTitle": "CHR Email",
+        "order": 16,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Advisor / Committee Chair Email:",
+        "required": true
+      },
+      {
+        "columnTitle": "OTHER REASON",
+        "order": 17,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "ASE Status",
+        "order": 18,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "LEAVE START",
+        "order": 19,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Semester / Year you request to begin leave:  ",
+        "helpText": "Example: Fall 2024"
+      },
+      {
+        "columnTitle": "LEAVE END",
+        "order": 20,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Semester / Year you request to return from leave:  ",
+        "helpText": "Students may request graduate leave status for up to one calendar year. Leave requests for longer periods of time are granted only for special circumstances.    Example: Fall 2025"
+      },
+      {
+        "columnTitle": "LIBRARY",
+        "order": 21,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Do you wish to retain access to the WSU Libraries while on leave?  ",
+        "helpText": ""
+      },
+      {
+        "columnTitle": "LEAVE REASONS",
+        "order": 22,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Provide the reason(s) for your graduate leave request. Please select all that apply.",
         "kindHint": "multiselect",
         "checkboxColumns": [
           "CHKBOX_01",
@@ -128,191 +207,163 @@
         ]
       },
       {
-        "columnTitle": "OTHER REASON",
-        "order": 14,
-        "itemKind": "field",
-        "hiddenOnForm": false
-      },
-      {
         "columnTitle": "Form Creation Date",
-        "order": 15,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "Student Approval",
-        "order": 16,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "Student Approval Date",
-        "order": 17,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "RESEND Student Approval",
-        "order": 18,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "D0",
-        "order": 19,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "ASE Status",
-        "order": 20,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "POS Status",
-        "order": 21,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "CHKBOX_01",
-        "order": 22,
-        "itemKind": "field",
-        "hiddenOnForm": true
-      },
-      {
-        "columnTitle": "CHKBOX_02",
         "order": 23,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_03",
+        "columnTitle": "Student Approval",
         "order": 24,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_04",
+        "columnTitle": "Student Approval Date",
         "order": 25,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_05",
+        "columnTitle": "RESEND Student Approval",
         "order": 26,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_06",
+        "columnTitle": "D0",
         "order": 27,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_07",
+        "columnTitle": "CHKBOX_01",
         "order": 28,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHKBOX_08",
+        "columnTitle": "CHKBOX_02",
         "order": 29,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "D1",
+        "columnTitle": "CHKBOX_03",
         "order": 30,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHR Name",
+        "columnTitle": "CHKBOX_04",
         "order": 31,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHR Email",
+        "columnTitle": "CHKBOX_05",
         "order": 32,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHR Approval",
+        "columnTitle": "CHKBOX_06",
         "order": 33,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "CHR Approval Date",
+        "columnTitle": "CHKBOX_07",
         "order": 34,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "RESEND Chair Approval",
+        "columnTitle": "CHKBOX_08",
         "order": 35,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "D2",
+        "columnTitle": "D1",
         "order": 36,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "Approvals Ready",
+        "columnTitle": "CHR Approval",
         "order": 37,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "Final PDF Create",
+        "columnTitle": "CHR Approval Date",
         "order": 38,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "Academic Coordinator Name",
+        "columnTitle": "RESEND Chair Approval",
         "order": 39,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "Academic Coordinator Email",
+        "columnTitle": "D2",
         "order": 40,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "RESEND Final PDF",
+        "columnTitle": "Approvals Ready",
         "order": 41,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "File Name",
+        "columnTitle": "Final PDF Create",
         "order": 42,
         "itemKind": "field",
         "hiddenOnForm": true
       },
       {
-        "columnTitle": "__heading:0726f206",
+        "columnTitle": "RESEND Final PDF",
         "order": 43,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "File Name",
+        "order": 44,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "__divider:ebac18fc",
+        "order": 45,
+        "itemKind": "divider",
+        "text": "",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "__heading:f6000cc2",
+        "order": 46,
         "itemKind": "heading",
-        "text": "Section heading",
+        "text": "<h2>Graduate Leave Request Details</h2><p></p>",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "__description:c60b46ba",
+        "order": 47,
+        "itemKind": "description",
+        "text": "<p><span style=\"color: rgb(17, 17, 17); font-family: &quot;Inter var&quot;, Arial, Helvetica, sans-serif, &quot;Segoe UI Emoji&quot;, &quot;Segoe UI Symbol&quot;; font-size: 16px;\">Please answer the following questions regarding your graduate leave request.</span></p>",
         "hiddenOnForm": false
       }
     ],
     "allowedDomains": [
       "wsu.edu"
     ],
-    "attachmentsEnabled": true
+    "attachmentsEnabled": false
   },
   "3361171036917636": {
     "columns": [
