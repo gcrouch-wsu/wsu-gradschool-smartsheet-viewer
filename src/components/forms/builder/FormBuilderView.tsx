@@ -1094,19 +1094,17 @@ export function FormBuilderView() {
       ) : null}
 
       {mode === "preview" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 p-4 sm:p-6">
-          <div className="mx-auto w-full max-w-xl rounded-xl border border-[color:var(--wsu-border)] bg-white p-4 shadow-sm sm:p-6">
-            {builder.previewSchema ? (
-              <SubmissionFormView
-                schema={builder.previewSchema}
-                serverErrors={[]}
-                preview
-                onSubmit={async () => ({ ok: true })}
-              />
-            ) : (
-              <p className="text-sm text-[color:var(--wsu-muted)]">Preview unavailable until the layout loads.</p>
-            )}
-          </div>
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 p-3 sm:p-5">
+          {builder.previewSchema ? (
+            <SubmissionFormView
+              schema={builder.previewSchema}
+              serverErrors={[]}
+              preview
+              onSubmit={async () => ({ ok: true })}
+            />
+          ) : (
+            <p className="text-sm text-[color:var(--wsu-muted)]">Preview unavailable until the layout loads.</p>
+          )}
         </div>
       ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">

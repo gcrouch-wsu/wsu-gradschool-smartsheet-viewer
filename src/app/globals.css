@@ -503,6 +503,44 @@ a {
   font-size: 1.125rem;
 }
 
+/* Public form / preview sidebar (dark panel) */
+.form-rich-text--on-dark,
+.form-rich-text--on-dark p,
+.form-rich-text--on-dark li,
+.form-rich-text--on-dark span {
+  color: inherit;
+}
+.form-rich-text--on-dark h1,
+.form-rich-text--on-dark h2,
+.form-rich-text--on-dark h3 {
+  color: #fff;
+}
+.form-rich-text--on-dark a {
+  color: #f3d5b5;
+  text-decoration: underline;
+}
+.form-rich-text--on-dark a:hover {
+  color: #fff;
+}
+.form-rich-text--on-dark strong,
+.form-rich-text--on-dark b {
+  color: #fff;
+  font-weight: 700;
+}
+.form-rich-text--on-dark em,
+.form-rich-text--on-dark i {
+  font-style: italic;
+  opacity: 0.95;
+}
+.form-rich-text--on-dark ol,
+.form-rich-text--on-dark ul {
+  margin: 0.75em 0;
+  padding-left: 1.25rem;
+}
+.form-rich-text--on-dark li + li {
+  margin-top: 0.35em;
+}
+
 /* TipTap editor base styles */
 .ProseMirror {
   outline: none;

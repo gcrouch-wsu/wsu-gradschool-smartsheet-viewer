@@ -61,7 +61,7 @@ function FieldShell({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-[color:var(--wsu-ink)]">
+      <label htmlFor={id} className="block text-sm font-semibold text-[color:var(--wsu-ink)]">
         {label}
         {required ? <span className="ml-0.5 text-wsu-crimson">*</span> : null}
       </label>
@@ -284,7 +284,7 @@ function LayoutBlock({ item }: { item: FormFieldDefinition }) {
       <RichTextHtml
         value={item.text}
         as="h2"
-        className="text-lg font-medium text-[color:var(--wsu-ink)]"
+        className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--wsu-ink)] sm:text-2xl"
         fallback="Section"
       />
     );
@@ -293,7 +293,7 @@ function LayoutBlock({ item }: { item: FormFieldDefinition }) {
     <RichTextHtml
       value={item.text}
       as="div"
-      className="text-sm leading-6 text-[color:var(--wsu-muted)]"
+      className="text-sm leading-relaxed text-[color:var(--wsu-muted)]"
     />
   );
 }
@@ -509,7 +509,7 @@ export function SubmissionFormView({
   const allErrors = [...clientErrors, ...serverErrors];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto w-full max-w-7xl space-y-4">
       {allErrors.length > 0 ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
           <p className="text-sm font-medium text-red-800">Please fix the following:</p>
@@ -524,115 +524,118 @@ export function SubmissionFormView({
       <form
         onSubmit={handleSubmit(processSubmit)}
         noValidate
-        className="relative overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-sm"
+        className="relative flex min-h-[28rem] flex-col overflow-hidden rounded-xl border border-[color:var(--wsu-border)] shadow-sm lg:min-h-[32rem] lg:flex-row"
       >
-        <div className="border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-4">
+        <aside className="flex shrink-0 flex-col border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone,#f0eeea)] px-6 py-8 text-[color:var(--wsu-ink)] sm:px-8 sm:py-10 lg:w-1/2 lg:border-b-0 lg:border-r lg:py-12">
           <RichTextHtml
             value={formTitle}
             as="h1"
-            className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]"
+            className="text-2xl font-semibold leading-tight tracking-tight text-[color:var(--wsu-ink)] sm:text-[1.75rem]"
             fallback={schema.sheetName}
           />
           {hasDescription ? (
             <RichTextHtml
               value={formDescription}
               as="div"
-              className="mt-1 text-sm text-[color:var(--wsu-muted)]"
+              className="mt-5 text-sm leading-relaxed text-[color:var(--wsu-muted)]"
             />
           ) : null}
           {!hasDescription && schema.allowedDomains.length ? (
-            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+            <p className="mt-5 text-sm leading-relaxed text-[color:var(--wsu-muted)]">
               Open to @{schema.allowedDomains.join(", @")} email addresses.
               {schema.demo ? " Demo mode." : ""}
             </p>
-          ) : schema.demo ? (
-            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
+          ) : schema.demo && !hasDescription ? (
+            <p className="mt-5 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
           ) : null}
-        </div>
+        </aside>
 
-        <div className="space-y-5 px-5 py-6">
-          {renderItems.length === 0 ? (
-            <p className="text-sm text-[color:var(--wsu-muted)]">No fields are visible for the current selections.</p>
-          ) : (
-            renderItems.map((entry) => {
-              if (entry.kind === "layout") {
-                return <LayoutBlock key={entry.item.columnTitle} item={entry.item} />;
-              }
-              const meta = schema.fieldMeta?.[entry.col.title.toLowerCase()];
-              const byTitle = new Map(schema.columns.map((c) => [c.title.toLowerCase(), c]));
-              const checkboxTargets = meta?.checkboxColumns?.length
-                ? meta.checkboxColumns
-                    .map((title, index) => {
-                      const target = byTitle.get(title.trim().toLowerCase());
-                      if (!target) return null;
-                      const optionLabel =
-                        meta.checkboxLabels?.[index]?.trim() ||
-                        entry.col.options?.[index] ||
-                        target.title;
-                      return { columnId: target.id, label: optionLabel };
-                    })
-                    .filter((t): t is { columnId: number; label: string } => Boolean(t))
-                : undefined;
-              return (
-                <FormField
-                  key={entry.col.id}
-                  col={entry.col}
-                  label={fieldLabel(entry.col, meta)}
-                  helpText={meta?.helpText}
-                  kind={fieldKind(entry.col, meta)}
-                  required={isFieldRequired(entry.col, conditionalTargets, hidden, meta)}
-                  register={register}
-                  error={fieldErrors[String(entry.col.id)] ?? formState.errors[String(entry.col.id)]?.message}
-                  setValue={setValue}
-                  watchValue={values[String(entry.col.id)] ?? ""}
-                  values={values}
-                  checkboxTargets={checkboxTargets}
-                />
-              );
-            })
-          )}
-
-          {schema.attachmentsEnabled !== false ? (
-            <FileUploadZone files={files} onChange={setFiles} disabled={submitting} />
-          ) : null}
-
-          {publicMode ? (
-            <>
-              <div className="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
-                <label htmlFor="website">Website</label>
-                <input
-                  id="website"
-                  name="website"
-                  type="text"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)}
-                />
-              </div>
-              {turnstileSiteKey ? <div ref={turnstileRef} className="cf-turnstile" /> : null}
-            </>
-          ) : null}
-        </div>
-
-        {!preview ? (
-          <div className="flex flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-[color:var(--wsu-muted)]">
-              <span className="text-wsu-crimson">*</span> Required field
+        <div className="flex min-w-0 flex-1 flex-col bg-white lg:w-1/2">
+          <div className="flex-1 space-y-6 px-5 py-6 sm:px-8 sm:py-8">
+            <p className="text-sm text-[#c45c26]">
+              Fields marked with an asterisk (<span className="font-semibold text-wsu-crimson">*</span>) are required.
             </p>
-            <button
-              type="submit"
-              disabled={submitting || visibleColumns.length === 0}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-wsu-crimson px-5 py-2.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50 sm:w-auto"
-            >
-              {submitting ? "Submitting…" : "Submit"}
-            </button>
+
+            {renderItems.length === 0 ? (
+              <p className="text-sm text-[color:var(--wsu-muted)]">No fields are visible for the current selections.</p>
+            ) : (
+              renderItems.map((entry) => {
+                if (entry.kind === "layout") {
+                  return <LayoutBlock key={entry.item.columnTitle} item={entry.item} />;
+                }
+                const meta = schema.fieldMeta?.[entry.col.title.toLowerCase()];
+                const byTitle = new Map(schema.columns.map((c) => [c.title.toLowerCase(), c]));
+                const checkboxTargets = meta?.checkboxColumns?.length
+                  ? meta.checkboxColumns
+                      .map((title, index) => {
+                        const target = byTitle.get(title.trim().toLowerCase());
+                        if (!target) return null;
+                        const optionLabel =
+                          meta.checkboxLabels?.[index]?.trim() ||
+                          entry.col.options?.[index] ||
+                          target.title;
+                        return { columnId: target.id, label: optionLabel };
+                      })
+                      .filter((t): t is { columnId: number; label: string } => Boolean(t))
+                  : undefined;
+                return (
+                  <FormField
+                    key={entry.col.id}
+                    col={entry.col}
+                    label={fieldLabel(entry.col, meta)}
+                    helpText={meta?.helpText}
+                    kind={fieldKind(entry.col, meta)}
+                    required={isFieldRequired(entry.col, conditionalTargets, hidden, meta)}
+                    register={register}
+                    error={fieldErrors[String(entry.col.id)] ?? formState.errors[String(entry.col.id)]?.message}
+                    setValue={setValue}
+                    watchValue={values[String(entry.col.id)] ?? ""}
+                    values={values}
+                    checkboxTargets={checkboxTargets}
+                  />
+                );
+              })
+            )}
+
+            {schema.attachmentsEnabled !== false ? (
+              <FileUploadZone files={files} onChange={setFiles} disabled={submitting} />
+            ) : null}
+
+            {publicMode ? (
+              <>
+                <div className="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+                  <label htmlFor="website">Website</label>
+                  <input
+                    id="website"
+                    name="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                  />
+                </div>
+                {turnstileSiteKey ? <div ref={turnstileRef} className="cf-turnstile" /> : null}
+              </>
+            ) : null}
           </div>
-        ) : (
-          <div className="border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-5 py-3">
-            <p className="text-xs text-[color:var(--wsu-muted)]">Preview only — submissions are disabled.</p>
-          </div>
-        )}
+
+          {!preview ? (
+            <div className="flex flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+              <button
+                type="submit"
+                disabled={submitting || visibleColumns.length === 0}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-wsu-crimson px-6 py-2.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50 sm:w-auto"
+              >
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
+            </div>
+          ) : (
+            <div className="border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-3 sm:px-8">
+              <p className="text-xs text-[color:var(--wsu-muted)]">Preview only — submissions are disabled.</p>
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );

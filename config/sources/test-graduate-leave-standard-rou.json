@@ -9,7 +9,8 @@
   },
   "formsEnabled": true,
   "formSlug": "test-graduate-leave-standard-rou",
-  "formPublic": false,
+  "formPublic": true,
+  "formPublishedAt": "2026-07-20T20:17:59.963Z",
   "formProvenance": "imported",
   "formRegisteredAt": "2026-07-13T20:12:53.858Z"
 }

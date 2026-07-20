@@ -14,7 +14,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
 
   if (form.loading && !form.schema) {
     return (
-      <div className="mx-auto flex min-h-[16rem] max-w-2xl items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
+      <div className="mx-auto flex min-h-[16rem] max-w-7xl items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
         <p className="text-sm text-[color:var(--wsu-muted)]">Loading form…</p>
       </div>
     );
@@ -32,7 +32,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
 
   if (form.successMessage) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-7xl px-4 py-8">
         <SubmissionSuccessView
           message={form.successMessage}
           onSubmitAnother={() => {
@@ -45,7 +45,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ slug: str
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-8">
       <SubmissionFormView
         schema={form.schema}
         serverErrors={form.serverErrors}
