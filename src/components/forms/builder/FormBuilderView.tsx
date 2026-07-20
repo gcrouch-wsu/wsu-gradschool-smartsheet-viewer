@@ -97,7 +97,7 @@ function FormPresentationEditor({
         setLogoError(result.error);
         return;
       }
-      const alt = (headerLogoAlt.trim() || "Washington State University logo").slice(0, HEADER_LOGO_ALT_MAX_LENGTH);
+      const alt = (headerLogoAlt.trim() || "Washington State University").slice(0, HEADER_LOGO_ALT_MAX_LENGTH);
       onChange({ headerLogoDataUrl: result.dataUrl, headerLogoAlt: alt });
     } finally {
       setLogoBusy(false);
@@ -112,16 +112,20 @@ function FormPresentationEditor({
       <div>
         <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Header logo</label>
         <p className="mb-2 text-[11px] text-[color:var(--wsu-muted)]">
-          Optional. Upload a PNG/JPEG (max 256KB) or paste an image URL. Default shows the WSU cougar lockup.
+          All forms use the WSU lockup by default. Optionally upload a PNG/JPEG (max 256KB) or paste another image URL.
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40">
-            {headerLogoDataUrl.trim() ? (
-              // eslint-disable-next-line @next/next/no-img-element -- admin preview of data URL or remote URL
-              <img src={headerLogoDataUrl} alt="" className="h-full w-full object-contain p-1" />
-            ) : (
-              <span className="text-[10px] text-[color:var(--wsu-muted)]">Default</span>
-            )}
+          <div className="flex h-14 max-w-[10rem] items-center justify-center overflow-hidden rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of default or custom logo */}
+            <img
+              src={
+                headerLogoDataUrl.trim() && headerLogoAlt.trim()
+                  ? headerLogoDataUrl
+                  : "https://s3.wp.wsu.edu/uploads/sites/1999/2021/09/WSU-lockup-horz-rgb-6in.jpg"
+              }
+              alt=""
+              className="h-full w-full object-contain py-1"
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             <label className={`${secondaryBtn} cursor-pointer ${logoBusy ? "pointer-events-none opacity-50" : ""}`}>
@@ -143,18 +147,18 @@ function FormPresentationEditor({
                 className={secondaryBtn}
                 onClick={() => onChange({ headerLogoDataUrl: "", headerLogoAlt: "" })}
               >
-                Use default
+                Use WSU default
               </button>
             ) : null}
           </div>
         </div>
         <label className="mt-2 block">
-          <span className="mb-1 block text-[11px] text-[color:var(--wsu-muted)]">Or image URL</span>
+          <span className="mb-1 block text-[11px] text-[color:var(--wsu-muted)]">Or image URL (leave blank for WSU default)</span>
           <input
             className={inputClass}
             type="url"
             value={/^data:/i.test(headerLogoDataUrl) ? "" : headerLogoDataUrl}
-            placeholder="https://example.com/logo.png"
+            placeholder="https://s3.wp.wsu.edu/…/WSU-lockup-horz-rgb-6in.jpg"
             onChange={(e) => {
               const url = e.target.value.trim();
               setLogoError("");
@@ -164,7 +168,7 @@ function FormPresentationEditor({
                 }
                 return;
               }
-              const alt = headerLogoAlt.trim() || "Washington State University logo";
+              const alt = headerLogoAlt.trim() || "Washington State University";
               onChange({ headerLogoDataUrl: url, headerLogoAlt: alt });
             }}
           />

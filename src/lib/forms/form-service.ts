@@ -4,6 +4,7 @@ import { expandColumnsWithCheckboxGroups, fieldMetaFromConfig } from "@/lib/form
 import { resolveFormColumns } from "@/lib/forms/form-fields";
 import { loadFormFields } from "@/lib/forms/store/field-config";
 import * as ss from "@/lib/forms/smartsheet-api";
+import { resolveFormsHeaderLogo } from "@/lib/header-logo";
 import { validateSubmission, type SubmissionCell } from "@/lib/forms/validation";
 
 export interface FormSchemaPayload {
@@ -32,6 +33,7 @@ export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchem
   const conditionalLogic = await loadConditionalLogic(sheetId);
   const allowedDomains = resolveAllowedDomains(fieldConfig);
   const attachmentsEnabled = resolveAttachmentsEnabled(fieldConfig);
+  const headerLogo = resolveFormsHeaderLogo(fieldConfig?.headerLogoDataUrl, fieldConfig?.headerLogoAlt);
 
   return {
     sheetName: String(sheet.name ?? "Form"),
@@ -45,8 +47,8 @@ export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchem
     allowedDomains,
     demo: config.demo,
     attachmentsEnabled,
-    headerLogoDataUrl: fieldConfig?.headerLogoDataUrl,
-    headerLogoAlt: fieldConfig?.headerLogoAlt,
+    headerLogoDataUrl: headerLogo.src,
+    headerLogoAlt: headerLogo.alt,
   };
 }
 
