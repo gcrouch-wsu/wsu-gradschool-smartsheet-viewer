@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
-import { SheetGridView, type SheetGridColumn, type SheetGridRow, type SheetGridWorkflow } from "@/components/forms/sheet/SheetGridView";
+import {
+  SheetGridView,
+  type SheetGridColumn,
+  type SheetGridRow,
+  type SheetGridWorkflow,
+} from "@/components/forms/sheet/SheetGridView";
+import { SubmissionDetailModal } from "@/components/forms/tracker/SubmissionDetailModal";
 
 export default function SheetViewPage() {
   const [sheetName, setSheetName] = useState("");
@@ -15,9 +21,10 @@ export default function SheetViewPage() {
   const [declinedValues, setDeclinedValues] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const loadSheet = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     fetch("/api/forms/sheet-view")
       .then(async (r) => {
         const d = await r.json();
@@ -36,8 +43,14 @@ export default function SheetViewPage() {
         setError("");
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not load sheet."))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!silent) setLoading(false);
+      });
   }, []);
+
+  useEffect(() => {
+    loadSheet();
+  }, [loadSheet]);
 
   if (error) {
     return (
@@ -68,6 +81,13 @@ export default function SheetViewPage() {
         totalRowCount={totalRowCount}
         approvedValues={approvedValues}
         declinedValues={declinedValues}
+        onRowClick={(row) => setSelectedRowId(row.id)}
+      />
+      <SubmissionDetailModal
+        rowId={selectedRowId}
+        open={selectedRowId != null}
+        onClose={() => setSelectedRowId(null)}
+        onChanged={() => loadSheet(true)}
       />
     </FormsWorkspaceChrome>
   );

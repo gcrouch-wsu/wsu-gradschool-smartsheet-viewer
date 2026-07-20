@@ -42,6 +42,7 @@ interface SheetGridViewProps {
   totalRowCount: number | null;
   approvedValues: string[];
   declinedValues: string[];
+  onRowClick?: (row: SheetGridRow) => void;
 }
 
 type ColumnFilter = "all" | "form" | "workflow";
@@ -104,6 +105,7 @@ export function SheetGridView({
   totalRowCount,
   approvedValues,
   declinedValues,
+  onRowClick,
 }: SheetGridViewProps) {
   const [query, setQuery] = useState("");
   const [highlightApprovals, setHighlightApprovals] = useState(true);
@@ -297,7 +299,26 @@ export function SheetGridView({
               </thead>
               <tbody>
                 {filteredRows.map((row, idx) => (
-                  <tr key={row.id} className="group hover:bg-wsu-crimson/[0.03]">
+                  <tr
+                    key={row.id}
+                    className={[
+                      "group hover:bg-wsu-crimson/[0.03]",
+                      onRowClick ? "cursor-pointer focus-within:bg-wsu-crimson/[0.04]" : "",
+                    ].join(" ")}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              onRowClick(row);
+                            }
+                          }
+                        : undefined
+                    }
+                    aria-label={onRowClick ? `Open submission ${row.approvalStatus?.label ?? row.id}` : undefined}
+                  >
                     <td className="sticky left-0 z-10 border-b border-r border-[color:var(--wsu-border)] bg-white px-2 py-2 text-center text-xs text-[color:var(--wsu-muted)] group-hover:bg-[#faf4f5]">
                       {row.rowNumber ?? idx + 1}
                     </td>
@@ -362,6 +383,7 @@ export function SheetGridView({
           {" · "}
           {visibleColumns.length} of {columns.length} column{columns.length === 1 ? "" : "s"}
           {query ? ` · filtered by “${query}”` : ""}
+          {onRowClick ? " · click a row for submission details" : ""}
         </div>
       </div>
     </div>
