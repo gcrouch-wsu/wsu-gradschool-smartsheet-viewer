@@ -96,6 +96,25 @@ function LegendChip({ label, className }: { label: string; className: string }) 
   );
 }
 
+function StatusStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: string;
+}) {
+  return (
+    <div className="bg-white px-4 py-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--wsu-muted)]">{label}</p>
+      <p className={`mt-1 font-mono text-xl font-medium tabular-nums leading-none tracking-tight ${tone ?? "text-[color:var(--wsu-ink)]"}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function SheetGridView({
   sheetName,
   demo,
@@ -135,6 +154,19 @@ export function SheetGridView({
     );
   }, [rows, visibleColumns, query]);
 
+  const metrics = useMemo(() => {
+    let inReview = 0;
+    let complete = 0;
+    let declined = 0;
+    for (const row of rows) {
+      const st = row.approvalStatus?.state;
+      if (st === "current") inReview++;
+      else if (st === "complete") complete++;
+      else if (st === "declined") declined++;
+    }
+    return { total: rows.length, inReview, complete, declined };
+  }, [rows]);
+
   const hasPrimarySticky = visibleColumns.some((c) => c.primary);
 
   const filterPill = (id: ColumnFilter, label: string) => {
@@ -171,6 +203,43 @@ export function SheetGridView({
         >
           Open tracker
         </Link>
+      </div>
+
+      <div
+        className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white"
+        aria-label="Submission status counts"
+      >
+        <div className="grid grid-cols-2 gap-px bg-[color:var(--wsu-border)] sm:grid-cols-4">
+          <StatusStat label="Total" value={metrics.total} />
+          <StatusStat label="In review" value={metrics.inReview} tone="text-amber-700" />
+          <StatusStat label="Complete" value={metrics.complete} tone="text-emerald-700" />
+          <StatusStat label="Declined" value={metrics.declined} tone="text-red-700" />
+        </div>
+        {metrics.total > 0 ? (
+          <div className="flex h-1 w-full overflow-hidden" aria-hidden>
+            {metrics.inReview > 0 ? (
+              <div
+                className="bg-amber-400 transition-[width] duration-500"
+                style={{ width: `${(metrics.inReview / metrics.total) * 100}%` }}
+              />
+            ) : null}
+            {metrics.complete > 0 ? (
+              <div
+                className="bg-emerald-500 transition-[width] duration-500"
+                style={{ width: `${(metrics.complete / metrics.total) * 100}%` }}
+              />
+            ) : null}
+            {metrics.declined > 0 ? (
+              <div
+                className="bg-red-400 transition-[width] duration-500"
+                style={{ width: `${(metrics.declined / metrics.total) * 100}%` }}
+              />
+            ) : null}
+            <div className="flex-1 bg-[color:var(--wsu-stone)]" />
+          </div>
+        ) : (
+          <div className="h-1 bg-[color:var(--wsu-stone)]" aria-hidden />
+        )}
       </div>
 
       <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
