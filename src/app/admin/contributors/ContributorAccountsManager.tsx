@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DataTable } from "@/components/ui/Table";
 
 interface ContributorUser {
   id: string;
@@ -125,51 +126,60 @@ export function ContributorAccountsManager({ users: initialUsers }: { users: Con
           No contributor accounts yet. Accounts are created when contributors complete first-time access.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[color:var(--wsu-border)] text-left text-xs font-semibold uppercase tracking-[0.1em] text-[color:var(--wsu-muted)]">
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Created</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Last updated</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[color:var(--wsu-border)]">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-[color:var(--wsu-stone)]/20">
-                  <td className="px-4 py-3 font-medium text-[color:var(--wsu-ink)]">{user.email}</td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-[color:var(--wsu-muted)]">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-[color:var(--wsu-muted)]">
-                    {new Date(user.updatedAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={loadingResetId === user.id}
-                        onClick={() => handleGenerateResetLink(user)}
-                        className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)] disabled:opacity-50"
-                      >
-                        {loadingResetId === user.id ? "Generating..." : "Generate reset link"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={removingId === user.id}
-                        onClick={() => handleRemove(user)}
-                        className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
-                      >
-                        {removingId === user.id ? "Removing..." : "Remove"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            {
+              id: "email",
+              header: "Email",
+              headerClassName: "py-3 font-semibold uppercase tracking-[0.1em]",
+              cellClassName: "font-medium",
+              cell: (user) => user.email,
+            },
+            {
+              id: "created",
+              header: "Created",
+              headerClassName: "hidden py-3 font-semibold uppercase tracking-[0.1em] sm:table-cell",
+              cellClassName: "hidden text-[color:var(--wsu-muted)] sm:table-cell",
+              cell: (user) => new Date(user.createdAt).toLocaleDateString(),
+            },
+            {
+              id: "updated",
+              header: "Last updated",
+              headerClassName: "hidden py-3 font-semibold uppercase tracking-[0.1em] sm:table-cell",
+              cellClassName: "hidden text-[color:var(--wsu-muted)] sm:table-cell",
+              cell: (user) => new Date(user.updatedAt).toLocaleDateString(),
+            },
+            {
+              id: "actions",
+              header: "Actions",
+              headerClassName: "py-3 font-semibold uppercase tracking-[0.1em]",
+              cell: (user) => (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={loadingResetId === user.id}
+                    onClick={() => handleGenerateResetLink(user)}
+                    className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)] disabled:opacity-50"
+                  >
+                    {loadingResetId === user.id ? "Generating..." : "Generate reset link"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={removingId === user.id}
+                    onClick={() => handleRemove(user)}
+                    className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                  >
+                    {removingId === user.id ? "Removing..." : "Remove"}
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+          data={users}
+          getRowKey={(user) => user.id}
+          rowClassName="hover:bg-[color:var(--wsu-stone)]/20"
+          containerClassName="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)]"
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listAuditEvents } from "@/lib/audit";
 import { ActivityFilters } from "@/components/admin/ActivityFilters";
+import { DataTable } from "@/components/ui/Table";
 
 export const dynamic = "force-dynamic";
 
@@ -34,34 +35,49 @@ export default async function AdminActivityPage({
       {events.length === 0 ? (
         <p className="product-empty">No audit events yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-line text-xs text-sub">
-                <th className="px-3 py-2 font-medium">When</th>
-                <th className="px-3 py-2 font-medium">Actor</th>
-                <th className="px-3 py-2 font-medium">Action</th>
-                <th className="px-3 py-2 font-medium">Resource</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e) => (
-                <tr key={e.id} className="border-b border-line last:border-0">
-                  <td className="px-3 py-2 text-sub">{new Date(e.createdAt).toLocaleString()}</td>
-                  <td className="px-3 py-2">
-                    <span className="font-medium text-ink">{e.actorLabel ?? e.actorId}</span>
-                    <span className="mt-0.5 block text-xs text-mist">{e.actorKind}</span>
-                  </td>
-                  <td className="px-3 py-2 text-ink">{e.action}</td>
-                  <td className="px-3 py-2 text-sub">
-                    {e.resourceType}
-                    {e.resourceId ? ` / ${e.resourceId}` : ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            {
+              id: "when",
+              header: "When",
+              headerClassName: "px-3 py-2 text-sub",
+              cellClassName: "px-3 py-2 text-sub",
+              cell: (e) => new Date(e.createdAt).toLocaleString(),
+            },
+            {
+              id: "actor",
+              header: "Actor",
+              headerClassName: "px-3 py-2 text-sub",
+              cellClassName: "px-3 py-2",
+              cell: (e) => (
+                <>
+                  <span className="font-medium text-ink">{e.actorLabel ?? e.actorId}</span>
+                  <span className="mt-0.5 block text-xs text-mist">{e.actorKind}</span>
+                </>
+              ),
+            },
+            {
+              id: "action",
+              header: "Action",
+              headerClassName: "px-3 py-2 text-sub",
+              cellClassName: "px-3 py-2 text-ink",
+              cell: (e) => e.action,
+            },
+            {
+              id: "resource",
+              header: "Resource",
+              headerClassName: "px-3 py-2 text-sub",
+              cellClassName: "px-3 py-2 text-sub",
+              cell: (e) => `${e.resourceType}${e.resourceId ? ` / ${e.resourceId}` : ""}`,
+            },
+          ]}
+          data={events}
+          getRowKey={(e) => e.id}
+          headerRowClassName="border-line"
+          rowClassName="border-line hover:bg-transparent"
+          minWidth={640}
+          containerClassName="rounded-xl border border-line"
+        />
       )}
     </div>
   );

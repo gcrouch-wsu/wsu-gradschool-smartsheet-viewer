@@ -2,6 +2,7 @@
 
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 import { Alert, Card, inputClass, primaryBtnClass, secondaryBtnClass } from "@/components/forms/admin/AdminCard";
+import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 
 interface ApproverSummary {
   id: string;
@@ -54,36 +55,45 @@ export function ApproversCard({
       {approvers.length === 0 ? (
         <p className="text-sm text-[color:var(--wsu-muted)]">No approver accounts yet.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-[color:var(--wsu-border)]">
-          <table className="w-full min-w-[400px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-[color:var(--wsu-border)] text-xs text-[color:var(--wsu-muted)]">
-                <th className="px-3 py-2 font-medium">Email</th>
-                <th className="px-3 py-2 font-medium">Created</th>
-                <th className="px-3 py-2 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {approvers.map((a) => (
-                <tr key={a.id} className="border-b border-[color:var(--wsu-border)] last:border-0 hover:bg-[color:var(--wsu-stone)]/60">
-                  <td className="px-3 py-2 font-medium text-[color:var(--wsu-ink)]">{a.email}</td>
-                  <td className="px-3 py-2 text-[color:var(--wsu-muted)]">{new Date(a.createdAt).toLocaleDateString()}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteApprover(a.id)}
-                      className="text-xs font-medium text-red-700 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={
+            [
+              {
+                id: "email",
+                header: "Email",
+                headerClassName: "px-3 py-2",
+                cellClassName: "px-3 py-2 font-medium",
+                cell: (a) => a.email,
+              },
+              {
+                id: "created",
+                header: "Created",
+                headerClassName: "px-3 py-2",
+                cellClassName: "px-3 py-2 text-[color:var(--wsu-muted)]",
+                cell: (a) => new Date(a.createdAt).toLocaleDateString(),
+              },
+              {
+                id: "actions",
+                header: <span className="sr-only">Actions</span>,
+                headerClassName: "px-3 py-2",
+                cellClassName: "px-3 py-2 text-right",
+                cell: (a) => (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteApprover(a.id)}
+                    className="text-xs font-medium text-red-700 hover:underline"
+                  >
+                    Delete
+                  </button>
+                ),
+              },
+            ] satisfies DataTableColumn<ApproverSummary>[]
+          }
+          data={approvers}
+          getRowKey={(a) => a.id}
+          minWidth={400}
+          containerClassName="rounded-lg border border-[color:var(--wsu-border)]"
+        />
       )}
       <div>
         <h3 className="text-xs font-medium text-[color:var(--wsu-muted)]">Create approver</h3>

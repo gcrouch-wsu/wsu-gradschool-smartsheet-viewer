@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
+import { DataTable } from "@/components/ui/Table";
 import {
   countDelimitedRoleAttributes,
   detectNumberedRoleGroupsFromColumns,
@@ -997,26 +998,34 @@ export function SourceForm({
               </p>
             )}
             <div className="overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-[color:var(--wsu-stone)]/70 text-[color:var(--wsu-muted)]">
-                    <tr>
-                      <th className="px-4 py-3">Title</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3">ID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schema.columns.map((column) => (
-                      <tr key={column.id} className="border-t border-[color:var(--wsu-border)]/60">
-                        <td className="px-4 py-3 text-[color:var(--wsu-ink)]">{column.title}</td>
-                        <td className="px-4 py-3">{column.type}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{column.id}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  {
+                    id: "title",
+                    header: "Title",
+                    headerClassName: "py-3",
+                    cell: (column) => column.title,
+                  },
+                  {
+                    id: "type",
+                    header: "Type",
+                    headerClassName: "py-3",
+                    cell: (column) => column.type,
+                  },
+                  {
+                    id: "id",
+                    header: "ID",
+                    headerClassName: "py-3",
+                    cellClassName: "font-mono text-xs",
+                    cell: (column) => column.id,
+                  },
+                ]}
+                data={schema.columns}
+                getRowKey={(column) => column.id}
+                plainRows
+                headerClassName="bg-[color:var(--wsu-stone)]/70"
+                rowClassName="border-t border-[color:var(--wsu-border)]/60"
+              />
             </div>
           </div>
         ) : (
@@ -1167,93 +1176,117 @@ export function SourceForm({
 
                   {roleGroup.mode === "numbered_slots" ? (
                     <div className="mt-3 space-y-3">
-                      <div className="overflow-x-auto rounded-xl border border-[color:var(--wsu-border)]/70">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="bg-[color:var(--wsu-stone)]/30 text-[color:var(--wsu-muted)]">
-                            <tr>
-                              <th className="px-3 py-2 align-bottom">Slot ID</th>
-                              <th className="px-3 py-2 align-bottom">Name column</th>
-                              <th className="px-3 py-2 align-bottom">Email column</th>
-                              <th className="px-3 py-2 align-bottom">Phone column</th>
-                              <th className="px-3 py-2 align-bottom">Campus column</th>
-                              <th className="w-14 px-2 py-2 align-bottom" aria-label="Remove slot" />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(roleGroup.slots ?? []).map((slot, slotIndex) => (
-                              <tr
-                                key={`${roleGroup.id}-slot-row-${slotIndex}`}
-                                className="border-t border-[color:var(--wsu-border)]/60 text-[color:var(--wsu-ink)]"
+                      <DataTable
+                        className="text-xs"
+                        containerClassName="rounded-xl border border-[color:var(--wsu-border)]/70"
+                        columns={[
+                          {
+                            id: "slot",
+                            header: "Slot ID",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <input
+                                value={slot.slot}
+                                onChange={(e) => setNumberedSlotId(roleGroup.id, slotIndex, e.target.value)}
+                                className="w-[6.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 font-mono text-xs"
+                                aria-label={`Slot ${slotIndex + 1} ID for ${roleGroup.label}`}
+                              />
+                            ),
+                          },
+                          {
+                            id: "name",
+                            header: "Name column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-name-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.name}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Name column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "name", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "email",
+                            header: "Email column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-email-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.email}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Email column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "email", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "phone",
+                            header: "Phone column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-phone-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.phone}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Phone column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "phone", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "campus",
+                            header: "Campus column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-campus-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.campus}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Campus column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "campus", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "remove",
+                            header: <span className="sr-only">Remove slot</span>,
+                            headerClassName: "w-14 px-2 py-2 align-bottom",
+                            cellClassName: "px-2 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <button
+                                type="button"
+                                onClick={() => removeNumberedSlot(roleGroup.id, slotIndex)}
+                                disabled={(roleGroup.slots ?? []).length <= 1}
+                                title={
+                                  (roleGroup.slots ?? []).length <= 1
+                                    ? "Keep at least one slot in the table, or use Remove group above to delete this entire role."
+                                    : undefined
+                                }
+                                aria-label={`Remove slot ${slot.slot || String(slotIndex + 1)} from ${roleGroup.label}`}
+                                className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
                               >
-                                <td className="px-3 py-2 align-top">
-                                  <input
-                                    value={slot.slot}
-                                    onChange={(e) => setNumberedSlotId(roleGroup.id, slotIndex, e.target.value)}
-                                    className="w-[6.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 font-mono text-xs"
-                                    aria-label={`Slot ${slotIndex + 1} ID for ${roleGroup.label}`}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-name-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.name}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Name column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "name", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-email-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.email}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Email column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "email", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-phone-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.phone}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Phone column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "phone", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-campus-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.campus}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Campus column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "campus", sel)}
-                                  />
-                                </td>
-                                <td className="px-2 py-2 align-top">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeNumberedSlot(roleGroup.id, slotIndex)}
-                                    disabled={(roleGroup.slots ?? []).length <= 1}
-                                    title={
-                                      (roleGroup.slots ?? []).length <= 1
-                                        ? "Keep at least one slot in the table, or use Remove group above to delete this entire role."
-                                        : undefined
-                                    }
-                                    aria-label={`Remove slot ${slot.slot || String(slotIndex + 1)} from ${roleGroup.label}`}
-                                    className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                Remove
+                              </button>
+                            ),
+                          },
+                        ]}
+                        data={roleGroup.slots ?? []}
+                        getRowKey={(_slot, slotIndex) => `${roleGroup.id}-slot-row-${slotIndex}`}
+                        plainRows
+                        headerClassName="bg-[color:var(--wsu-stone)]/30"
+                        rowClassName="border-t border-[color:var(--wsu-border)]/60"
+                      />
                       {numberedSlotsHaveDuplicateIds(roleGroup.slots) ? (
                         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                           Two or more rows use the same slot ID. Use a distinct ID per row so contributors and saves align

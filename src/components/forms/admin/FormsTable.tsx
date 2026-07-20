@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCheck, IconFile, IconPencil, IconSearch } from "@/components/forms/icons";
+import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 
 export interface FormEntryRow {
   id: string;
@@ -52,6 +53,153 @@ export function FormsTable({
   busyId,
   loading = false,
 }: FormsTableProps) {
+  const columns: DataTableColumn<FormEntryRow>[] = [
+    {
+      id: "name",
+      header: "Name",
+      cellClassName: "max-w-[200px]",
+      cell: (form) => (
+        <>
+          <div className="flex items-center gap-2">
+            <IconFile className="h-4 w-4 shrink-0 text-[color:var(--wsu-muted)]" />
+            <span className="truncate font-medium text-[color:var(--wsu-ink)]">{form.name}</span>
+          </div>
+          <p className="mt-0.5 font-mono text-[10px] text-[color:var(--wsu-muted)]" title={form.id}>
+            {truncateSheetId(form.id)}
+          </p>
+          {form.sourceConfigId ? (
+            <a
+              href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
+              className="mt-1 inline-block text-[10px] font-medium text-wsu-crimson hover:underline"
+            >
+              Admin source →
+            </a>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "source",
+      header: "Source",
+      cellClassName: "text-[color:var(--wsu-muted)]",
+      cell: (form) => (
+        <>
+          <span>{SOURCE_LABEL[form.source]}</span>
+          {form.sourceConfigId ? (
+            <a
+              href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
+              className="mt-1 block text-[10px] font-medium text-wsu-crimson hover:underline"
+            >
+              Edit source / views →
+            </a>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "slug",
+      header: "Slug",
+      cellClassName: "font-mono text-xs text-[color:var(--wsu-muted)]",
+      cell: (form) => form.slug || "—",
+    },
+    {
+      id: "created",
+      header: "Created",
+      cellClassName: "text-[color:var(--wsu-muted)]",
+      cell: (form) => (form.createdAt ? new Date(form.createdAt).toLocaleDateString() : ""),
+    },
+    {
+      id: "workspace",
+      header: "Workspace",
+      cell: (form) => {
+        const isActive = String(form.id) === activeId;
+        return isActive ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+            <IconCheck className="h-3 w-3" />
+            Active
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onUseForm(form.id)}
+            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white"
+          >
+            Use
+          </button>
+        );
+      },
+    },
+    {
+      id: "publication",
+      header: "Publication",
+      cell: (form) =>
+        form.public ? (
+          <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800">
+            Published
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full bg-[color:var(--wsu-stone)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--wsu-muted)]">
+            Draft
+          </span>
+        ),
+    },
+    {
+      id: "actions",
+      header: <span className="sr-only">Actions</span>,
+      cell: (form) => {
+        const isPublished = Boolean(form.public);
+        const publicUrl = form.slug ? `/f/${form.slug}` : null;
+        const busy = busyId === form.id;
+        return (
+          <div className="flex flex-wrap justify-end gap-1.5">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-lg border border-[color:var(--wsu-border)] p-1.5 text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+              disabled={busy}
+              onClick={() => onEdit(form.id)}
+              aria-label={`Edit ${form.name}`}
+              title="Edit in builder"
+            >
+              <IconPencil className="h-3.5 w-3.5" />
+            </button>
+            {isPublished && publicUrl ? (
+              <button
+                type="button"
+                className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                disabled={busy}
+                onClick={() => {
+                  const absolute = `${window.location.origin}${publicUrl}`;
+                  void navigator.clipboard.writeText(absolute);
+                }}
+              >
+                Copy URL
+              </button>
+            ) : null}
+            {isPublished ? (
+              <button
+                type="button"
+                className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onUnpublish(form.id)}
+              >
+                Unpublish
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                disabled={busy}
+                onClick={() => onPublish(form.id)}
+              >
+                Publish
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--wsu-border)] px-4 py-3">
@@ -80,143 +228,14 @@ export function FormsTable({
       ) : forms.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">No forms yet.</p>
       ) : (
-        <div className="max-h-[min(28rem,55vh)] overflow-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_var(--wsu-border)]">
-              <tr className="text-xs text-[color:var(--wsu-muted)]">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Source</th>
-                <th className="px-4 py-2.5 font-medium">Slug</th>
-                <th className="px-4 py-2.5 font-medium">Created</th>
-                <th className="px-4 py-2.5 font-medium">Workspace</th>
-                <th className="px-4 py-2.5 font-medium">Publication</th>
-                <th className="px-4 py-2.5 font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {forms.map((form) => {
-                const isActive = String(form.id) === activeId;
-                const isPublished = Boolean(form.public);
-                const publicUrl = form.slug ? `/f/${form.slug}` : null;
-                const busy = busyId === form.id;
-                return (
-                  <tr
-                    key={form.id}
-                    className="border-b border-[color:var(--wsu-border)] last:border-0 hover:bg-[color:var(--wsu-stone)]/60"
-                  >
-                    <td className="max-w-[200px] px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <IconFile className="h-4 w-4 shrink-0 text-[color:var(--wsu-muted)]" />
-                        <span className="truncate font-medium text-[color:var(--wsu-ink)]">{form.name}</span>
-                      </div>
-                      <p className="mt-0.5 font-mono text-[10px] text-[color:var(--wsu-muted)]" title={form.id}>
-                        {truncateSheetId(form.id)}
-                      </p>
-                      {form.sourceConfigId ? (
-                        <a
-                          href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
-                          className="mt-1 inline-block text-[10px] font-medium text-wsu-crimson hover:underline"
-                        >
-                          Admin source →
-                        </a>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-[color:var(--wsu-muted)]">
-                      <span>{SOURCE_LABEL[form.source]}</span>
-                      {form.sourceConfigId ? (
-                        <a
-                          href={`/admin/sources/${encodeURIComponent(form.sourceConfigId)}`}
-                          className="mt-1 block text-[10px] font-medium text-wsu-crimson hover:underline"
-                        >
-                          Edit source / views →
-                        </a>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[color:var(--wsu-muted)]">{form.slug || "—"}</td>
-                    <td className="px-4 py-3 text-[color:var(--wsu-muted)]">
-                      {form.createdAt ? new Date(form.createdAt).toLocaleDateString() : ""}
-                    </td>
-                    <td className="px-4 py-3">
-                      {isActive ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-                          <IconCheck className="h-3 w-3" />
-                          Active
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => onUseForm(form.id)}
-                          className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white"
-                        >
-                          Use
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {isPublished ? (
-                        <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800">
-                          Published
-                        </span>
-                      ) : (
-                        <span className="inline-flex rounded-full bg-[color:var(--wsu-stone)] px-2.5 py-0.5 text-xs font-medium text-[color:var(--wsu-muted)]">
-                          Draft
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap justify-end gap-1.5">
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center rounded-lg border border-[color:var(--wsu-border)] p-1.5 text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
-                          disabled={busy}
-                          onClick={() => onEdit(form.id)}
-                          aria-label={`Edit ${form.name}`}
-                          title="Edit in builder"
-                        >
-                          <IconPencil className="h-3.5 w-3.5" />
-                        </button>
-                        {isPublished && publicUrl ? (
-                          <button
-                            type="button"
-                            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
-                            disabled={busy}
-                            onClick={() => {
-                              const absolute = `${window.location.origin}${publicUrl}`;
-                              void navigator.clipboard.writeText(absolute);
-                            }}
-                          >
-                            Copy URL
-                          </button>
-                        ) : null}
-                        {isPublished ? (
-                          <button
-                            type="button"
-                            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
-                            disabled={busy}
-                            onClick={() => onUnpublish(form.id)}
-                          >
-                            Unpublish
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
-                            disabled={busy}
-                            onClick={() => onPublish(form.id)}
-                          >
-                            Publish
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={forms}
+          getRowKey={(form) => form.id}
+          stickyHeader
+          maxHeight="min(32rem, 55vh)"
+          minWidth={720}
+        />
       )}
     </div>
   );

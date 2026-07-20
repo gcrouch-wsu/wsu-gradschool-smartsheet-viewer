@@ -118,7 +118,7 @@ export function RecentCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="flex flex-col p-[22px]">
+    <Card className="flex h-fit flex-col self-start p-[22px]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-serif text-xl font-medium text-ink">{title}</h2>
@@ -126,7 +126,7 @@ export function RecentCard({
         </div>
         {action}
       </div>
-      <div className="mt-4">{children}</div>
+      <div className="mt-4 max-h-[min(32rem,55vh)] overflow-y-auto overscroll-contain">{children}</div>
     </Card>
   );
 }
