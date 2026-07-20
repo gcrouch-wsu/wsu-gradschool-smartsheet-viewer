@@ -197,7 +197,7 @@ export async function PUT(request: Request) {
             : undefined;
           return {
             columnTitle: title,
-            order: typeof f.order === "number" ? f.order : index,
+            order: index,
             itemKind,
             text: typeof f.text === "string" ? f.text : undefined,
             hiddenOnForm: lockedField ? true : Boolean(f.hiddenOnForm),

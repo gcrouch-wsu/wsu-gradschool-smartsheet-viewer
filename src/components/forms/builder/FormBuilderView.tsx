@@ -219,9 +219,9 @@ function FieldCanvas({
   lockedSet: Set<string>;
   onSelect: (title: string) => void;
   onToggleHidden: (title: string, hidden: boolean) => void;
-  onReorder: (fromIndex: number, toIndex: number) => void;
+  onReorder: (fromTitle: string, toTitle: string) => void;
 }) {
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragTitle, setDragTitle] = useState<string | null>(null);
   const byTitle = useMemo(() => new Map(columns.map((c) => [c.title.toLowerCase(), c])), [columns]);
 
   const formFields = fields.filter((f) => !lockedSet.has(f.columnTitle.toLowerCase()) || !f.hiddenOnForm || isLayoutFormItem(f));
@@ -233,7 +233,6 @@ function FieldCanvas({
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Drag to reorder. Toggle to include on the public form.</p>
       <ul className="mt-3 space-y-2">
         {formFields.map((field) => {
-          const index = fields.findIndex((f) => f.columnTitle === field.columnTitle);
           const layout = isLayoutFormItem(field);
           const col = layout ? null : byTitle.get(field.columnTitle.toLowerCase());
           const locked = !layout && lockedSet.has(field.columnTitle.toLowerCase());
@@ -248,17 +247,20 @@ function FieldCanvas({
             <li
               key={field.columnTitle}
               draggable={!locked}
-              onDragStart={() => setDragIndex(index)}
+              onDragStart={() => setDragTitle(field.columnTitle)}
               onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                if (dragIndex === null || dragIndex === index) return;
-                onReorder(dragIndex, index);
-                setDragIndex(null);
+              onDrop={(e) => {
+                e.preventDefault();
+                if (!dragTitle || dragTitle === field.columnTitle) return;
+                onReorder(dragTitle, field.columnTitle);
+                setDragTitle(null);
               }}
+              onDragEnd={() => setDragTitle(null)}
               className={[
                 "flex items-center gap-3 rounded-lg border px-3 py-2",
                 selected ? "border-wsu-crimson bg-wsu-crimson/5" : "border-[color:var(--wsu-border)] bg-white",
                 field.hiddenOnForm ? "opacity-60" : "",
+                dragTitle === field.columnTitle ? "opacity-40" : "",
               ].join(" ")}
             >
               <button type="button" className="cursor-grab text-[color:var(--wsu-muted)]" aria-label="Drag to reorder" disabled={locked}>
@@ -1168,8 +1170,11 @@ export function FormBuilderView() {
               lockedSet={builder.lockedSet}
               onSelect={handleSelectField}
               onToggleHidden={(title, hidden) => builder.updateField(title, { hiddenOnForm: hidden })}
-              onReorder={(from, to) => {
+              onReorder={(fromTitle, toTitle) => {
                 builder.updateFields((fields) => {
+                  const from = fields.findIndex((f) => f.columnTitle === fromTitle);
+                  const to = fields.findIndex((f) => f.columnTitle === toTitle);
+                  if (from < 0 || to < 0 || from === to) return fields;
                   const next = [...fields];
                   const [item] = next.splice(from, 1);
                   if (!item) return fields;

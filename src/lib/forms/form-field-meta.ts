@@ -129,89 +129,60 @@ export function mergeFieldsWithColumns(
   config: FormFieldConfig | null,
 ): FormFieldDefinition[] {
   const existing = [...(config?.fields ?? [])].sort((a, b) => a.order - b.order);
-  const layoutItems = existing.filter(isLayoutFormItem);
-  const existingFields = existing.filter(isFieldFormItem);
-  const byTitle = new Map(existingFields.map((f) => [f.columnTitle.toLowerCase(), f]));
-  const used = new Set<string>();
-  const result: FormFieldDefinition[] = [];
   const hasConfig = Boolean(config?.fields?.length || config?.columns?.length);
 
-  const orderedTitles = config?.columns?.length
-    ? config.columns
-    : existingFields.map((f) => f.columnTitle);
+  if (!existing.length) {
+    return seedFieldsFromColumns(columns, config?.columns);
+  }
 
-  // Rebuild in saved order, inserting layout items relative to neighboring fields.
-  const layoutByAfterKey = new Map<string, FormFieldDefinition[]>();
-  const leadingLayout: FormFieldDefinition[] = [];
-  {
-    let lastFieldKey: string | null = null;
-    for (const item of existing) {
-      if (isLayoutFormItem(item)) {
-        if (lastFieldKey == null) leadingLayout.push(item);
-        else {
-          const list = layoutByAfterKey.get(lastFieldKey) ?? [];
-          list.push(item);
-          layoutByAfterKey.set(lastFieldKey, list);
-        }
-      } else {
-        lastFieldKey = item.columnTitle.toLowerCase();
-      }
+  const sheetByTitle = new Map(columns.map((c) => [c.title.toLowerCase(), c]));
+  const used = new Set<string>();
+  const result: FormFieldDefinition[] = [];
+
+  // Walk saved canvas order exactly (fields + layout), so reorder survives reload.
+  for (const item of existing) {
+    if (isLayoutFormItem(item)) {
+      result.push({
+        ...item,
+        order: result.length,
+        itemKind: item.itemKind ?? "heading",
+      });
+      continue;
     }
-  }
 
-  for (const item of leadingLayout) {
-    result.push({ ...item, order: result.length, itemKind: item.itemKind ?? "heading" });
-  }
-
-  for (const title of orderedTitles) {
-    const col = columns.find((c) => c.title.toLowerCase() === title.toLowerCase());
+    const col = sheetByTitle.get(item.columnTitle.toLowerCase());
     if (!col) continue;
     const key = col.title.toLowerCase();
     if (used.has(key)) continue;
     used.add(key);
-    const prev = byTitle.get(key);
+
     const defaultHidden = /^chkbox([_-]?\d+)?$/i.test(col.title.trim());
     result.push({
       columnTitle: col.title,
       order: result.length,
       itemKind: "field",
-      hiddenOnForm: prev?.hiddenOnForm ?? defaultHidden,
-      label: prev?.label,
-      helpText: prev?.helpText,
-      required: prev?.required,
-      kindHint: prev?.kindHint,
-      checkboxColumns: prev?.checkboxColumns,
-      checkboxLabels: prev?.checkboxLabels,
+      hiddenOnForm: item.hiddenOnForm ?? defaultHidden,
+      label: item.label,
+      helpText: item.helpText,
+      required: item.required,
+      kindHint: item.kindHint,
+      checkboxColumns: item.checkboxColumns,
+      checkboxLabels: item.checkboxLabels,
     });
-    for (const layout of layoutByAfterKey.get(key) ?? []) {
-      result.push({ ...layout, order: result.length, itemKind: layout.itemKind ?? "heading" });
-    }
   }
 
+  // New sheet columns not yet in config (append; keep existing order intact).
   for (const col of columns) {
     const key = col.title.toLowerCase();
     if (used.has(key)) continue;
     used.add(key);
-    const prev = byTitle.get(key);
     const defaultHidden = /^chkbox([_-]?\d+)?$/i.test(col.title.trim()) || hasConfig;
     result.push({
       columnTitle: col.title,
       order: result.length,
       itemKind: "field",
-      hiddenOnForm: prev?.hiddenOnForm ?? defaultHidden,
-      label: prev?.label,
-      helpText: prev?.helpText,
-      required: prev?.required,
-      kindHint: prev?.kindHint,
-      checkboxColumns: prev?.checkboxColumns,
-      checkboxLabels: prev?.checkboxLabels,
+      hiddenOnForm: defaultHidden,
     });
-  }
-
-  // Preserve any layout that sat after removed columns (append).
-  for (const item of layoutItems) {
-    if (result.some((r) => r.columnTitle === item.columnTitle)) continue;
-    result.push({ ...item, order: result.length, itemKind: item.itemKind ?? "heading" });
   }
 
   return result;
