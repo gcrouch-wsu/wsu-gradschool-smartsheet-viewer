@@ -67,7 +67,7 @@ declare module "@tiptap/core" {
 }
 
 const FONT_FAMILIES = [
-  { label: "Default Font", value: "" },
+  { label: "Font", value: "" },
   { label: "Serif", value: "serif" },
   { label: "Sans-Serif", value: "sans-serif" },
   { label: "Monospace", value: "monospace" },
@@ -76,7 +76,7 @@ const FONT_FAMILIES = [
 ];
 
 const FONT_SIZES = [
-  { label: "Default Size", value: "" },
+  { label: "Size", value: "" },
   { label: "10px", value: "10px" },
   { label: "12px", value: "12px" },
   { label: "14px", value: "14px" },

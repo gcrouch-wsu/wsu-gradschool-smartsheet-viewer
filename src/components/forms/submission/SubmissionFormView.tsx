@@ -451,30 +451,6 @@ export function SubmissionFormView({
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <div>
-        <RichTextHtml
-          value={formTitle}
-          as="h1"
-          className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]"
-          fallback={schema.sheetName}
-        />
-        {hasDescription ? (
-          <RichTextHtml
-            value={formDescription}
-            as="div"
-            className="mt-1 text-sm text-[color:var(--wsu-muted)]"
-          />
-        ) : null}
-        {!hasDescription && schema.allowedDomains.length ? (
-          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-            Open to @{schema.allowedDomains.join(", @")} email addresses.
-            {schema.demo ? " Demo mode." : ""}
-          </p>
-        ) : schema.demo ? (
-          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
-        ) : null}
-      </div>
-
       {allErrors.length > 0 ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
           <p className="text-sm font-medium text-red-800">Please fix the following:</p>
@@ -491,10 +467,28 @@ export function SubmissionFormView({
         noValidate
         className="relative overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-sm"
       >
-        <div className="border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">
-            Submission details
-          </p>
+        <div className="border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-4">
+          <RichTextHtml
+            value={formTitle}
+            as="h1"
+            className="view-section-title text-xl font-medium text-[color:var(--wsu-ink)]"
+            fallback={schema.sheetName}
+          />
+          {hasDescription ? (
+            <RichTextHtml
+              value={formDescription}
+              as="div"
+              className="mt-1 text-sm text-[color:var(--wsu-muted)]"
+            />
+          ) : null}
+          {!hasDescription && schema.allowedDomains.length ? (
+            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+              Open to @{schema.allowedDomains.join(", @")} email addresses.
+              {schema.demo ? " Demo mode." : ""}
+            </p>
+          ) : schema.demo ? (
+            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
+          ) : null}
         </div>
 
         <div className="space-y-5 px-5 py-6">

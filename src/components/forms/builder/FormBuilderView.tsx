@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
 import { SubmissionFormView } from "@/components/forms/submission/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
@@ -23,6 +23,9 @@ const secondaryBtn =
 
 const primaryBtn =
   "rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson-dark disabled:opacity-60";
+
+type BuilderMode = "edit" | "preview";
+type RailTab = "add" | "field";
 
 const FIELD_PALETTE: { type: BuilderFieldType; label: string; hint: string }[] = [
   { type: "text", label: "Short text", hint: "Single-line answer" },
@@ -75,125 +78,128 @@ function FormPresentationEditor({
   const envDefault = (envAllowedDomains.length ? envAllowedDomains : ["wsu.edu"]).join(", ");
 
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
-      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form title & description</h2>
-      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-        Shown at the top of the public form. Next: set domains, then publish from Manage.
+    <div className="space-y-3 border-t border-[color:var(--wsu-border)] px-4 py-3">
+      <p className="text-xs text-[color:var(--wsu-muted)]">
+        Shown at the top of the public form. Set domains, then publish from Manage.
       </p>
-      <div className="mt-3 space-y-3">
-        <div>
-          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Title</label>
-          <HeaderCustomTextEditor
-            value={formTitle}
-            placeholder={sheetName}
-            compact
-            onChange={(html) => onChange({ formTitle: html })}
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Description</label>
-          <HeaderCustomTextEditor
-            value={formDescription}
-            placeholder="Optional supporting text for submitters"
-            onChange={(html) => onChange({ formDescription: html })}
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Allowed email domains</label>
-          <input
-            className={inputClass}
-            value={domainsText}
-            placeholder="wsu.edu"
-            onChange={(e) =>
-              onChange({
-                allowedDomains: e.target.value
-                  .split(",")
-                  .map((d) => d.trim().toLowerCase())
-                  .filter(Boolean),
-              })
-            }
-          />
-          <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
-            Comma-separated. Default is <span className="font-mono">{envDefault}</span>. Clear and save to use that
-            default again.
-          </p>
-        </div>
-        <div>
-          <label className="flex items-start gap-2 text-sm text-[color:var(--wsu-ink)]">
-            <input
-              type="checkbox"
-              className="mt-0.5 rounded border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
-              checked={attachmentsEnabled}
-              onChange={(e) => onChange({ attachmentsEnabled: e.target.checked })}
-            />
-            <span>
-              Allow file uploads
-              <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--wsu-muted)]">
-                When off, the submit form hides the attachment control. Env default is{" "}
-                {envAttachmentsEnabled ? "on" : "off"} (`ATTACHMENTS_ENABLED`).
-              </span>
-            </span>
-          </label>
-        </div>
-        <div className="rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-3 py-2 text-xs text-[color:var(--wsu-muted)]">
-          {formPublic && publicUrl ? (
-            <p>
-              Published:{" "}
-              <Link href={publicUrl} className="font-medium text-wsu-crimson hover:underline">
-                {publicUrl}
-              </Link>
-            </p>
-          ) : (
-            <p>Draft — publish from Manage to get a public /f/… URL for submissions.</p>
-          )}
-        </div>
+      <div>
+        <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Title</label>
+        <HeaderCustomTextEditor
+          value={formTitle}
+          placeholder={sheetName}
+          compact
+          onChange={(html) => onChange({ formTitle: html })}
+        />
       </div>
-    </section>
+      <div>
+        <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Description</label>
+        <HeaderCustomTextEditor
+          value={formDescription}
+          placeholder="Optional supporting text for submitters"
+          onChange={(html) => onChange({ formDescription: html })}
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Allowed email domains</label>
+        <input
+          className={inputClass}
+          value={domainsText}
+          placeholder="wsu.edu"
+          onChange={(e) =>
+            onChange({
+              allowedDomains: e.target.value
+                .split(",")
+                .map((d) => d.trim().toLowerCase())
+                .filter(Boolean),
+            })
+          }
+        />
+        <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
+          Comma-separated. Default is <span className="font-mono">{envDefault}</span>. Clear and save to use that
+          default again.
+        </p>
+      </div>
+      <div>
+        <label className="flex items-start gap-2 text-sm text-[color:var(--wsu-ink)]">
+          <input
+            type="checkbox"
+            className="mt-0.5 rounded border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
+            checked={attachmentsEnabled}
+            onChange={(e) => onChange({ attachmentsEnabled: e.target.checked })}
+          />
+          <span>
+            Allow file uploads
+            <span className="mt-0.5 block text-[11px] font-normal text-[color:var(--wsu-muted)]">
+              When off, the submit form hides the attachment control. Env default is{" "}
+              {envAttachmentsEnabled ? "on" : "off"} (`ATTACHMENTS_ENABLED`).
+            </span>
+          </span>
+        </label>
+      </div>
+      <div className="rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-3 py-2 text-xs text-[color:var(--wsu-muted)]">
+        {formPublic && publicUrl ? (
+          <p>
+            Published:{" "}
+            <Link href={publicUrl} className="font-medium text-wsu-crimson hover:underline">
+              {publicUrl}
+            </Link>
+          </p>
+        ) : (
+          <p>Draft — publish from Manage to get a public /f/… URL for submissions.</p>
+        )}
+      </div>
+    </div>
   );
 }
 
 function FieldPalette({ onAdd }: { onAdd: (type: BuilderElementType) => void }) {
+  const chipClass =
+    "flex flex-col items-start gap-0.5 rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-2 text-left hover:border-wsu-crimson/40 hover:bg-[color:var(--wsu-stone)]/50";
+
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
-      <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form elements</h2>
-      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Layout blocks and Smartsheet input fields.</p>
-
-      <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Layout</h3>
-      <div className="mt-2 space-y-2">
-        {ELEMENT_PALETTE.map((item) => (
-          <button
-            key={item.type}
-            type="button"
-            onClick={() => onAdd(item.type)}
-            className="flex w-full items-start gap-2 rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-left hover:border-wsu-crimson/40 hover:bg-[color:var(--wsu-stone)]/50"
-          >
-            <IconPlus className="mt-0.5 h-4 w-4 shrink-0 text-wsu-crimson" />
-            <span>
-              <span className="block text-sm font-medium text-[color:var(--wsu-ink)]">{item.label}</span>
-              <span className="block text-xs text-[color:var(--wsu-muted)]">{item.hint}</span>
-            </span>
-          </button>
-        ))}
+    <div className="space-y-4 p-3">
+      <div>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Layout</h3>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {ELEMENT_PALETTE.map((item) => (
+            <button
+              key={item.type}
+              type="button"
+              title={item.hint}
+              onClick={() => onAdd(item.type)}
+              className={chipClass}
+            >
+              <span className="flex items-center gap-1 text-sm font-medium text-[color:var(--wsu-ink)]">
+                <IconPlus className="h-3.5 w-3.5 shrink-0 text-wsu-crimson" />
+                {item.label}
+              </span>
+              <span className="line-clamp-1 text-[11px] text-[color:var(--wsu-muted)]">{item.hint}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <h3 className="mt-4 text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Fields</h3>
-      <div className="mt-2 space-y-2">
-        {FIELD_PALETTE.map((item) => (
-          <button
-            key={item.type}
-            type="button"
-            onClick={() => onAdd(item.type)}
-            className="flex w-full items-start gap-2 rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-left hover:border-wsu-crimson/40 hover:bg-[color:var(--wsu-stone)]/50"
-          >
-            <IconPlus className="mt-0.5 h-4 w-4 shrink-0 text-wsu-crimson" />
-            <span>
-              <span className="block text-sm font-medium text-[color:var(--wsu-ink)]">{item.label}</span>
-              <span className="block text-xs text-[color:var(--wsu-muted)]">{item.hint}</span>
-            </span>
-          </button>
-        ))}
+      <div>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Fields</h3>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {FIELD_PALETTE.map((item) => (
+            <button
+              key={item.type}
+              type="button"
+              title={item.hint}
+              onClick={() => onAdd(item.type)}
+              className={chipClass}
+            >
+              <span className="flex items-center gap-1 text-sm font-medium text-[color:var(--wsu-ink)]">
+                <IconPlus className="h-3.5 w-3.5 shrink-0 text-wsu-crimson" />
+                {item.label}
+              </span>
+              <span className="line-clamp-1 text-[11px] text-[color:var(--wsu-muted)]">{item.hint}</span>
+            </button>
+          ))}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -299,6 +305,7 @@ function FieldInspector({
   onRename,
   onOptions,
   onDelete,
+  bare = false,
 }: {
   field: FormFieldDefinition | null;
   column: SmartsheetColumn | null;
@@ -307,6 +314,8 @@ function FieldInspector({
   onRename: (title: string) => Promise<void>;
   onOptions: (options: string[]) => Promise<void>;
   onDelete: () => void;
+  /** When true, omit outer card chrome (used inside the right rail). */
+  bare?: boolean;
 }) {
   const [titleDraft, setTitleDraft] = useState(field?.columnTitle ?? "");
   const [optionsDraft, setOptionsDraft] = useState((column?.options ?? []).join("\n"));
@@ -319,18 +328,25 @@ function FieldInspector({
     setLocalError("");
   }, [field?.columnTitle, column?.id, column?.options]);
 
+  const shell = (children: ReactNode) =>
+    bare ? (
+      <div className="space-y-4 p-3">{children}</div>
+    ) : (
+      <section className="space-y-4 rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">{children}</section>
+    );
+
   if (!field) {
-    return (
-      <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+    return shell(
+      <>
         <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Element properties</h2>
-        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Select a field or layout element on the canvas.</p>
-      </section>
+        <p className="text-sm text-[color:var(--wsu-muted)]">Select a field or layout element on the canvas.</p>
+      </>,
     );
   }
 
   if (isLayoutFormItem(field)) {
-    return (
-      <section className="space-y-4 rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+    return shell(
+      <>
         <div>
           <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Element properties</h2>
           <p className="mt-1 text-xs text-[color:var(--wsu-muted)] capitalize">{field.itemKind}</p>
@@ -360,21 +376,21 @@ function FieldInspector({
         <button type="button" onClick={onDelete} className="text-sm font-medium text-red-700 hover:underline">
           Remove element
         </button>
-      </section>
+      </>,
     );
   }
 
   if (!column) {
-    return (
-      <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+    return shell(
+      <>
         <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Field properties</h2>
-        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Column not found on the sheet.</p>
-      </section>
+        <p className="text-sm text-[color:var(--wsu-muted)]">Column not found on the sheet.</p>
+      </>,
     );
   }
 
-  return (
-    <section className="space-y-4 rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+  return shell(
+    <>
       <div>
         <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Field properties</h2>
         <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">{column.type} · ID {column.id}</p>
@@ -507,7 +523,7 @@ function FieldInspector({
       ) : (
         <p className="text-xs text-[color:var(--wsu-muted)]">Workflow / system columns stay on the sheet but off the public form.</p>
       )}
-    </section>
+    </>,
   );
 }
 
@@ -515,10 +531,14 @@ function ConditionalRulesEditor({
   rules,
   fields,
   onChange,
+  open,
+  onToggle,
 }: {
   rules: ConditionalRule[];
   fields: FormFieldDefinition[];
   onChange: (rules: ConditionalRule[]) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const titles = fields.filter((f) => isFieldFormItem(f) && !f.hiddenOnForm).map((f) => f.columnTitle);
 
@@ -527,104 +547,224 @@ function ConditionalRulesEditor({
   }
 
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+        aria-expanded={open}
+      >
         <div>
           <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Conditional logic</h2>
-          <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Show fields when another field matches a value.</p>
+          <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">
+            {rules.length === 0
+              ? "Show fields when another field matches a value."
+              : `${rules.length} rule${rules.length === 1 ? "" : "s"}`}
+          </p>
         </div>
-        <button
-          type="button"
-          className={secondaryBtn}
-          onClick={() =>
-            onChange([
-              ...rules,
-              {
-                whenColumn: titles[0] ?? "",
-                equals: [""],
-                showColumns: titles.slice(1, 2),
-              },
-            ])
-          }
-        >
-          Add rule
-        </button>
-      </div>
+        <span className="text-xs font-medium text-wsu-crimson">{open ? "Hide" : "Show"}</span>
+      </button>
 
-      <div className="mt-3 space-y-3">
-        {rules.length === 0 ? <p className="text-sm text-[color:var(--wsu-muted)]">No rules yet.</p> : null}
-        {rules.map((rule, index) => (
-          <div key={index} className="space-y-2 rounded-lg border border-[color:var(--wsu-border)] p-3">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">When field</label>
-                <select className={inputClass} value={rule.whenColumn} onChange={(e) => updateRule(index, { whenColumn: e.target.value })}>
-                  <option value="">Select…</option>
-                  {titles.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Equals (comma-separated)</label>
-                <input
-                  className={inputClass}
-                  value={rule.equals.join(", ")}
-                  onChange={(e) =>
-                    updateRule(index, {
-                      equals: e.target.value
-                        .split(",")
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Show fields</label>
-              <div className="flex flex-wrap gap-2">
-                {titles
-                  .filter((t) => t.toLowerCase() !== rule.whenColumn.toLowerCase())
-                  .map((t) => {
-                    const checked = rule.showColumns.some((s) => s.toLowerCase() === t.toLowerCase());
-                    return (
-                      <label key={t} className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            const next = e.target.checked
-                              ? [...rule.showColumns, t]
-                              : rule.showColumns.filter((s) => s.toLowerCase() !== t.toLowerCase());
-                            updateRule(index, { showColumns: next });
-                          }}
-                        />
-                        {t}
-                      </label>
-                    );
-                  })}
-              </div>
-            </div>
+      {open ? (
+        <div className="space-y-3 border-t border-[color:var(--wsu-border)] px-4 py-3">
+          <div className="flex justify-end">
             <button
               type="button"
-              className="text-xs font-medium text-red-700 hover:underline"
-              onClick={() => onChange(rules.filter((_, i) => i !== index))}
+              className={secondaryBtn}
+              onClick={() =>
+                onChange([
+                  ...rules,
+                  {
+                    whenColumn: titles[0] ?? "",
+                    equals: [""],
+                    showColumns: titles.slice(1, 2),
+                  },
+                ])
+              }
             >
-              Remove rule
+              Add rule
             </button>
           </div>
-        ))}
-      </div>
+          {rules.length === 0 ? <p className="text-sm text-[color:var(--wsu-muted)]">No rules yet.</p> : null}
+          {rules.map((rule, index) => (
+            <div key={index} className="space-y-2 rounded-lg border border-[color:var(--wsu-border)] p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">When field</label>
+                  <select className={inputClass} value={rule.whenColumn} onChange={(e) => updateRule(index, { whenColumn: e.target.value })}>
+                    <option value="">Select…</option>
+                    {titles.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Equals (comma-separated)</label>
+                  <input
+                    className={inputClass}
+                    value={rule.equals.join(", ")}
+                    onChange={(e) =>
+                      updateRule(index, {
+                        equals: e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Show fields</label>
+                <div className="flex flex-wrap gap-2">
+                  {titles
+                    .filter((t) => t.toLowerCase() !== rule.whenColumn.toLowerCase())
+                    .map((t) => {
+                      const checked = rule.showColumns.some((s) => s.toLowerCase() === t.toLowerCase());
+                      return (
+                        <label key={t} className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...rule.showColumns, t]
+                                : rule.showColumns.filter((s) => s.toLowerCase() !== t.toLowerCase());
+                              updateRule(index, { showColumns: next });
+                            }}
+                          />
+                          {t}
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="text-xs font-medium text-red-700 hover:underline"
+                onClick={() => onChange(rules.filter((_, i) => i !== index))}
+              >
+                Remove rule
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </section>
+  );
+}
+
+function RailTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        active
+          ? "bg-white text-[color:var(--wsu-ink)] shadow-sm"
+          : "text-[color:var(--wsu-muted)] hover:text-[color:var(--wsu-ink)]",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BuilderRightRail({
+  railTab,
+  onRailTabChange,
+  onAdd,
+  inspector,
+  className = "",
+}: {
+  railTab: RailTab;
+  onRailTabChange: (tab: RailTab) => void;
+  onAdd: (type: BuilderElementType) => void;
+  inspector: ReactNode;
+  className?: string;
+}) {
+  return (
+    <aside
+      className={[
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white",
+        className,
+      ].join(" ")}
+    >
+      <div className="shrink-0 border-b border-[color:var(--wsu-border)] p-2">
+        <div className="flex rounded-lg bg-[color:var(--wsu-stone)]/60 p-0.5">
+          <RailTabButton active={railTab === "add"} onClick={() => onRailTabChange("add")}>
+            Add
+          </RailTabButton>
+          <RailTabButton active={railTab === "field"} onClick={() => onRailTabChange("field")}>
+            Field
+          </RailTabButton>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {railTab === "add" ? <FieldPalette onAdd={onAdd} /> : inspector}
+      </div>
+    </aside>
+  );
+}
+
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: BuilderMode;
+  onChange: (mode: BuilderMode) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-[color:var(--wsu-border)] bg-white p-0.5" role="group" aria-label="Builder mode">
+      {(["edit", "preview"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onChange(value)}
+          className={[
+            "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
+            mode === value
+              ? "bg-wsu-crimson text-white"
+              : "text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]",
+          ].join(" ")}
+        >
+          {value}
+        </button>
+      ))}
+    </div>
   );
 }
 
 export function FormBuilderView() {
   const builder = useFormBuilder();
-  const [previewOpen, setPreviewOpen] = useState(true);
+  const [mode, setMode] = useState<BuilderMode>("edit");
+  const [railTab, setRailTab] = useState<RailTab>("add");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [mobileRailOpen, setMobileRailOpen] = useState(false);
+
+  useEffect(() => {
+    if (builder.selectedTitle) {
+      setRailTab("field");
+    }
+  }, [builder.selectedTitle]);
+
+  useEffect(() => {
+    if (builder.state?.conditionalLogic.length) {
+      setRulesOpen(true);
+    }
+  }, [builder.state?.conditionalLogic.length]);
 
   if (builder.loading) {
     return <p className="text-sm text-[color:var(--wsu-muted)]">Loading form builder…</p>;
@@ -656,10 +796,55 @@ export function FormBuilderView() {
         null
       : null;
 
+  function handleSelectField(title: string) {
+    builder.setSelectedTitle(title);
+    setRailTab("field");
+    setMobileRailOpen(true);
+  }
+
+  function handleAdd(type: BuilderElementType) {
+    void builder.addElement(type);
+    setRailTab("field");
+  }
+
+  const inspector = (
+    <FieldInspector
+      key={selectedField?.columnTitle ?? "none"}
+      bare
+      field={selectedField}
+      column={selectedColumn}
+      locked={selectedField ? builder.lockedSet.has(selectedField.columnTitle.toLowerCase()) : false}
+      onChange={(patch) => {
+        if (!selectedField) return;
+        builder.updateField(selectedField.columnTitle, patch);
+      }}
+      onRename={async (title) => {
+        if (!selectedColumn || !selectedField) return;
+        await builder.renameColumn(selectedColumn.id, title);
+        builder.updateFields((fields) =>
+          fields.map((f) =>
+            f.columnTitle === selectedField.columnTitle ? { ...f, columnTitle: title } : f,
+          ),
+        );
+        builder.setSelectedTitle(title);
+        await builder.load();
+      }}
+      onOptions={async (options) => {
+        if (!selectedColumn) return;
+        const type = selectedColumn.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST";
+        await builder.updatePicklistOptions(selectedColumn.id, options, type);
+        await builder.load();
+      }}
+      onDelete={() => {
+        if (selectedField) void builder.deleteField(selectedField.columnTitle);
+      }}
+    />
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <div className="flex min-h-0 flex-col gap-3 lg:h-[calc(100dvh-14rem)]">
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="font-serif text-2xl font-medium tracking-[-0.02em] text-ink">Form builder</h1>
           <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
             {builder.state.sheetName}
@@ -667,10 +852,13 @@ export function FormBuilderView() {
             {builder.dirty ? " · Unsaved changes" : ""}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={secondaryBtn} onClick={() => setPreviewOpen((v) => !v)}>
-            {previewOpen ? "Hide preview" : "Show preview"}
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ModeToggle mode={mode} onChange={setMode} />
+          {builder.state.formPublic && builder.state.publicUrl ? (
+            <Link href={builder.state.publicUrl} target="_blank" rel="noreferrer" className={secondaryBtn}>
+              Open public form
+            </Link>
+          ) : null}
           <button type="button" className={secondaryBtn} onClick={() => void builder.load()} disabled={builder.saving}>
             Refresh
           </button>
@@ -681,99 +869,146 @@ export function FormBuilderView() {
       </div>
 
       {builder.message ? (
-        <p className={`rounded-lg px-3 py-2 text-xs ${builder.message.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
+        <p className={`shrink-0 rounded-lg px-3 py-2 text-xs ${builder.message.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
           {builder.message.text}
         </p>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)_300px]">
-        <div className="space-y-4">
-          <FormPresentationEditor
-            sheetName={builder.state.sheetName}
-            formTitle={builder.state.formTitle}
-            formDescription={builder.state.formDescription}
-            allowedDomains={builder.state.allowedDomains}
-            envAllowedDomains={builder.state.envAllowedDomains}
-            attachmentsEnabled={builder.state.attachmentsEnabled}
-            envAttachmentsEnabled={builder.state.envAttachmentsEnabled}
-            formPublic={builder.state.formPublic}
-            publicUrl={builder.state.publicUrl}
-            onChange={builder.setFormPresentation}
-          />
-          <FieldPalette onAdd={(type) => void builder.addElement(type)} />
+      {mode === "preview" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-xl rounded-xl border border-[color:var(--wsu-border)] bg-white p-4 shadow-sm sm:p-6">
+            {builder.previewSchema ? (
+              <SubmissionFormView
+                schema={builder.previewSchema}
+                serverErrors={[]}
+                preview
+                onSubmit={async () => ({ ok: true })}
+              />
+            ) : (
+              <p className="text-sm text-[color:var(--wsu-muted)]">Preview unavailable until the layout loads.</p>
+            )}
+          </div>
         </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+            <section className="shrink-0 rounded-xl border border-[color:var(--wsu-border)] bg-white">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                aria-expanded={settingsOpen}
+              >
+                <div>
+                  <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form settings</h2>
+                  <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Title, description, domains, and attachments</p>
+                </div>
+                <span className="text-xs font-medium text-wsu-crimson">{settingsOpen ? "Hide" : "Show"}</span>
+              </button>
+              {settingsOpen ? (
+                <FormPresentationEditor
+                  sheetName={builder.state.sheetName}
+                  formTitle={builder.state.formTitle}
+                  formDescription={builder.state.formDescription}
+                  allowedDomains={builder.state.allowedDomains}
+                  envAllowedDomains={builder.state.envAllowedDomains}
+                  attachmentsEnabled={builder.state.attachmentsEnabled}
+                  envAttachmentsEnabled={builder.state.envAttachmentsEnabled}
+                  formPublic={builder.state.formPublic}
+                  publicUrl={builder.state.publicUrl}
+                  onChange={builder.setFormPresentation}
+                />
+              ) : null}
+            </section>
 
-        <div className="space-y-4">
-          <FieldCanvas
-            fields={builder.state.fields}
-            columns={builder.state.columns}
-            selectedTitle={builder.selectedTitle}
-            lockedSet={builder.lockedSet}
-            onSelect={builder.setSelectedTitle}
-            onToggleHidden={(title, hidden) => builder.updateField(title, { hiddenOnForm: hidden })}
-            onReorder={(from, to) => {
-              builder.updateFields((fields) => {
-                const next = [...fields];
-                const [item] = next.splice(from, 1);
-                if (!item) return fields;
-                next.splice(to, 0, item);
-                return next;
-              });
-            }}
-          />
-          <ConditionalRulesEditor
-            rules={builder.state.conditionalLogic}
-            fields={builder.state.fields}
-            onChange={builder.setConditionalLogic}
+            <div className="flex shrink-0 flex-wrap gap-2 lg:hidden">
+              <button
+                type="button"
+                className={secondaryBtn}
+                onClick={() => {
+                  setRailTab("add");
+                  setMobileRailOpen(true);
+                }}
+              >
+                Add field
+              </button>
+              <button
+                type="button"
+                className={secondaryBtn}
+                onClick={() => {
+                  setRailTab("field");
+                  setMobileRailOpen(true);
+                }}
+              >
+                Field settings
+              </button>
+            </div>
+
+            <FieldCanvas
+              fields={builder.state.fields}
+              columns={builder.state.columns}
+              selectedTitle={builder.selectedTitle}
+              lockedSet={builder.lockedSet}
+              onSelect={handleSelectField}
+              onToggleHidden={(title, hidden) => builder.updateField(title, { hiddenOnForm: hidden })}
+              onReorder={(from, to) => {
+                builder.updateFields((fields) => {
+                  const next = [...fields];
+                  const [item] = next.splice(from, 1);
+                  if (!item) return fields;
+                  next.splice(to, 0, item);
+                  return next;
+                });
+              }}
+            />
+
+            <ConditionalRulesEditor
+              rules={builder.state.conditionalLogic}
+              fields={builder.state.fields}
+              onChange={builder.setConditionalLogic}
+              open={rulesOpen}
+              onToggle={() => setRulesOpen((v) => !v)}
+            />
+          </div>
+
+          <BuilderRightRail
+            className="hidden lg:flex"
+            railTab={railTab}
+            onRailTabChange={setRailTab}
+            onAdd={handleAdd}
+            inspector={inspector}
           />
         </div>
+      )}
 
-        <div className="space-y-4">
-          <FieldInspector
-            key={selectedField?.columnTitle ?? "none"}
-            field={selectedField}
-            column={selectedColumn}
-            locked={selectedField ? builder.lockedSet.has(selectedField.columnTitle.toLowerCase()) : false}
-            onChange={(patch) => {
-              if (!selectedField) return;
-              builder.updateField(selectedField.columnTitle, patch);
-            }}
-            onRename={async (title) => {
-              if (!selectedColumn || !selectedField) return;
-              await builder.renameColumn(selectedColumn.id, title);
-              builder.updateFields((fields) =>
-                fields.map((f) =>
-                  f.columnTitle === selectedField.columnTitle
-                    ? { ...f, columnTitle: title }
-                    : f,
-                ),
-              );
-              builder.setSelectedTitle(title);
-              await builder.load();
-            }}
-            onOptions={async (options) => {
-              if (!selectedColumn) return;
-              const type = selectedColumn.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST";
-              await builder.updatePicklistOptions(selectedColumn.id, options, type);
-              await builder.load();
-            }}
-            onDelete={() => {
-              if (selectedField) void builder.deleteField(selectedField.columnTitle);
-            }}
+      {mobileRailOpen && mode === "edit" ? (
+        <div className="fixed inset-0 z-[10000] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[color:var(--wsu-ink)]/40"
+            aria-label="Close panel"
+            onClick={() => setMobileRailOpen(false)}
           />
+          <div className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-white shadow-[0_20px_50px_rgba(35,31,32,0.2)]">
+            <div className="flex items-center justify-between border-b border-[color:var(--wsu-border)] px-3 py-2">
+              <p className="text-sm font-medium text-[color:var(--wsu-ink)]">
+                {railTab === "add" ? "Add elements" : "Field settings"}
+              </p>
+              <button type="button" className={secondaryBtn} onClick={() => setMobileRailOpen(false)}>
+                Done
+              </button>
+            </div>
+            <BuilderRightRail
+              className="min-h-0 flex-1 rounded-none border-0"
+              railTab={railTab}
+              onRailTabChange={setRailTab}
+              onAdd={(type) => {
+                handleAdd(type);
+              }}
+              inspector={inspector}
+            />
+          </div>
         </div>
-      </div>
-
-      {previewOpen && builder.previewSchema ? (
-        <section className="rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 p-4">
-          <h2 className="mb-3 text-sm font-medium text-[color:var(--wsu-ink)]">Live preview</h2>
-          <SubmissionFormView
-            schema={builder.previewSchema}
-            serverErrors={[]}
-            preview
-            onSubmit={async () => ({ ok: true })}
-          />
-        </section>
       ) : null}
     </div>
   );
