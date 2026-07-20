@@ -7,7 +7,7 @@ import type {
   TrackerAttachment,
   TrackerDiscussion,
   TrackerSubmission,
-} from "@/components/forms/tracker/useSubmissionTracker";
+} from "@/components/forms/tracker/types";
 import { Modal } from "@/components/ui/Modal";
 
 async function parseApiJson(r: Response): Promise<Record<string, unknown>> {

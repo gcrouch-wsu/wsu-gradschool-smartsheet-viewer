@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 interface FormsWorkspaceChromeProps {
   children: ReactNode;
-  /** Active manage tab when on `/forms/manage`; null on Tracker / Grid / Builder. */
+  /** Active manage tab when on `/forms/manage`; null on Grid / Builder. */
   activeTab?: AdminTab | null;
   onSelectTab?: (tab: AdminTab) => void;
   actions?: ReactNode;
@@ -39,7 +39,7 @@ export function FormsWorkspaceChrome({
       <PageHeader
         eyebrow="Forms workspace"
         title="Form administration"
-        description="Sheet sources from the shared Admin Sources catalog. Use a form to work in tracker/builder; publish for public submit."
+        description="Sheet sources from the shared Admin Sources catalog. Use a form in grid/builder; publish for public submit."
         actions={actions}
       />
 

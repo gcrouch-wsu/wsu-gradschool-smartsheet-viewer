@@ -8,8 +8,8 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
 
   if (pathname.startsWith("/forms")) {
     const forms: BreadcrumbItem = { href: "/forms/manage", label: "Forms" };
-    if (pathname.startsWith("/forms/tracker")) return [dashboard, forms, { href: null, label: "Tracker" }];
     if (pathname.startsWith("/forms/sheet")) return [dashboard, forms, { href: null, label: "Grid" }];
+    if (pathname.startsWith("/forms/tracker")) return [dashboard, forms, { href: null, label: "Grid" }];
     if (pathname.startsWith("/forms/manage")) return [dashboard, forms, { href: null, label: "Manage" }];
     if (pathname.startsWith("/forms/builder")) return [dashboard, forms, { href: null, label: "Builder" }];
     if (pathname.startsWith("/forms/search")) return [dashboard, forms, { href: null, label: "Search" }];

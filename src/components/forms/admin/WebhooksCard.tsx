@@ -16,7 +16,7 @@ export function WebhooksCard({ webhookInfo, onRegister }: WebhooksCardProps) {
   return (
     <Card
       title="Live sync (webhooks)"
-      description="Register a webhook so the tracker refreshes when Smartsheet changes. Set WEBHOOK_CALLBACK_URL in .env for production."
+      description="Register a webhook so the grid refreshes when Smartsheet changes. Set WEBHOOK_CALLBACK_URL in .env for production."
     >
       <button type="button" onClick={onRegister} className={secondaryBtnClass}>
         Register webhook for active sheet

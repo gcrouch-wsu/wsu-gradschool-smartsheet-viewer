@@ -5,8 +5,8 @@ import { Suspense, useState } from "react";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 
 function normalizeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/forms")) return "/forms/tracker";
-  if (value === "/forms" || value === "/forms/") return "/forms/tracker";
+  if (!value || !value.startsWith("/forms")) return "/forms/sheet";
+  if (value === "/forms" || value === "/forms/") return "/forms/sheet";
   return value;
 }
 
@@ -111,7 +111,7 @@ function SignInContent() {
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--wsu-crimson)]">Forms access</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[color:var(--wsu-ink)]">Approver sign in</h1>
         <p className="mt-3 text-sm leading-6 text-[color:var(--wsu-muted)]">
-          Sign in with your approver email and password to access the form, tracker, and grid views.
+          Sign in with your approver email and password to access the form and grid views.
         </p>
 
         <div className="mt-5 rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm text-[color:var(--wsu-muted)]">

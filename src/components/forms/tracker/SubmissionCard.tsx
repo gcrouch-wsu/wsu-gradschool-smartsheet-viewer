@@ -8,7 +8,7 @@ import type {
   TrackerDiscussion,
   TrackerStep,
   TrackerSubmission,
-} from "@/components/forms/tracker/useSubmissionTracker";
+} from "@/components/forms/tracker/types";
 
 function canApprove(roles: string[]) {
   return roles.includes("admin") || roles.includes("approver");

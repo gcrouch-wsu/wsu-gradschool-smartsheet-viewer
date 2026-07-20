@@ -7,7 +7,6 @@ import {
   IconFile,
   IconGrid,
   IconPencil,
-  IconTracker,
   IconUsers,
   IconWebhook,
 } from "@/components/forms/icons";
@@ -21,7 +20,6 @@ type NavItem =
 const SECTIONS: NavItem[] = [
   { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
   { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
-  { kind: "link", href: "/forms/tracker", label: "Tracker", icon: <IconTracker className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/sheet", label: "Grid", icon: <IconGrid className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/builder", label: "Builder", icon: <IconPencil className="h-3.5 w-3.5" /> },
   { kind: "tab", id: "approvers", label: "Approvers", icon: <IconUsers className="h-3.5 w-3.5" /> },
@@ -37,7 +35,7 @@ function pillClass(isActive: boolean) {
 }
 
 interface AdminSectionNavProps {
-  /** Active manage tab, or null when a link route (Tracker / Grid / Builder) is current. */
+  /** Active manage tab, or null when a link route (Grid / Builder) is current. */
   active: AdminTab | null;
   onSelect: (tab: AdminTab) => void;
 }

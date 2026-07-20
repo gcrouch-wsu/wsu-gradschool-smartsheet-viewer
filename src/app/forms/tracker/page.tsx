@@ -1,46 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
-import { SubmissionTrackerView } from "@/components/forms/tracker/SubmissionTrackerView";
-import { useSubmissionTracker } from "@/components/forms/tracker/useSubmissionTracker";
-
+/** Tracker UI moved into Grid; keep this route as a redirect for old links. */
 export default function TrackerPage() {
-  const tracker = useSubmissionTracker();
-
-  if (tracker.loading && !tracker.subs) {
-    return (
-      <FormsWorkspaceChrome>
-        <div className="flex min-h-[16rem] items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
-          <p className="text-sm text-[color:var(--wsu-muted)]">Loading submissions…</p>
-        </div>
-      </FormsWorkspaceChrome>
-    );
-  }
-
-  return (
-    <FormsWorkspaceChrome>
-      <SubmissionTrackerView
-        subs={tracker.subs ?? []}
-        sheetName={tracker.sheetName}
-        demo={tracker.demo}
-        roles={tracker.roles}
-        workflowStages={tracker.workflowStages}
-        error={tracker.error}
-        refreshing={tracker.refreshing}
-        timelines={tracker.timelines}
-        attachments={tracker.attachments}
-        discussions={tracker.discussions}
-        commentText={tracker.commentText}
-        actionBusy={tracker.actionBusy}
-        onRefresh={() => tracker.loadSubs(true)}
-        onToggleTimeline={tracker.toggleTimeline}
-        onLoadExtras={tracker.loadExtras}
-        onApprove={(id) => tracker.patchRow(id, "approve")}
-        onDecline={(id) => tracker.patchRow(id, "decline")}
-        onDelete={tracker.deleteRow}
-        onCommentChange={(id, text) => tracker.setCommentText((p) => ({ ...p, [id]: text }))}
-        onPostComment={tracker.postComment}
-      />
-    </FormsWorkspaceChrome>
-  );
+  redirect("/forms/sheet");
 }

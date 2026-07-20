@@ -47,7 +47,7 @@ export function ApproversCard({
   return (
     <Card
       title="Approver accounts"
-      description={`Create email/password accounts for approvers who need tracker access without admin credentials. Password requirement: ${ADMIN_PASSWORD_POLICY_MESSAGE.replace("Admin password must be ", "")}`}
+      description={`Create email/password accounts for approvers who need grid access without admin credentials. Password requirement: ${ADMIN_PASSWORD_POLICY_MESSAGE.replace("Admin password must be ", "")}`}
     >
       <button type="button" onClick={onLoadApprovers} className={secondaryBtnClass}>
         Refresh list

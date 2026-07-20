@@ -595,10 +595,10 @@ export function SubmissionSuccessView({
         </button>
         {showTrackerLink ? (
           <Link
-            href="/forms/tracker"
+            href="/forms/sheet"
             className="rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson/90"
           >
-            View tracker
+            Open grid
           </Link>
         ) : null}
       </div>
