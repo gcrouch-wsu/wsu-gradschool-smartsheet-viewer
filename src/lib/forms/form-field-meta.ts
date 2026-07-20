@@ -195,6 +195,8 @@ export function deriveFormFieldConfig(
     formDescription?: string;
     allowedDomains?: string[];
     attachmentsEnabled?: boolean;
+    headerLogoDataUrl?: string;
+    headerLogoAlt?: string;
   },
 ): FormFieldConfig {
   return normalizeFormFieldConfig({
@@ -204,5 +206,7 @@ export function deriveFormFieldConfig(
     formDescription: presentation?.formDescription,
     allowedDomains: presentation?.allowedDomains,
     attachmentsEnabled: presentation?.attachmentsEnabled,
+    headerLogoDataUrl: presentation?.headerLogoDataUrl,
+    headerLogoAlt: presentation?.headerLogoAlt,
   });
 }

@@ -21,6 +21,7 @@ import { saveConditionalRules } from "@/lib/forms/store/conditional-rules";
 import { loadFormFields, saveFormFields } from "@/lib/forms/store/field-config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import type { ConditionalRule } from "@/lib/forms/types";
+import { validateHeaderLogoPair } from "@/lib/header-logo";
 import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
@@ -94,6 +95,8 @@ export async function GET(request: Request) {
       formDescription: fieldConfig?.formDescription,
       allowedDomains: fieldConfig?.allowedDomains,
       attachmentsEnabled: fieldConfig?.attachmentsEnabled,
+      headerLogoDataUrl: fieldConfig?.headerLogoDataUrl,
+      headerLogoAlt: fieldConfig?.headerLogoAlt,
     });
     const formEntry = await registry.getFormById(sheetId);
     const resolvedDomains = resolveAllowedDomains(fieldConfig);
@@ -104,6 +107,8 @@ export async function GET(request: Request) {
       sheetName: sheet.name,
       formTitle: derived.formTitle ?? "",
       formDescription: derived.formDescription ?? "",
+      headerLogoDataUrl: derived.headerLogoDataUrl ?? "",
+      headerLogoAlt: derived.headerLogoAlt ?? "",
       columns,
       fields,
       fieldConfig: derived,
@@ -145,6 +150,7 @@ export async function PUT(request: Request) {
   const hasFormDescription = Object.prototype.hasOwnProperty.call(body, "formDescription");
   const hasAllowedDomains = Object.prototype.hasOwnProperty.call(body, "allowedDomains");
   const hasAttachmentsEnabled = Object.prototype.hasOwnProperty.call(body, "attachmentsEnabled");
+  const hasHeaderLogo = Object.prototype.hasOwnProperty.call(body, "headerLogoDataUrl");
   const formTitle = hasFormTitle ? asOptionalString(body.formTitle) : undefined;
   const formDescription = hasFormDescription ? asOptionalString(body.formDescription) : undefined;
   const allowedDomains = hasAllowedDomains ? parseAllowedDomainsBody(body.allowedDomains) : undefined;
@@ -153,18 +159,33 @@ export async function PUT(request: Request) {
       ? body.attachmentsEnabled
       : undefined;
 
+  let nextHeaderLogoDataUrl: string | undefined;
+  let nextHeaderLogoAlt: string | undefined;
+  if (hasHeaderLogo) {
+    const logoValidated = validateHeaderLogoPair(
+      typeof body.headerLogoDataUrl === "string" ? body.headerLogoDataUrl : undefined,
+      typeof body.headerLogoAlt === "string" ? body.headerLogoAlt : undefined,
+    );
+    if (!logoValidated.ok) {
+      return Response.json({ error: logoValidated.errors[0] ?? "Invalid header logo." }, { status: 400 });
+    }
+    nextHeaderLogoDataUrl = logoValidated.dataUrl;
+    nextHeaderLogoAlt = logoValidated.alt;
+  }
+
   if (
     !fields &&
     !conditionalLogic &&
     !hasFormTitle &&
     !hasFormDescription &&
     !hasAllowedDomains &&
-    !hasAttachmentsEnabled
+    !hasAttachmentsEnabled &&
+    !hasHeaderLogo
   ) {
     return Response.json(
       {
         error:
-          "Provide fields, form title/description, allowedDomains, attachmentsEnabled, and/or conditionalLogic.",
+          "Provide fields, form title/description, allowedDomains, attachmentsEnabled, header logo, and/or conditionalLogic.",
       },
       { status: 400 },
     );
@@ -173,7 +194,7 @@ export async function PUT(request: Request) {
   try {
     const existing = await loadFormFields(sheetId);
 
-    if (fields || hasFormTitle || hasFormDescription || hasAllowedDomains || hasAttachmentsEnabled) {
+    if (fields || hasFormTitle || hasFormDescription || hasAllowedDomains || hasAttachmentsEnabled || hasHeaderLogo) {
       const sheet = await ss.getSheet(sheetId);
       const columns = ss.extractColumns(sheet);
       const locked = new Set([
@@ -228,6 +249,8 @@ export async function PUT(request: Request) {
           formDescription: hasFormDescription ? formDescription : existing?.formDescription,
           allowedDomains: nextDomains,
           attachmentsEnabled: nextAttachments,
+          headerLogoDataUrl: hasHeaderLogo ? nextHeaderLogoDataUrl : existing?.headerLogoDataUrl,
+          headerLogoAlt: hasHeaderLogo ? nextHeaderLogoAlt : existing?.headerLogoAlt,
         }),
       );
     }

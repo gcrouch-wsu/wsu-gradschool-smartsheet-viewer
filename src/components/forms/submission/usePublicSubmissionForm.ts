@@ -59,6 +59,8 @@ export function usePublicSubmissionForm(slug: string) {
         allowedDomains: Array.isArray(d.allowedDomains) ? (d.allowedDomains as string[]) : [],
         demo: Boolean(d.demo),
         attachmentsEnabled: d.attachmentsEnabled !== false,
+        headerLogoDataUrl: typeof d.headerLogoDataUrl === "string" ? d.headerLogoDataUrl : undefined,
+        headerLogoAlt: typeof d.headerLogoAlt === "string" ? d.headerLogoAlt : undefined,
       });
       setTurnstileSiteKey(typeof d.turnstileSiteKey === "string" ? d.turnstileSiteKey : "");
       setTurnstileRequired(Boolean(d.turnstileRequired));

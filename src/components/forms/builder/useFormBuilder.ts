@@ -35,6 +35,8 @@ export interface BuilderState {
   sheetName: string;
   formTitle: string;
   formDescription: string;
+  headerLogoDataUrl: string;
+  headerLogoAlt: string;
   columns: SmartsheetColumn[];
   fields: FormFieldDefinition[];
   conditionalLogic: ConditionalRule[];
@@ -152,6 +154,8 @@ export function useFormBuilder() {
         sheetName: String(d.sheetName ?? "Form"),
         formTitle: typeof d.formTitle === "string" ? d.formTitle : "",
         formDescription: typeof d.formDescription === "string" ? d.formDescription : "",
+        headerLogoDataUrl: typeof d.headerLogoDataUrl === "string" ? d.headerLogoDataUrl : "",
+        headerLogoAlt: typeof d.headerLogoAlt === "string" ? d.headerLogoAlt : "",
         columns: (d.columns as SmartsheetColumn[]) ?? [],
         fields: (d.fields as FormFieldDefinition[]) ?? [],
         conditionalLogic: (d.conditionalLogic as ConditionalRule[]) ?? [],
@@ -209,6 +213,8 @@ export function useFormBuilder() {
       formDescription: string;
       allowedDomains: string[];
       attachmentsEnabled: boolean;
+      headerLogoDataUrl?: string;
+      headerLogoAlt?: string;
     },
   ) {
     if (!state) return;
@@ -222,6 +228,8 @@ export function useFormBuilder() {
         formDescription: presentation?.formDescription ?? state.formDescription,
         allowedDomains: presentation?.allowedDomains ?? state.allowedDomains,
         attachmentsEnabled: presentation?.attachmentsEnabled ?? state.attachmentsEnabled,
+        headerLogoDataUrl: presentation?.headerLogoDataUrl ?? state.headerLogoDataUrl,
+        headerLogoAlt: presentation?.headerLogoAlt ?? state.headerLogoAlt,
       }),
     });
     const d = await parseJson(r);
@@ -427,6 +435,8 @@ export function useFormBuilder() {
     formDescription?: string;
     allowedDomains?: string[];
     attachmentsEnabled?: boolean;
+    headerLogoDataUrl?: string;
+    headerLogoAlt?: string;
   }) {
     setState((prev) => (prev ? { ...prev, ...patch } : prev));
     setDirty(true);
@@ -446,6 +456,8 @@ export function useFormBuilder() {
       formDescription: state.formDescription,
       allowedDomains: state.allowedDomains,
       attachmentsEnabled: state.attachmentsEnabled,
+      headerLogoDataUrl: state.headerLogoDataUrl || undefined,
+      headerLogoAlt: state.headerLogoAlt || undefined,
     });
     const byTitle = new Map(state.columns.map((c) => [c.title.toLowerCase(), c]));
     const baseColumns = config.columns
@@ -456,6 +468,8 @@ export function useFormBuilder() {
       sheetName: state.sheetName,
       formTitle: state.formTitle,
       formDescription: state.formDescription,
+      headerLogoDataUrl: state.headerLogoDataUrl || undefined,
+      headerLogoAlt: state.headerLogoAlt || undefined,
       columns,
       formItems: config.fields?.filter((f) => !f.hiddenOnForm) ?? [],
       formColumnSource: "smartsheet-config",

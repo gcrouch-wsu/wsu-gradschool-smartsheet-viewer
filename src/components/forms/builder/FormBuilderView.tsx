@@ -51,6 +51,8 @@ function FormPresentationEditor({
   sheetName,
   formTitle,
   formDescription,
+  headerLogoDataUrl,
+  headerLogoAlt,
   allowedDomains,
   envAllowedDomains,
   attachmentsEnabled,
@@ -62,6 +64,8 @@ function FormPresentationEditor({
   sheetName: string;
   formTitle: string;
   formDescription: string;
+  headerLogoDataUrl: string;
+  headerLogoAlt: string;
   allowedDomains: string[];
   envAllowedDomains: string[];
   attachmentsEnabled: boolean;
@@ -73,16 +77,112 @@ function FormPresentationEditor({
     formDescription?: string;
     allowedDomains?: string[];
     attachmentsEnabled?: boolean;
+    headerLogoDataUrl?: string;
+    headerLogoAlt?: string;
   }) => void;
 }) {
   const domainsText = allowedDomains.join(", ");
   const envDefault = (envAllowedDomains.length ? envAllowedDomains : ["wsu.edu"]).join(", ");
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState("");
+
+  async function onPickLogo(file: File | null) {
+    if (!file) return;
+    setLogoBusy(true);
+    setLogoError("");
+    try {
+      const { readLogoFileAsDataUrl, HEADER_LOGO_ALT_MAX_LENGTH } = await import("@/lib/header-logo");
+      const result = await readLogoFileAsDataUrl(file);
+      if (!result.ok) {
+        setLogoError(result.error);
+        return;
+      }
+      const alt = (headerLogoAlt.trim() || "Washington State University logo").slice(0, HEADER_LOGO_ALT_MAX_LENGTH);
+      onChange({ headerLogoDataUrl: result.dataUrl, headerLogoAlt: alt });
+    } finally {
+      setLogoBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-3 border-t border-[color:var(--wsu-border)] px-4 py-3">
       <p className="text-xs text-[color:var(--wsu-muted)]">
         Shown at the top of the public form. Set domains, then publish from Manage.
       </p>
+      <div>
+        <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Header logo</label>
+        <p className="mb-2 text-[11px] text-[color:var(--wsu-muted)]">
+          Optional. Upload a PNG/JPEG (max 256KB) or paste an image URL. Default shows the WSU cougar lockup.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40">
+            {headerLogoDataUrl.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element -- admin preview of data URL or remote URL
+              <img src={headerLogoDataUrl} alt="" className="h-full w-full object-contain p-1" />
+            ) : (
+              <span className="text-[10px] text-[color:var(--wsu-muted)]">Default</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className={`${secondaryBtn} cursor-pointer ${logoBusy ? "pointer-events-none opacity-50" : ""}`}>
+              {logoBusy ? "Uploading…" : headerLogoDataUrl.trim() ? "Replace file" : "Upload file"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                className="sr-only"
+                disabled={logoBusy}
+                onChange={(e) => {
+                  void onPickLogo(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {headerLogoDataUrl.trim() ? (
+              <button
+                type="button"
+                className={secondaryBtn}
+                onClick={() => onChange({ headerLogoDataUrl: "", headerLogoAlt: "" })}
+              >
+                Use default
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <label className="mt-2 block">
+          <span className="mb-1 block text-[11px] text-[color:var(--wsu-muted)]">Or image URL</span>
+          <input
+            className={inputClass}
+            type="url"
+            value={/^data:/i.test(headerLogoDataUrl) ? "" : headerLogoDataUrl}
+            placeholder="https://example.com/logo.png"
+            onChange={(e) => {
+              const url = e.target.value.trim();
+              setLogoError("");
+              if (!url) {
+                if (!/^data:/i.test(headerLogoDataUrl)) {
+                  onChange({ headerLogoDataUrl: "", headerLogoAlt: "" });
+                }
+                return;
+              }
+              const alt = headerLogoAlt.trim() || "Washington State University logo";
+              onChange({ headerLogoDataUrl: url, headerLogoAlt: alt });
+            }}
+          />
+        </label>
+        {headerLogoDataUrl.trim() ? (
+          <label className="mt-2 block">
+            <span className="mb-1 block text-[11px] text-[color:var(--wsu-muted)]">Logo alt text (required)</span>
+            <input
+              className={inputClass}
+              value={headerLogoAlt}
+              maxLength={200}
+              onChange={(e) => onChange({ headerLogoAlt: e.target.value })}
+              placeholder="Washington State University logo"
+            />
+          </label>
+        ) : null}
+        {logoError ? <p className="mt-1 text-xs text-red-600">{logoError}</p> : null}
+      </div>
       <div>
         <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Title</label>
         <HeaderCustomTextEditor
@@ -1120,7 +1220,7 @@ export function FormBuilderView() {
               >
                 <div>
                   <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form settings</h2>
-                  <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Title, description, domains, and attachments</p>
+                  <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Logo, title, description, domains, and attachments</p>
                 </div>
                 <span className="text-xs font-medium text-wsu-crimson">{settingsOpen ? "Hide" : "Show"}</span>
               </button>
@@ -1129,6 +1229,8 @@ export function FormBuilderView() {
                   sheetName={builder.state.sheetName}
                   formTitle={builder.state.formTitle}
                   formDescription={builder.state.formDescription}
+                  headerLogoDataUrl={builder.state.headerLogoDataUrl}
+                  headerLogoAlt={builder.state.headerLogoAlt}
                   allowedDomains={builder.state.allowedDomains}
                   envAllowedDomains={builder.state.envAllowedDomains}
                   attachmentsEnabled={builder.state.attachmentsEnabled}

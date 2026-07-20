@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { IconCheck, IconFile } from "@/components/forms/icons";
+import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { RichTextHtml } from "@/components/forms/submission/RichTextHtml";
 import {
   buildSubmitPayload,
@@ -521,11 +522,18 @@ export function SubmissionFormView({
         </div>
       ) : null}
 
-      <form
-        onSubmit={handleSubmit(processSubmit)}
-        noValidate
-        className="relative flex min-h-[28rem] flex-col overflow-hidden rounded-xl border border-[color:var(--wsu-border)] shadow-sm lg:min-h-[32rem] lg:flex-row"
-      >
+      <div className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] shadow-sm">
+        <FormBrandHeader
+          logoDataUrl={schema.headerLogoDataUrl}
+          logoAlt={schema.headerLogoAlt}
+          maxWidthClassName="max-w-none"
+        />
+
+        <form
+          onSubmit={handleSubmit(processSubmit)}
+          noValidate
+          className="relative flex min-h-[28rem] flex-col lg:min-h-[32rem] lg:flex-row"
+        >
         <aside className="flex shrink-0 flex-col border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone,#f0eeea)] px-6 py-8 text-[color:var(--wsu-ink)] sm:px-8 sm:py-10 lg:w-1/2 lg:border-b-0 lg:border-r lg:py-12">
           <RichTextHtml
             value={formTitle}
@@ -637,6 +645,7 @@ export function SubmissionFormView({
           )}
         </div>
       </form>
+      </div>
     </div>
   );
 }

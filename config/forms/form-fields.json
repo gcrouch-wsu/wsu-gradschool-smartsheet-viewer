@@ -372,7 +372,9 @@
     "allowedDomains": [
       "wsu.edu"
     ],
-    "attachmentsEnabled": false
+    "attachmentsEnabled": false,
+    "headerLogoDataUrl": "https://8ioiwlfdgi6pmftc.public.blob.vercel-storage.com/site-branding/35cde4fe-9b10-45fb-8d0d-2a98a3c5bd10.jpg",
+    "headerLogoAlt": "Washington State University logo"
   },
   "3361171036917636": {
     "columns": [

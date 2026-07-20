@@ -60,6 +60,10 @@ export interface FormFieldConfig {
    * Unset falls back to env ATTACHMENTS_ENABLED (default true).
    */
   attachmentsEnabled?: boolean;
+  /** Optional header logo: PNG/JPEG data URL or http(s) image URL. Pair with headerLogoAlt. */
+  headerLogoDataUrl?: string;
+  /** Accessible description of headerLogoDataUrl. */
+  headerLogoAlt?: string;
 }
 
 function optionalTrimmed(value: unknown): string | undefined {
@@ -102,6 +106,14 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
   const attachmentsEnabled =
     typeof config.attachmentsEnabled === "boolean" ? config.attachmentsEnabled : undefined;
 
+  // Accept uploaded data URLs or remote http(s) image URLs.
+  const logoDataUrl = optionalTrimmed(config.headerLogoDataUrl);
+  const logoAlt = optionalTrimmed(config.headerLogoAlt);
+  const headerLogo =
+    logoDataUrl && logoAlt
+      ? { headerLogoDataUrl: logoDataUrl, headerLogoAlt: logoAlt }
+      : {};
+
   if (Array.isArray(config.fields) && config.fields.length > 0) {
     const sorted = [...config.fields].sort((a, b) => a.order - b.order);
     const columns = sorted
@@ -124,6 +136,7 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
       formDescription,
       ...(allowedDomains?.length ? { allowedDomains } : {}),
       ...(typeof attachmentsEnabled === "boolean" ? { attachmentsEnabled } : {}),
+      ...headerLogo,
     };
   }
   return {
@@ -133,5 +146,6 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
     formDescription,
     ...(allowedDomains?.length ? { allowedDomains } : {}),
     ...(typeof attachmentsEnabled === "boolean" ? { attachmentsEnabled } : {}),
+    ...headerLogo,
   };
 }

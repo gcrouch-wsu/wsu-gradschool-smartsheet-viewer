@@ -1,4 +1,4 @@
-/** Shared validation for optional public header logo (PNG/JPEG data URLs stored in view config). */
+/** Shared validation for optional public header logo (PNG/JPEG data URLs or http(s) image URLs). */
 
 /** Max length for header brand subline / title (plain text next to logo). */
 export const HEADER_BRAND_TEXT_MAX_LENGTH = 150;
@@ -7,6 +7,7 @@ export const HEADER_LOGO_MAX_DECODED_BYTES = 256 * 1024;
 export const HEADER_LOGO_ALT_MAX_LENGTH = 200;
 /** Upper bound on full data URL string length (base64 + prefix). */
 export const HEADER_LOGO_MAX_DATA_URL_LENGTH = 450_000;
+export const HEADER_LOGO_MAX_REMOTE_URL_LENGTH = 2048;
 
 export function validateHeaderLogoDataUrlOnly(dataUrl: string): string | null {
   if (dataUrl.length > HEADER_LOGO_MAX_DATA_URL_LENGTH) {
@@ -24,6 +25,27 @@ export function validateHeaderLogoDataUrlOnly(dataUrl: string): string | null {
     }
   } catch {
     return "Logo image data is not valid base64.";
+  }
+  return null;
+}
+
+/** Accept either an uploaded data URL or a remote http(s) image URL. */
+export function validateHeaderLogoSrcOnly(src: string): string | null {
+  const trimmed = src.trim();
+  if (!trimmed) return "Logo source is empty.";
+  if (/^data:/i.test(trimmed)) {
+    return validateHeaderLogoDataUrlOnly(trimmed);
+  }
+  if (trimmed.length > HEADER_LOGO_MAX_REMOTE_URL_LENGTH) {
+    return "Logo URL is too long.";
+  }
+  try {
+    const u = new URL(trimmed);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return "Logo URL must start with http:// or https://.";
+    }
+  } catch {
+    return "Enter a valid image URL (https://…) or upload a PNG/JPEG.";
   }
   return null;
 }
@@ -59,7 +81,7 @@ export function validateHeaderLogoPair(
     return { ok: false, errors };
   }
 
-  const urlErr = validateHeaderLogoDataUrlOnly(dataUrl!);
+  const urlErr = validateHeaderLogoSrcOnly(dataUrl!);
   if (urlErr) {
     errors.push(urlErr);
     return { ok: false, errors };

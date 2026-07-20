@@ -31,6 +31,9 @@ export interface FormSchema {
   allowedDomains: string[];
   demo: boolean;
   attachmentsEnabled?: boolean;
+  /** Optional custom header logo (PNG/JPEG data URL). */
+  headerLogoDataUrl?: string;
+  headerLogoAlt?: string;
 }
 
 const MAX_LEN = 4000;

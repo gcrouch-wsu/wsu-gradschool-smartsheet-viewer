@@ -18,6 +18,8 @@ export interface FormSchemaPayload {
   allowedDomains: string[];
   demo: boolean;
   attachmentsEnabled: boolean;
+  headerLogoDataUrl?: string;
+  headerLogoAlt?: string;
 }
 
 export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchemaPayload> {
@@ -43,6 +45,8 @@ export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchem
     allowedDomains,
     demo: config.demo,
     attachmentsEnabled,
+    headerLogoDataUrl: fieldConfig?.headerLogoDataUrl,
+    headerLogoAlt: fieldConfig?.headerLogoAlt,
   };
 }
 
