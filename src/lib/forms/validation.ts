@@ -65,6 +65,19 @@ export function validateSubmission(
       (/e-?mail/i.test(col.title) && col.type !== "MULTI_PICKLIST") ||
       col.type === "CONTACT_LIST";
 
+    // Parent of a per-column checkbox group: validate group, skip writing this column.
+    if (meta?.checkboxColumns?.length) {
+      const byTitle = new Map(columns.map((c) => [c.title.toLowerCase(), c]));
+      const linked = meta.checkboxColumns
+        .map((t) => byTitle.get(t.trim().toLowerCase()))
+        .filter((c): c is SmartsheetColumn => Boolean(c));
+      const anyChecked = linked.some((c) => (values[String(c.id)] ?? "").toString() === "true");
+      if (!optional && !anyChecked) {
+        errors.push(`${label} is required.`);
+      }
+      continue;
+    }
+
     if (col.type === "CHECKBOX") {
       cells.push({ columnId: col.id, value: raw === "true" });
       continue;
@@ -80,7 +93,7 @@ export function validateSubmission(
       continue;
     }
 
-    if (col.type === "MULTI_PICKLIST") {
+    if (String(col.type).toUpperCase() === "MULTI_PICKLIST") {
       const selected = splitMultiValues(raw);
       if (!selected.length) {
         if (!optional) errors.push(`${label} is required.`);

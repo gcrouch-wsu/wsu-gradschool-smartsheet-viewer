@@ -7,6 +7,7 @@ import { SubmissionFormView } from "@/components/forms/submission/SubmissionForm
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
 import { isFieldFormItem, isLayoutFormItem } from "@/lib/forms/form-field-config";
+import { listMappableCheckboxColumns } from "@/lib/forms/form-field-meta";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 import {
   type BuilderElementType,
@@ -304,18 +305,22 @@ function FieldInspector({
   onChange,
   onRename,
   onOptions,
+  onColumnType,
   onDelete,
   bare = false,
+  allColumns = [],
 }: {
   field: FormFieldDefinition | null;
   column: SmartsheetColumn | null;
   locked: boolean;
   onChange: (patch: Partial<FormFieldDefinition>) => void;
   onRename: (title: string) => Promise<void>;
-  onOptions: (options: string[]) => Promise<void>;
+  onOptions: (options: string[], columnType?: "PICKLIST" | "MULTI_PICKLIST") => Promise<void>;
+  onColumnType: (type: string, options?: string[]) => Promise<void>;
   onDelete: () => void;
   /** When true, omit outer card chrome (used inside the right rail). */
   bare?: boolean;
+  allColumns?: SmartsheetColumn[];
 }) {
   const [titleDraft, setTitleDraft] = useState(field?.columnTitle ?? "");
   const [optionsDraft, setOptionsDraft] = useState((column?.options ?? []).join("\n"));
@@ -450,21 +455,129 @@ function FieldInspector({
         />
       </div>
 
-      {column.type === "TEXT_NUMBER" || column.type === "CONTACT_LIST" || column.type === "PHONE" ? (
+      {column.type === "TEXT_NUMBER" ||
+      column.type === "CONTACT_LIST" ||
+      column.type === "PHONE" ||
+      column.type === "PICKLIST" ||
+      column.type === "MULTI_PICKLIST" ? (
         <div>
           <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Input kind</label>
           <select
             className={inputClass}
-            value={field.kindHint ?? (column.type === "PHONE" ? "phone" : column.type === "CONTACT_LIST" ? "email" : "text")}
-            disabled={locked}
-            onChange={(e) => onChange({ kindHint: e.target.value as FormFieldDefinition["kindHint"] })}
+            value={
+              column.type === "MULTI_PICKLIST" || field.kindHint === "multiselect"
+                ? "MULTI_PICKLIST"
+                : column.type === "PICKLIST"
+                  ? field.kindHint === "select" || field.kindHint === "dropdown"
+                    ? "DROPDOWN"
+                    : "RADIO"
+                  : field.kindHint ??
+                    (column.type === "PHONE" ? "phone" : column.type === "CONTACT_LIST" ? "email" : "text")
+            }
+            disabled={locked || busy}
+            onChange={async (e) => {
+              const next = e.target.value;
+              if (next === "RADIO" || next === "DROPDOWN" || next === "MULTI_PICKLIST") {
+                const asMulti = next === "MULTI_PICKLIST";
+                const asDropdown = next === "DROPDOWN";
+                const targetType = asMulti ? "MULTI_PICKLIST" : "PICKLIST";
+                setBusy(true);
+                setLocalError("");
+                try {
+                  const options = optionsDraft
+                    .split("\n")
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  const resolved =
+                    options.length > 0
+                      ? options
+                      : column.options?.length
+                        ? column.options
+                        : field.checkboxLabels?.filter(Boolean)?.length
+                          ? (field.checkboxLabels as string[])
+                          : ["Yes", "No"];
+                  if (column.type !== targetType) {
+                    await onColumnType(targetType, resolved);
+                  }
+                  setOptionsDraft(resolved.join("\n"));
+                  if (asMulti) {
+                    const mappable = listMappableCheckboxColumns(allColumns);
+                    const checkboxColumns = mappable.slice(0, resolved.length).map((c) => c.title);
+                    onChange({
+                      kindHint: "multiselect",
+                      checkboxLabels: resolved,
+                      checkboxColumns,
+                    });
+                    if (!checkboxColumns.length) {
+                      setLocalError(
+                        "No CHKBOX_* columns found on the sheet. Add Smartsheet checkbox columns, then map them below.",
+                      );
+                    }
+                  } else {
+                    onChange({
+                      kindHint: asDropdown ? "dropdown" : "radio",
+                      checkboxColumns: undefined,
+                      checkboxLabels: undefined,
+                    });
+                  }
+                } catch (err: unknown) {
+                  setLocalError(err instanceof Error ? err.message : "Could not update field type.");
+                } finally {
+                  setBusy(false);
+                }
+                return;
+              }
+
+              if (column.type === "PICKLIST" || column.type === "MULTI_PICKLIST") {
+                setBusy(true);
+                setLocalError("");
+                try {
+                  await onColumnType("TEXT_NUMBER");
+                  onChange({
+                    kindHint: next as FormFieldDefinition["kindHint"],
+                    checkboxColumns: undefined,
+                    checkboxLabels: undefined,
+                  });
+                } catch (err: unknown) {
+                  setLocalError(err instanceof Error ? err.message : "Could not update field type.");
+                } finally {
+                  setBusy(false);
+                }
+                return;
+              }
+
+              onChange({ kindHint: next as FormFieldDefinition["kindHint"] });
+            }}
           >
-            <option value="text">Short text</option>
-            <option value="textarea">Long text</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
-            <option value="number">Number</option>
+            {column.type === "TEXT_NUMBER" || column.type === "CONTACT_LIST" || column.type === "PHONE" ? (
+              <>
+                <option value="text">Short text</option>
+                <option value="textarea">Long text</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="number">Number</option>
+              </>
+            ) : (
+              <option value="text">Short text</option>
+            )}
+            <option value="RADIO">Radio buttons (one choice)</option>
+            <option value="DROPDOWN">Dropdown (one choice)</option>
+            <option value="MULTI_PICKLIST">Checkboxes (multiple)</option>
           </select>
+          {column.type === "MULTI_PICKLIST" || field.kindHint === "multiselect" ? (
+            <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
+              Each checkbox writes to its own CHKBOX_* column. Matches Smartsheet Forms vertical checkboxes.
+            </p>
+          ) : column.type === "PICKLIST" ? (
+            <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
+              Smartsheet Dropdown (single-select) defaults to radio buttons (like the leave form screenshot). Use
+              Dropdown only for a compact select list.
+            </p>
+          ) : (
+            <p className="mt-1 text-[11px] text-[color:var(--wsu-muted)]">
+              Choose Radio, Dropdown, or Checkboxes to convert this column.
+            </p>
+          )}
         </div>
       ) : null}
 
@@ -480,39 +593,137 @@ function FieldInspector({
         </label>
       ) : null}
 
-      {column.type === "PICKLIST" || column.type === "MULTI_PICKLIST" ? (
+      {column.type === "PICKLIST" || column.type === "MULTI_PICKLIST" || column.type === "TEXT_NUMBER" ? (
         <div>
-          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">Options (one per line)</label>
+          <label className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+            {column.type === "TEXT_NUMBER" ? "Options (used when converting to dropdown/checkboxes)" : "Options (one per line)"}
+          </label>
           <textarea
             className={`${inputClass} min-h-[6rem]`}
             value={optionsDraft}
             disabled={locked || busy}
             onChange={(e) => setOptionsDraft(e.target.value)}
+            placeholder={"Option 1\nOption 2\nOption 3"}
           />
-          <button
-            type="button"
-            className={`${secondaryBtn} mt-2`}
-            disabled={locked || busy}
-            onClick={async () => {
-              setBusy(true);
-              setLocalError("");
-              try {
-                const options = optionsDraft
+          {column.type === "PICKLIST" || column.type === "MULTI_PICKLIST" ? (
+            <button
+              type="button"
+              className={`${secondaryBtn} mt-2`}
+              disabled={locked || busy}
+              onClick={async () => {
+                setBusy(true);
+                setLocalError("");
+                try {
+                  const options = optionsDraft
+                    .split("\n")
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  const type = column.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST";
+                  await onOptions(options, type);
+                  if (type === "MULTI_PICKLIST") {
+                    const existing = field.checkboxColumns ?? [];
+                    const mappable = listMappableCheckboxColumns(allColumns);
+                    const checkboxColumns =
+                      existing.length >= options.length
+                        ? existing.slice(0, options.length)
+                        : [
+                            ...existing,
+                            ...mappable
+                              .map((c) => c.title)
+                              .filter((t) => !existing.some((e) => e.toLowerCase() === t.toLowerCase()))
+                              .slice(0, Math.max(0, options.length - existing.length)),
+                          ].slice(0, options.length);
+                    onChange({ checkboxLabels: options, checkboxColumns, kindHint: "multiselect" });
+                  }
+                } catch (e: unknown) {
+                  setLocalError(e instanceof Error ? e.message : "Could not update options.");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Save options
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(column.type === "MULTI_PICKLIST" || field.kindHint === "multiselect") && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="block text-xs text-[color:var(--wsu-muted)]">Checkbox → Smartsheet column</label>
+            <button
+              type="button"
+              className="text-xs font-medium text-wsu-crimson hover:underline"
+              disabled={locked}
+              onClick={() => {
+                const labels = optionsDraft
                   .split("\n")
                   .map((s) => s.trim())
                   .filter(Boolean);
-                await onOptions(options);
-              } catch (e: unknown) {
-                setLocalError(e instanceof Error ? e.message : "Could not update options.");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Save options
-          </button>
+                const resolved =
+                  labels.length > 0
+                    ? labels
+                    : column.options?.length
+                      ? column.options
+                      : field.checkboxLabels ?? [];
+                const mappable = listMappableCheckboxColumns(allColumns);
+                onChange({
+                  kindHint: "multiselect",
+                  checkboxLabels: resolved,
+                  checkboxColumns: mappable.slice(0, resolved.length).map((c) => c.title),
+                });
+              }}
+            >
+              Auto-map CHKBOX_*
+            </button>
+          </div>
+          <p className="text-[11px] text-[color:var(--wsu-muted)]">
+            Each option below writes true/false to the selected checkbox column on submit.
+          </p>
+          {(field.checkboxLabels?.length
+            ? field.checkboxLabels
+            : optionsDraft.split("\n").map((s) => s.trim()).filter(Boolean)
+          ).map((label, index) => {
+            const mappable = listMappableCheckboxColumns(allColumns);
+            const current = field.checkboxColumns?.[index] ?? "";
+            return (
+              <div key={`${label}-${index}`} className="grid gap-1 sm:grid-cols-[1fr_1fr]">
+                <p className="truncate rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-2 py-2 text-xs text-[color:var(--wsu-ink)]">
+                  {label || `Option ${index + 1}`}
+                </p>
+                <select
+                  className={inputClass}
+                  value={current}
+                  disabled={locked}
+                  onChange={(e) => {
+                    const next = [...(field.checkboxColumns ?? [])];
+                    while (next.length <= index) next.push("");
+                    next[index] = e.target.value;
+                    const labels =
+                      field.checkboxLabels?.length
+                        ? field.checkboxLabels
+                        : optionsDraft.split("\n").map((s) => s.trim()).filter(Boolean);
+                    onChange({
+                      kindHint: "multiselect",
+                      checkboxColumns: next,
+                      checkboxLabels: labels,
+                    });
+                  }}
+                >
+                  <option value="">Select column…</option>
+                  {mappable.map((c) => (
+                    <option key={c.id} value={c.title}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
         </div>
-      ) : null}
+      )}
+
 
       {localError ? <p className="text-xs text-red-700">{localError}</p> : null}
 
@@ -813,6 +1024,7 @@ export function FormBuilderView() {
       bare
       field={selectedField}
       column={selectedColumn}
+      allColumns={builder.state.columns}
       locked={selectedField ? builder.lockedSet.has(selectedField.columnTitle.toLowerCase()) : false}
       onChange={(patch) => {
         if (!selectedField) return;
@@ -829,10 +1041,17 @@ export function FormBuilderView() {
         builder.setSelectedTitle(title);
         await builder.load();
       }}
-      onOptions={async (options) => {
+      onOptions={async (options, columnType) => {
         if (!selectedColumn) return;
-        const type = selectedColumn.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST";
+        const type =
+          columnType ??
+          (selectedColumn.type === "MULTI_PICKLIST" ? "MULTI_PICKLIST" : "PICKLIST");
         await builder.updatePicklistOptions(selectedColumn.id, options, type);
+        await builder.load();
+      }}
+      onColumnType={async (type, options) => {
+        if (!selectedColumn) return;
+        await builder.updateColumnType(selectedColumn.id, type, options);
         await builder.load();
       }}
       onDelete={() => {

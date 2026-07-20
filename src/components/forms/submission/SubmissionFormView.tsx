@@ -82,6 +82,8 @@ function FormField({
   error,
   setValue,
   watchValue,
+  values,
+  checkboxTargets,
 }: {
   col: SmartsheetColumn;
   required: boolean;
@@ -92,6 +94,9 @@ function FormField({
   error?: string;
   setValue: ReturnType<typeof useForm<FormValues>>["setValue"];
   watchValue: string;
+  values: FormValues;
+  /** When set, each option writes to its own CHECKBOX column. */
+  checkboxTargets?: { columnId: number; label: string }[];
 }) {
   const id = `field_${col.id}`;
   const hasError = Boolean(error);
@@ -122,7 +127,7 @@ function FormField({
           {...register(String(col.id), { required: required ? `${label} is required.` : false })}
         >
           <option value="">Select…</option>
-          {col.options!.map((o) => (
+          {(col.options ?? []).map((o) => (
             <option key={o} value={o}>
               {o}
             </option>
@@ -132,7 +137,61 @@ function FormField({
     );
   }
 
+  if (kind === "radio") {
+    const options = col.options ?? [];
+    return (
+      <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
+        <div className="space-y-2">
+          {options.map((option) => {
+            const optionId = `${id}_${option}`;
+            return (
+              <label key={option} htmlFor={optionId} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+                <input
+                  id={optionId}
+                  type="radio"
+                  name={id}
+                  value={option}
+                  className="h-4 w-4 border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
+                  checked={watchValue === option}
+                  onChange={() => setValue(String(col.id), option, { shouldDirty: true, shouldValidate: true })}
+                />
+                {option}
+              </label>
+            );
+          })}
+        </div>
+      </FieldShell>
+    );
+  }
+
   if (kind === "multiselect") {
+    if (checkboxTargets?.length) {
+      return (
+        <FieldShell id={id} label={label} required={required} hint={helpText} error={error}>
+          <div className="space-y-2 rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 px-3 py-3">
+            {checkboxTargets.map((target) => {
+              const optionId = `${id}_${target.columnId}`;
+              const checked = (values[String(target.columnId)] ?? "") === "true";
+              return (
+                <label key={target.columnId} htmlFor={optionId} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+                  <input
+                    id={optionId}
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-[color:var(--wsu-border)] text-wsu-crimson focus:ring-wsu-crimson"
+                    checked={checked}
+                    onChange={(e) => {
+                      setValue(String(target.columnId), e.target.checked ? "true" : "false", { shouldDirty: true });
+                    }}
+                  />
+                  {target.label}
+                </label>
+              );
+            })}
+          </div>
+        </FieldShell>
+      );
+    }
+
     const selected = new Set(
       watchValue
         .split(/;|,|\n/)
@@ -432,7 +491,7 @@ export function SubmissionFormView({
       return;
     }
 
-    const payload = buildSubmitPayload(schema.columns, data, schema.conditionalLogic);
+    const payload = buildSubmitPayload(schema.columns, data, schema.conditionalLogic, schema.fieldMeta);
     setSubmitting(true);
     try {
       await onSubmit(payload, files, publicMode
@@ -500,6 +559,20 @@ export function SubmissionFormView({
                 return <LayoutBlock key={entry.item.columnTitle} item={entry.item} />;
               }
               const meta = schema.fieldMeta?.[entry.col.title.toLowerCase()];
+              const byTitle = new Map(schema.columns.map((c) => [c.title.toLowerCase(), c]));
+              const checkboxTargets = meta?.checkboxColumns?.length
+                ? meta.checkboxColumns
+                    .map((title, index) => {
+                      const target = byTitle.get(title.trim().toLowerCase());
+                      if (!target) return null;
+                      const optionLabel =
+                        meta.checkboxLabels?.[index]?.trim() ||
+                        entry.col.options?.[index] ||
+                        target.title;
+                      return { columnId: target.id, label: optionLabel };
+                    })
+                    .filter((t): t is { columnId: number; label: string } => Boolean(t))
+                : undefined;
               return (
                 <FormField
                   key={entry.col.id}
@@ -512,6 +585,8 @@ export function SubmissionFormView({
                   error={fieldErrors[String(entry.col.id)] ?? formState.errors[String(entry.col.id)]?.message}
                   setValue={setValue}
                   watchValue={values[String(entry.col.id)] ?? ""}
+                  values={values}
+                  checkboxTargets={checkboxTargets}
                 />
               );
             })

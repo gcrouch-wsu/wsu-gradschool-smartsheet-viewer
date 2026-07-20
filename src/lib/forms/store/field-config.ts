@@ -5,10 +5,29 @@ import { readFormFieldsForSheet, writeFormFieldsForSheet } from "@/lib/forms/sto
 export type { FormFieldConfig, FormFieldDefinition, FormFieldKindHint } from "@/lib/forms/form-field-config";
 export { normalizeFormFieldConfig };
 
+/** Undo prior auto-hide of role name/email columns used for Path A routing. */
+function restoreRoutingContactFields(config: FormFieldConfig): FormFieldConfig {
+  if (!config.fields?.length) return config;
+  let changed = false;
+  const fields = config.fields.map((field) => {
+    if (
+      /^(academic coordinator|chr|chair)\s+(name|email)\b/i.test(field.columnTitle) &&
+      field.hiddenOnForm
+    ) {
+      changed = true;
+      return { ...field, hiddenOnForm: false };
+    }
+    return field;
+  });
+  return changed ? { ...config, fields } : config;
+}
+
 export async function loadFormFields(sheetId: string): Promise<FormFieldConfig | null> {
   if (!sheetId.trim()) {
     return null;
   }
+
+  let loaded: FormFieldConfig | null = null;
 
   if (isFormsDatabaseEnabled()) {
     await ensureFormsTables();
@@ -17,11 +36,13 @@ export async function loadFormFields(sheetId: string): Promise<FormFieldConfig |
       [sheetId.trim()],
     );
     const row = rows[0];
-    return row?.data ? normalizeFormFieldConfig(row.data) : null;
+    loaded = row?.data ? normalizeFormFieldConfig(row.data) : null;
+  } else {
+    const fromFile = await readFormFieldsForSheet(sheetId.trim());
+    loaded = fromFile ? normalizeFormFieldConfig(fromFile) : null;
   }
 
-  const fromFile = await readFormFieldsForSheet(sheetId.trim());
-  return fromFile ? normalizeFormFieldConfig(fromFile) : null;
+  return loaded ? restoreRoutingContactFields(loaded) : null;
 }
 
 export async function saveFormFields(sheetId: string, fieldConfig: FormFieldConfig): Promise<void> {

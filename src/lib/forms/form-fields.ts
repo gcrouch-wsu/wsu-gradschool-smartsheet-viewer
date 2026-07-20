@@ -19,9 +19,8 @@ export function isInternalFormColumn(title: string): boolean {
   if (/\bapproval\s*date$/i.test(t)) return true;
   if (/^(final pdf|approvals ready|file name)(\b|$)/i.test(t)) return true;
   if (/^form creation/i.test(t)) return true;
-  if (/^chr\s+(name|email)\b/i.test(t)) return true;
-  if (/^academic coordinator\s+(name|email)\b/i.test(t)) return true;
-  if (/^chair\s+(name|email)\b/i.test(t)) return true;
+  // Legacy Smartsheet companion columns (options belong on a MULTI_PICKLIST, not separate bools).
+  if (/^chkbox([_-]?\d+)?$/i.test(t)) return true;
   return false;
 }
 
@@ -73,7 +72,7 @@ export async function resolveFormColumns(
         : configured.columns;
     const picked = (titles ?? [])
       .map((title) => byTitle.get(titleKey(title)))
-      .filter((c): c is SmartsheetColumn => Boolean(c));
+      .filter((c): c is SmartsheetColumn => Boolean(c) && !isInternalFormColumn(c.title));
     if (picked.length) return { columns: picked, source: "smartsheet-config" };
   }
 

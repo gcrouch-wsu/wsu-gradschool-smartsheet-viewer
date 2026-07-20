@@ -13,7 +13,7 @@ import {
   newLayoutElementId,
 } from "@/lib/forms/form-field-config";
 import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
-import { deriveFormFieldConfig, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
+import { deriveFormFieldConfig, expandColumnsWithCheckboxGroups, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
 import type { FormSchema } from "@/lib/forms/form-ui";
 
 export type BuilderFieldType =
@@ -349,6 +349,23 @@ export function useFormBuilder() {
     if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || "Could not update options.");
   }
 
+  async function updateColumnType(
+    columnId: number,
+    type: string,
+    options?: string[],
+  ) {
+    if (!state) return;
+    const body: Record<string, unknown> = { type };
+    if (options) body.options = options;
+    const r = await fetch(`/api/forms/platform/sheets/${state.sheetId}/columns/${columnId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const d = await parseJson(r);
+    if (!r.ok) throw new Error((typeof d.error === "string" && d.error) || "Could not update column type.");
+  }
+
   async function deleteField(columnTitle: string) {
     if (!state) return;
     const item = state.fields.find((f) => f.columnTitle === columnTitle);
@@ -431,7 +448,10 @@ export function useFormBuilder() {
       attachmentsEnabled: state.attachmentsEnabled,
     });
     const byTitle = new Map(state.columns.map((c) => [c.title.toLowerCase(), c]));
-    const columns = config.columns.map((t) => byTitle.get(t.toLowerCase())).filter((c): c is SmartsheetColumn => Boolean(c));
+    const baseColumns = config.columns
+      .map((t) => byTitle.get(t.toLowerCase()))
+      .filter((c): c is SmartsheetColumn => Boolean(c));
+    const columns = expandColumnsWithCheckboxGroups(baseColumns, state.columns, config);
     return {
       sheetName: state.sheetName,
       formTitle: state.formTitle,
@@ -465,6 +485,7 @@ export function useFormBuilder() {
     updateFields,
     renameColumn,
     updatePicklistOptions,
+    updateColumnType,
     deleteField,
     setFormPresentation,
     setConditionalLogic,

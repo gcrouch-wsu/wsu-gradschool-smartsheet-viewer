@@ -7,6 +7,7 @@ import type { ConditionalRule, SmartsheetColumn } from "@/lib/forms/types";
 export type FormFieldKind =
   | "checkbox"
   | "select"
+  | "radio"
   | "multiselect"
   | "date"
   | "email"
@@ -35,16 +36,24 @@ export interface FormSchema {
 const MAX_LEN = 4000;
 
 export function fieldKind(col: SmartsheetColumn, meta?: FormFieldMeta): FormFieldKind {
-  if (col.type === "CHECKBOX") return "checkbox";
-  if (col.type === "MULTI_PICKLIST") return "multiselect";
-  if (col.type === "PICKLIST" || (col.options && col.options.length)) return "select";
+  const type = String(col.type || "").toUpperCase();
+  if (type === "CHECKBOX") return "checkbox";
+  if (type === "MULTI_PICKLIST" || meta?.kindHint === "multiselect" || (meta?.checkboxColumns?.length ?? 0) > 0) {
+    return "multiselect";
+  }
+  // Smartsheet "Dropdown (single-select)" — Forms often Display As radio buttons; we default to radio.
+  if (type === "PICKLIST" || (col.options && col.options.length)) {
+    if (meta?.kindHint === "select" || meta?.kindHint === "dropdown") return "select";
+    if (meta?.kindHint === "radio") return "radio";
+    return "radio";
+  }
   if (isSmartsheetDateColumnType(col.type)) return "date";
-  if (col.type === "PHONE" || meta?.kindHint === "phone") return "phone";
+  if (type === "PHONE" || meta?.kindHint === "phone") return "phone";
   if (meta?.kindHint === "number") return "number";
   if (meta?.kindHint === "textarea") return "textarea";
   if (meta?.kindHint === "email") return "email";
   if (meta?.kindHint === "text") return "text";
-  if (/e-?mail/i.test(col.title) || col.type === "CONTACT_LIST") return "email";
+  if (/e-?mail/i.test(col.title) || type === "CONTACT_LIST") return "email";
   if (/phone|mobile|cell/i.test(col.title)) return "phone";
   if (/message|comment|description|notes?|details?/i.test(col.title)) return "textarea";
   return "text";
@@ -129,6 +138,20 @@ export function validateFormClient(
     const required = isFieldRequired(col, conditionalTargets, hidden, meta);
     const kind = fieldKind(col, meta);
 
+    if (meta?.checkboxColumns?.length) {
+      const byTitle = new Map(columns.map((c) => [c.title.toLowerCase(), c]));
+      const linked = meta.checkboxColumns
+        .map((t) => byTitle.get(t.trim().toLowerCase()))
+        .filter((c): c is SmartsheetColumn => Boolean(c));
+      const anyChecked = linked.some((c) => (values[String(c.id)] ?? "") === "true");
+      if (required && !anyChecked) {
+        const msg = `${label} is required.`;
+        errors.push(msg);
+        fieldErrors[key] = msg;
+      }
+      continue;
+    }
+
     if (col.type === "CHECKBOX") continue;
 
     if (!raw) {
@@ -202,11 +225,17 @@ export function buildSubmitPayload(
   columns: SmartsheetColumn[],
   values: Record<string, string>,
   conditional: ConditionalRule[],
+  fieldMeta?: Record<string, FormFieldMeta>,
 ): Record<string, string> {
   const hidden = hiddenColumnTitles(columns, conditional, values);
   const payload: Record<string, string> = {};
   for (const col of columns) {
-    if (!isFieldVisible(col, hidden)) continue;
+    const isLinkedCheckbox =
+      col.type === "CHECKBOX" &&
+      Object.values(fieldMeta ?? {}).some((m) =>
+        m.checkboxColumns?.some((t) => t.trim().toLowerCase() === col.title.toLowerCase()),
+      );
+    if (!isFieldVisible(col, hidden) && !isLinkedCheckbox) continue;
     const raw = values[String(col.id)] ?? (col.type === "CHECKBOX" ? "false" : "");
     if (isSmartsheetDateColumnType(col.type)) {
       const iso = parseFormDateToIso(raw);

@@ -14,16 +14,305 @@
       "LEAVE END",
       "LIBRARY",
       "LEAVE REASONS",
-      "CHKBOX_01",
-      "CHKBOX_02",
-      "CHKBOX_03",
-      "CHKBOX_04",
-      "CHKBOX_05",
-      "CHKBOX_06",
-      "CHKBOX_07",
-      "CHKBOX_08",
       "OTHER REASON"
-    ]
+    ],
+    "fields": [
+      {
+        "columnTitle": "Student Name",
+        "order": 0,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "WSU ID",
+        "order": 1,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Student WSU Email",
+        "order": 2,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Student Phone",
+        "order": 3,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "IS Y/N",
+        "order": 4,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Are you an Academic Student Employee (ASE)?",
+        "required": true
+      },
+      {
+        "columnTitle": "VISA",
+        "order": 5,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "label": "Are you an international student? ",
+        "required": true
+      },
+      {
+        "columnTitle": "__divider:901de2d9",
+        "order": 6,
+        "itemKind": "divider",
+        "text": "",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Degree",
+        "order": 7,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Program",
+        "order": 8,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Campus",
+        "order": 9,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "LEAVE START",
+        "order": 10,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "LEAVE END",
+        "order": 11,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "LIBRARY",
+        "order": 12,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "LEAVE REASONS",
+        "order": 13,
+        "itemKind": "field",
+        "hiddenOnForm": false,
+        "kindHint": "multiselect",
+        "checkboxColumns": [
+          "CHKBOX_01",
+          "CHKBOX_02",
+          "CHKBOX_03",
+          "CHKBOX_04",
+          "CHKBOX_05",
+          "CHKBOX_06",
+          "CHKBOX_07",
+          "CHKBOX_08"
+        ],
+        "checkboxLabels": [
+          "Medical",
+          "Financial",
+          "Job Obligations",
+          "Family Obligations",
+          "Military Service",
+          "Peace Corps",
+          "Fulbright Scholar",
+          "Other Reason"
+        ]
+      },
+      {
+        "columnTitle": "OTHER REASON",
+        "order": 14,
+        "itemKind": "field",
+        "hiddenOnForm": false
+      },
+      {
+        "columnTitle": "Form Creation Date",
+        "order": 15,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Student Approval",
+        "order": 16,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Student Approval Date",
+        "order": 17,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "RESEND Student Approval",
+        "order": 18,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "D0",
+        "order": 19,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "ASE Status",
+        "order": 20,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "POS Status",
+        "order": 21,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_01",
+        "order": 22,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_02",
+        "order": 23,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_03",
+        "order": 24,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_04",
+        "order": 25,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_05",
+        "order": 26,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_06",
+        "order": 27,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_07",
+        "order": 28,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHKBOX_08",
+        "order": 29,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "D1",
+        "order": 30,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHR Name",
+        "order": 31,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHR Email",
+        "order": 32,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHR Approval",
+        "order": 33,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "CHR Approval Date",
+        "order": 34,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "RESEND Chair Approval",
+        "order": 35,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "D2",
+        "order": 36,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Approvals Ready",
+        "order": 37,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Final PDF Create",
+        "order": 38,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Academic Coordinator Name",
+        "order": 39,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "Academic Coordinator Email",
+        "order": 40,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "RESEND Final PDF",
+        "order": 41,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "File Name",
+        "order": 42,
+        "itemKind": "field",
+        "hiddenOnForm": true
+      },
+      {
+        "columnTitle": "__heading:0726f206",
+        "order": 43,
+        "itemKind": "heading",
+        "text": "Section heading",
+        "hiddenOnForm": false
+      }
+    ],
+    "allowedDomains": [
+      "wsu.edu"
+    ],
+    "attachmentsEnabled": true
   },
   "3361171036917636": {
     "columns": [

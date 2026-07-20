@@ -1,6 +1,6 @@
 import { resolveAllowedDomains, resolveAttachmentsEnabled } from "@/lib/forms/allowed-domains";
 import { config, loadConditionalLogic } from "@/lib/forms/config";
-import { fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
+import { expandColumnsWithCheckboxGroups, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
 import { loadFormFields } from "@/lib/forms/store/field-config";
 import * as ss from "@/lib/forms/smartsheet-api";
@@ -23,8 +23,9 @@ export interface FormSchemaPayload {
 export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchemaPayload> {
   const sheet = await ss.getSheet(sheetId);
   const extracted = ss.extractColumns(sheet);
-  const { columns, source: formColumnSource } = await resolveFormColumns(sheet, extracted);
+  const { columns: formColumns, source: formColumnSource } = await resolveFormColumns(sheet, extracted);
   const fieldConfig = await loadFormFields(sheetId);
+  const columns = expandColumnsWithCheckboxGroups(formColumns, extracted, fieldConfig);
   const fieldMeta = fieldMetaFromConfig(fieldConfig);
   const conditionalLogic = await loadConditionalLogic(sheetId);
   const allowedDomains = resolveAllowedDomains(fieldConfig);
@@ -128,7 +129,9 @@ export async function submitFormRows(
   }
 
   const sheet = await ss.getSheet(sheetId);
-  const { columns } = await resolveFormColumns(sheet, ss.extractColumns(sheet));
+  const extracted = ss.extractColumns(sheet);
+  const { columns: formColumns } = await resolveFormColumns(sheet, extracted);
+  const columns = expandColumnsWithCheckboxGroups(formColumns, extracted, fieldConfig);
   const conditionalLogic = await loadConditionalLogic(sheetId);
   const fieldMeta = fieldMetaFromConfig(fieldConfig);
   const allowedDomains = resolveAllowedDomains(fieldConfig);

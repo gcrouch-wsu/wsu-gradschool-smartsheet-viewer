@@ -27,6 +27,8 @@ export interface FormFieldMeta {
   helpText?: string;
   required?: boolean;
   kindHint?: FormFieldDefinition["kindHint"];
+  checkboxColumns?: string[];
+  checkboxLabels?: string[];
 }
 
 /** Build fieldMeta map keyed by column title (lowercase) for the public schema. */
@@ -42,9 +44,52 @@ export function fieldMetaFromConfig(config: FormFieldConfig | null | undefined):
       helpText: field.helpText,
       required: field.required,
       kindHint: field.kindHint,
+      checkboxColumns: field.checkboxColumns,
+      checkboxLabels: field.checkboxLabels,
     };
   }
   return meta;
+}
+
+/** Titles of CHECKBOX columns owned by a checkbox-group field (should not render alone). */
+export function linkedCheckboxColumnTitles(config: FormFieldConfig | null | undefined): Set<string> {
+  const titles = new Set<string>();
+  for (const field of config?.fields ?? []) {
+    for (const t of field.checkboxColumns ?? []) {
+      if (t.trim()) titles.add(t.trim().toLowerCase());
+    }
+  }
+  return titles;
+}
+
+/** Append linked CHECKBOX columns so submit can write them. */
+export function expandColumnsWithCheckboxGroups(
+  columns: SmartsheetColumn[],
+  allColumns: SmartsheetColumn[],
+  config: FormFieldConfig | null | undefined,
+): SmartsheetColumn[] {
+  const byTitle = new Map(allColumns.map((c) => [c.title.toLowerCase(), c]));
+  const have = new Set(columns.map((c) => c.title.toLowerCase()));
+  const out = [...columns];
+  for (const field of config?.fields ?? []) {
+    if (field.hiddenOnForm) continue;
+    for (const title of field.checkboxColumns ?? []) {
+      const key = title.trim().toLowerCase();
+      if (!key || have.has(key)) continue;
+      const col = byTitle.get(key);
+      if (!col) continue;
+      out.push(col);
+      have.add(key);
+    }
+  }
+  return out;
+}
+
+/** CHKBOX_* columns available for mapping, in sheet order. */
+export function listMappableCheckboxColumns(columns: SmartsheetColumn[]): SmartsheetColumn[] {
+  return columns.filter(
+    (c) => String(c.type).toUpperCase() === "CHECKBOX" && /^chkbox([_-]?\d+)?$/i.test(c.title.trim()),
+  );
 }
 
 export function fieldMetaForColumn(
@@ -72,7 +117,9 @@ export function seedFieldsFromColumns(columns: SmartsheetColumn[], visibleTitles
     columnTitle: col.title,
     order: index,
     itemKind: "field" as const,
-    hiddenOnForm: visible ? !visible.has(col.title.toLowerCase()) : false,
+    hiddenOnForm: visible
+      ? !visible.has(col.title.toLowerCase())
+      : /^chkbox([_-]?\d+)?$/i.test(col.title.trim()),
   }));
 }
 
@@ -123,15 +170,18 @@ export function mergeFieldsWithColumns(
     if (used.has(key)) continue;
     used.add(key);
     const prev = byTitle.get(key);
+    const defaultHidden = /^chkbox([_-]?\d+)?$/i.test(col.title.trim());
     result.push({
       columnTitle: col.title,
       order: result.length,
       itemKind: "field",
-      hiddenOnForm: prev?.hiddenOnForm ?? false,
+      hiddenOnForm: prev?.hiddenOnForm ?? defaultHidden,
       label: prev?.label,
       helpText: prev?.helpText,
       required: prev?.required,
       kindHint: prev?.kindHint,
+      checkboxColumns: prev?.checkboxColumns,
+      checkboxLabels: prev?.checkboxLabels,
     });
     for (const layout of layoutByAfterKey.get(key) ?? []) {
       result.push({ ...layout, order: result.length, itemKind: layout.itemKind ?? "heading" });
@@ -143,15 +193,18 @@ export function mergeFieldsWithColumns(
     if (used.has(key)) continue;
     used.add(key);
     const prev = byTitle.get(key);
+    const defaultHidden = /^chkbox([_-]?\d+)?$/i.test(col.title.trim()) || hasConfig;
     result.push({
       columnTitle: col.title,
       order: result.length,
       itemKind: "field",
-      hiddenOnForm: prev?.hiddenOnForm ?? (hasConfig ? true : false),
+      hiddenOnForm: prev?.hiddenOnForm ?? defaultHidden,
       label: prev?.label,
       helpText: prev?.helpText,
       required: prev?.required,
       kindHint: prev?.kindHint,
+      checkboxColumns: prev?.checkboxColumns,
+      checkboxLabels: prev?.checkboxLabels,
     });
   }
 

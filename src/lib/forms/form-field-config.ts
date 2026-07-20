@@ -1,4 +1,13 @@
-export type FormFieldKindHint = "text" | "textarea" | "email" | "phone" | "number";
+export type FormFieldKindHint =
+  | "text"
+  | "textarea"
+  | "email"
+  | "phone"
+  | "number"
+  | "multiselect"
+  | "select"
+  | "dropdown"
+  | "radio";
 
 /** Display-only form elements (not Smartsheet columns). */
 export type FormLayoutElementType = "heading" | "description" | "divider";
@@ -23,6 +32,13 @@ export interface FormFieldDefinition {
   helpText?: string;
   required?: boolean;
   kindHint?: FormFieldKindHint;
+  /**
+   * When set, Checkboxes (multiple) writes each choice to its own CHECKBOX column
+   * (titles parallel to checkboxLabels / column options).
+   */
+  checkboxColumns?: string[];
+  /** Display labels for checkboxColumns; falls back to picklist options, then column titles. */
+  checkboxLabels?: string[];
 }
 
 export interface FormFieldConfig {
@@ -93,7 +109,17 @@ export function normalizeFormFieldConfig(config: FormFieldConfig): FormFieldConf
       .map((f) => f.columnTitle);
     return {
       columns,
-      fields: sorted.map((f, i) => ({ ...f, order: i, itemKind: f.itemKind ?? "field" })),
+      fields: sorted.map((f, i) => ({
+        ...f,
+        order: i,
+        itemKind: f.itemKind ?? "field",
+        checkboxColumns: Array.isArray(f.checkboxColumns)
+          ? f.checkboxColumns.map((t) => String(t).trim()).filter(Boolean)
+          : undefined,
+        checkboxLabels: Array.isArray(f.checkboxLabels)
+          ? f.checkboxLabels.map((t) => String(t))
+          : undefined,
+      })),
       formTitle,
       formDescription,
       ...(allowedDomains?.length ? { allowedDomains } : {}),

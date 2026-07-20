@@ -26,7 +26,17 @@ import { resolveAdminPrincipal } from "@/lib/identity";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const KIND_HINTS = new Set<FormFieldKindHint>(["text", "textarea", "email", "phone", "number"]);
+const KIND_HINTS = new Set<FormFieldKindHint>([
+  "text",
+  "textarea",
+  "email",
+  "phone",
+  "number",
+  "multiselect",
+  "select",
+  "dropdown",
+  "radio",
+]);
 const ITEM_KINDS = new Set<FormItemKind>(["field", "heading", "description", "divider"]);
 
 function asOptionalString(value: unknown): string | undefined {
@@ -179,6 +189,12 @@ export async function PUT(request: Request) {
           const layout = isLayoutFormItem({ itemKind });
           const lockedField = !layout && locked.has(title.toLowerCase());
           const kindHint = KIND_HINTS.has(f.kindHint as FormFieldKindHint) ? (f.kindHint as FormFieldKindHint) : undefined;
+          const checkboxColumns = Array.isArray(f.checkboxColumns)
+            ? f.checkboxColumns.map((t) => String(t).trim()).filter(Boolean)
+            : undefined;
+          const checkboxLabels = Array.isArray(f.checkboxLabels)
+            ? f.checkboxLabels.map((t) => String(t))
+            : undefined;
           return {
             columnTitle: title,
             order: typeof f.order === "number" ? f.order : index,
@@ -189,6 +205,8 @@ export async function PUT(request: Request) {
             helpText: typeof f.helpText === "string" ? f.helpText : undefined,
             required: layout ? undefined : typeof f.required === "boolean" ? f.required : undefined,
             kindHint: layout ? undefined : kindHint,
+            checkboxColumns: layout ? undefined : checkboxColumns?.length ? checkboxColumns : undefined,
+            checkboxLabels: layout ? undefined : checkboxLabels?.length ? checkboxLabels : undefined,
           } satisfies FormFieldDefinition;
         })
         .filter((f) => f.columnTitle);
