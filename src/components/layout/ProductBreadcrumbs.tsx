@@ -24,6 +24,7 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
   }
   if (pathname.startsWith("/admin/contributors")) return [dashboard, { href: null, label: "Contributors" }];
   if (pathname.startsWith("/admin/users")) return [dashboard, { href: null, label: "Admins" }];
+  if (pathname.startsWith("/admin/activity")) return [dashboard, { href: null, label: "Activity" }];
 
   return [{ href: null, label: "Dashboard" }];
 }
