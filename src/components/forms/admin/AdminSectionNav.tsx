@@ -6,14 +6,13 @@ import { usePathname } from "next/navigation";
 import {
   IconFile,
   IconGrid,
-  IconLayers,
   IconPencil,
   IconTracker,
   IconUsers,
   IconWebhook,
 } from "@/components/forms/icons";
 
-export type AdminTab = "forms" | "org" | "webhooks" | "approvers";
+export type AdminTab = "forms" | "webhooks" | "approvers";
 
 type NavItem =
   | { kind: "tab"; id: AdminTab; label: string; icon: ReactNode }
@@ -21,7 +20,6 @@ type NavItem =
 
 const SECTIONS: NavItem[] = [
   { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
-  { kind: "tab", id: "org", label: "Org", icon: <IconLayers className="h-3.5 w-3.5" /> },
   { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/tracker", label: "Tracker", icon: <IconTracker className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/sheet", label: "Grid", icon: <IconGrid className="h-3.5 w-3.5" /> },

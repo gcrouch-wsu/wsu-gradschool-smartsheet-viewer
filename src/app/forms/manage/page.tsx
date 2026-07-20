@@ -10,7 +10,6 @@ import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
-import { OrgSharingCard } from "@/components/forms/admin/OrgSharingCard";
 import { WebhooksCard } from "@/components/forms/admin/WebhooksCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { IconPlus } from "@/components/forms/icons";
@@ -61,7 +60,7 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
   }
 }
 
-const MANAGE_TABS: AdminTab[] = ["forms", "org", "webhooks", "approvers"];
+const MANAGE_TABS: AdminTab[] = ["forms", "webhooks", "approvers"];
 
 function tabFromSearchParam(value: string | null): AdminTab {
   if (value && MANAGE_TABS.includes(value as AdminTab)) return value as AdminTab;
@@ -107,10 +106,6 @@ function ManagePageContent() {
   const [autoNotice, setAutoNotice] = useState("");
   const [autoLoading, setAutoLoading] = useState(false);
   const [paths, setPaths] = useState<Record<string, string>>({});
-  const [workspaces, setWorkspaces] = useState<{ id: number; name: string }[]>([]);
-  const [folderChildren, setFolderChildren] = useState<{ id: number; name: string; type: string }[]>([]);
-  const [shareSheetEmail, setShareSheetEmail] = useState("");
-  const [shareMsg, setShareMsg] = useState("");
   const [webhookInfo, setWebhookInfo] = useState<{ webhooks?: unknown[]; state?: { lastWebhookAt?: string } } | null>(null);
   const [approvers, setApprovers] = useState<ApproverSummary[]>([]);
   const [approverEmail, setApproverEmail] = useState("");
@@ -256,7 +251,6 @@ function ManagePageContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (tab === "org") loadOrg();
     if (tab === "webhooks") loadWebhooks();
     if (tab === "approvers") loadApprovers();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load helpers are stable closures over setters
@@ -377,36 +371,19 @@ function ManagePageContent() {
     }
   }
 
-  async function loadOrg() {
-    try {
-      const wr = await fetch("/api/forms/platform/workspaces");
-      const wd = await wr.json();
-      if (wr.ok) setWorkspaces(wd.workspaces ?? []);
-      if (destinationFolderId) {
-        const fr = await fetch(`/api/forms/platform/folders/${destinationFolderId}/children`);
-        const fd = await fr.json();
-        if (fr.ok) setFolderChildren(fd.children ?? []);
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  async function shareActiveSheet() {
-    setShareMsg("");
-    if (!activeId || !shareSheetEmail.trim()) return;
+  async function shareActiveSheet(email: string): Promise<{ ok: boolean; text: string }> {
+    if (!activeId) return { ok: false, text: "No active form selected." };
     try {
       const r = await fetch(`/api/forms/platform/sheets/${activeId}/shares`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: shareSheetEmail.trim(), accessLevel: "EDITOR" }),
+        body: JSON.stringify({ email: email.trim(), accessLevel: "EDITOR" }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || d.message || "Share failed.");
-      setShareMsg("Shared successfully.");
-      setShareSheetEmail("");
+      return { ok: true, text: "Shared successfully." };
     } catch (e: unknown) {
-      setShareMsg(e instanceof Error ? e.message : "Share failed.");
+      return { ok: false, text: e instanceof Error ? e.message : "Share failed." };
     }
   }
 
@@ -509,6 +486,7 @@ function ManagePageContent() {
             onEdit={editForm}
             onPublish={publishForm}
             onUnpublish={unpublishForm}
+            onShareActiveSheet={shareActiveSheet}
             busyId={publishBusyId}
             loading={formsLoading}
           />
@@ -534,17 +512,6 @@ function ManagePageContent() {
             />
           </div>
         </div>
-      ) : null}
-
-      {tab === "org" ? (
-        <OrgSharingCard
-          workspaces={workspaces}
-          folderChildren={folderChildren}
-          shareSheetEmail={shareSheetEmail}
-          onShareSheetEmailChange={setShareSheetEmail}
-          onShare={shareActiveSheet}
-          shareMsg={shareMsg}
-        />
       ) : null}
 
       {tab === "webhooks" ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { IconCheck, IconFile, IconPencil, IconSearch } from "@/components/forms/icons";
 import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 
@@ -36,6 +37,7 @@ interface FormsTableProps {
   onEdit: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
+  onShareActiveSheet: (email: string) => Promise<{ ok: boolean; text: string }>;
   busyId?: string | null;
   loading?: boolean;
 }
@@ -50,9 +52,32 @@ export function FormsTable({
   onEdit,
   onPublish,
   onUnpublish,
+  onShareActiveSheet,
   busyId,
   loading = false,
 }: FormsTableProps) {
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareMsg, setShareMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleShare() {
+    const email = shareEmail.trim();
+    if (!email || shareBusy) return;
+    setShareBusy(true);
+    setShareMsg(null);
+    try {
+      const result = await onShareActiveSheet(email);
+      setShareMsg(result);
+      if (result.ok) {
+        setShareEmail("");
+        setShareOpen(false);
+      }
+    } finally {
+      setShareBusy(false);
+    }
+  }
+
   const columns: DataTableColumn<FormEntryRow>[] = [
     {
       id: "name",
@@ -147,53 +172,112 @@ export function FormsTable({
       id: "actions",
       header: <span className="sr-only">Actions</span>,
       cell: (form) => {
+        const isActive = String(form.id) === activeId;
         const isPublished = Boolean(form.public);
         const publicUrl = form.slug ? `/f/${form.slug}` : null;
         const busy = busyId === form.id;
         return (
-          <div className="flex flex-wrap justify-end gap-1.5">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-lg border border-[color:var(--wsu-border)] p-1.5 text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
-              disabled={busy}
-              onClick={() => onEdit(form.id)}
-              aria-label={`Edit ${form.name}`}
-              title="Edit in builder"
-            >
-              <IconPencil className="h-3.5 w-3.5" />
-            </button>
-            {isPublished && publicUrl ? (
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5">
               <button
                 type="button"
-                className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                className="inline-flex items-center justify-center rounded-lg border border-[color:var(--wsu-border)] p-1.5 text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
                 disabled={busy}
-                onClick={() => {
-                  const absolute = `${window.location.origin}${publicUrl}`;
-                  void navigator.clipboard.writeText(absolute);
-                }}
+                onClick={() => onEdit(form.id)}
+                aria-label={`Edit ${form.name}`}
+                title="Edit in builder"
               >
-                Copy URL
+                <IconPencil className="h-3.5 w-3.5" />
               </button>
+              {isActive ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white"
+                  onClick={() => {
+                    setShareOpen((open) => !open);
+                    setShareMsg(null);
+                  }}
+                  aria-expanded={shareOpen}
+                >
+                  Share
+                </button>
+              ) : null}
+              {isPublished && publicUrl ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => {
+                    const absolute = `${window.location.origin}${publicUrl}`;
+                    void navigator.clipboard.writeText(absolute);
+                  }}
+                >
+                  Copy URL
+                </button>
+              ) : null}
+              {isPublished ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => onUnpublish(form.id)}
+                >
+                  Unpublish
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                  disabled={busy}
+                  onClick={() => onPublish(form.id)}
+                >
+                  Publish
+                </button>
+              )}
+            </div>
+            {isActive && shareOpen ? (
+              <div className="flex w-full min-w-[14rem] max-w-xs flex-col gap-1.5 sm:items-end">
+                <div className="flex w-full flex-wrap gap-1.5 sm:justify-end">
+                  <input
+                    type="email"
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                    placeholder="user@wsu.edu"
+                    aria-label="Email to share active sheet with"
+                    className="min-w-0 flex-1 rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleShare();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={shareBusy || !shareEmail.trim()}
+                    onClick={() => void handleShare()}
+                    className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
+                  >
+                    {shareBusy ? "Sharing…" : "Send"}
+                  </button>
+                </div>
+                {shareMsg ? (
+                  <p
+                    className={`text-[10px] ${shareMsg.ok ? "text-emerald-700" : "text-red-700"}`}
+                    role="status"
+                  >
+                    {shareMsg.text}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-[color:var(--wsu-muted)]">Grants EDITOR access on this sheet</p>
+                )}
+              </div>
             ) : null}
-            {isPublished ? (
-              <button
-                type="button"
-                className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-white disabled:opacity-50"
-                disabled={busy}
-                onClick={() => onUnpublish(form.id)}
-              >
-                Unpublish
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
-                disabled={busy}
-                onClick={() => onPublish(form.id)}
-              >
-                Publish
-              </button>
-            )}
+            {isActive && !shareOpen && shareMsg?.ok ? (
+              <p className="text-[10px] text-emerald-700" role="status">
+                {shareMsg.text}
+              </p>
+            ) : null}
           </div>
         );
       },
