@@ -46,6 +46,7 @@ interface SheetGridViewProps {
 }
 
 type ColumnFilter = "all" | "form" | "workflow";
+type StatusFilter = "all" | "current" | "complete" | "declined";
 
 function toneCellClasses(tone: ApprovalTone | null, highlight: boolean): string {
   if (!highlight || !tone || tone === "empty") {
@@ -100,18 +101,33 @@ function StatusStat({
   label,
   value,
   tone,
+  selected,
+  onSelect,
 }: {
   label: string;
   value: number;
   tone?: string;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <div className="bg-white px-4 py-3">
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={[
+        "px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-wsu-crimson",
+        selected
+          ? "bg-[color:var(--wsu-stone)]/80 ring-1 ring-inset ring-wsu-crimson/35"
+          : "bg-white hover:bg-[color:var(--wsu-stone)]/40",
+      ].join(" ")}
+    >
       <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[color:var(--wsu-muted)]">{label}</p>
       <p className={`mt-1 font-mono text-xl font-medium tabular-nums leading-none tracking-tight ${tone ?? "text-[color:var(--wsu-ink)]"}`}>
         {value}
       </p>
-    </div>
+      {selected ? <span className="sr-only">(selected filter)</span> : null}
+    </button>
   );
 }
 
@@ -129,6 +145,7 @@ export function SheetGridView({
   const [query, setQuery] = useState("");
   const [highlightApprovals, setHighlightApprovals] = useState(true);
   const [columnFilter, setColumnFilter] = useState<ColumnFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const stageColumns = useMemo(
     () => columns.filter((c) => c.workflowRole === "stage" || c.workflowRole === "overall"),
@@ -145,14 +162,16 @@ export function SheetGridView({
 
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (row) =>
+    return rows.filter((row) => {
+      if (statusFilter !== "all" && row.approvalStatus?.state !== statusFilter) return false;
+      if (!q) return true;
+      return (
         visibleColumns.some((col) => (row.values[String(col.id)] ?? "").toLowerCase().includes(q)) ||
         String(row.id).includes(q) ||
-        (row.approvalStatus?.label ?? "").toLowerCase().includes(q),
-    );
-  }, [rows, visibleColumns, query]);
+        (row.approvalStatus?.label ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [rows, visibleColumns, query, statusFilter]);
 
   const metrics = useMemo(() => {
     let inReview = 0;
@@ -207,38 +226,71 @@ export function SheetGridView({
 
       <div
         className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white"
-        aria-label="Submission status counts"
+        role="group"
+        aria-label="Filter by submission status"
       >
         <div className="grid grid-cols-2 gap-px bg-[color:var(--wsu-border)] sm:grid-cols-4">
-          <StatusStat label="Total" value={metrics.total} />
-          <StatusStat label="In review" value={metrics.inReview} tone="text-amber-700" />
-          <StatusStat label="Complete" value={metrics.complete} tone="text-emerald-700" />
-          <StatusStat label="Declined" value={metrics.declined} tone="text-red-700" />
+          <StatusStat
+            label="Total"
+            value={metrics.total}
+            selected={statusFilter === "all"}
+            onSelect={() => setStatusFilter("all")}
+          />
+          <StatusStat
+            label="In review"
+            value={metrics.inReview}
+            tone="text-amber-700"
+            selected={statusFilter === "current"}
+            onSelect={() => setStatusFilter("current")}
+          />
+          <StatusStat
+            label="Complete"
+            value={metrics.complete}
+            tone="text-emerald-700"
+            selected={statusFilter === "complete"}
+            onSelect={() => setStatusFilter("complete")}
+          />
+          <StatusStat
+            label="Declined"
+            value={metrics.declined}
+            tone="text-red-700"
+            selected={statusFilter === "declined"}
+            onSelect={() => setStatusFilter("declined")}
+          />
         </div>
         {metrics.total > 0 ? (
-          <div className="flex h-1 w-full overflow-hidden" aria-hidden>
+          <div className="flex h-1.5 w-full overflow-hidden" aria-hidden>
             {metrics.inReview > 0 ? (
               <div
-                className="bg-amber-400 transition-[width] duration-500"
+                className={[
+                  "bg-amber-400 transition-[width,opacity] duration-500",
+                  statusFilter !== "all" && statusFilter !== "current" ? "opacity-25" : "",
+                ].join(" ")}
                 style={{ width: `${(metrics.inReview / metrics.total) * 100}%` }}
               />
             ) : null}
             {metrics.complete > 0 ? (
               <div
-                className="bg-emerald-500 transition-[width] duration-500"
+                className={[
+                  "bg-emerald-500 transition-[width,opacity] duration-500",
+                  statusFilter !== "all" && statusFilter !== "complete" ? "opacity-25" : "",
+                ].join(" ")}
                 style={{ width: `${(metrics.complete / metrics.total) * 100}%` }}
               />
             ) : null}
             {metrics.declined > 0 ? (
               <div
-                className="bg-red-400 transition-[width] duration-500"
+                className={[
+                  "bg-red-400 transition-[width,opacity] duration-500",
+                  statusFilter !== "all" && statusFilter !== "declined" ? "opacity-25" : "",
+                ].join(" ")}
                 style={{ width: `${(metrics.declined / metrics.total) * 100}%` }}
               />
             ) : null}
             <div className="flex-1 bg-[color:var(--wsu-stone)]" />
           </div>
         ) : (
-          <div className="h-1 bg-[color:var(--wsu-stone)]" aria-hidden />
+          <div className="h-1.5 bg-[color:var(--wsu-stone)]" aria-hidden />
         )}
       </div>
 
@@ -452,6 +504,9 @@ export function SheetGridView({
           {" · "}
           {visibleColumns.length} of {columns.length} column{columns.length === 1 ? "" : "s"}
           {query ? ` · filtered by “${query}”` : ""}
+          {statusFilter !== "all"
+            ? ` · status ${statusFilter === "current" ? "in review" : statusFilter}`
+            : ""}
           {onRowClick ? " · click a row for submission details" : ""}
         </div>
       </div>
