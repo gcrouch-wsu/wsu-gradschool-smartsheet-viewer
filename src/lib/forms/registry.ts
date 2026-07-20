@@ -110,7 +110,7 @@ async function writePreference(preference: RegistryShape): Promise<void> {
 }
 
 async function uniqueSourceId(baseLabel: string, sheetId: string, existingIds: Set<string>): Promise<string> {
-  let base = slugify(baseLabel) || `sheet-${sheetId.slice(-8)}`;
+  const base = slugify(baseLabel) || `sheet-${sheetId.slice(-8)}`;
   if (!existingIds.has(base)) return base;
   const withSheet = slugify(`${baseLabel}-${sheetId.slice(-6)}`) || `${base}-${sheetId.slice(-6)}`;
   if (!existingIds.has(withSheet)) return withSheet;

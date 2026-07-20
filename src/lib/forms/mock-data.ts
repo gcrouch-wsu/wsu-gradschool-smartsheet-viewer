@@ -219,7 +219,7 @@ export function mockDeleteRows(sheetId: string | number, rowIds: (string | numbe
   return { message: "SUCCESS", result: [...ids] };
 }
 
-export function mockSendUpdateRequest(_sheetId: string | number, _payload: unknown) {
+export function mockSendUpdateRequest() {
   return { message: "SUCCESS", result: { id: nextId() } };
 }
 
@@ -241,7 +241,7 @@ export function mockAttachFile(sheetId: string | number, rowId: string | number,
   return { result: rec };
 }
 
-export function mockGetAttachment(_sheetId: string | number, attachmentId: string | number) {
+export function mockGetAttachment(attachmentId: string | number) {
   for (const list of attachments.values()) {
     const a = list.find((x) => x.id === Number(attachmentId));
     if (a) return { ...clone(a), url: `https://demo.local/attachments/${a.id}` };
@@ -269,7 +269,7 @@ export function mockListWorkspaces() {
   return [{ id: 1, name: "WSU Graduate School", permalink: "https://demo.local/ws/1" }];
 }
 
-export function mockListFolderChildren(_folderId: string | number) {
+export function mockListFolderChildren() {
   return [
     { id: 101, name: "Forms", type: "folder" },
     { id: Number(SAMPLE_SHEET_ID), name: "WSU Nomination Form (Sample)", type: "sheet" },
@@ -286,7 +286,7 @@ export function mockGetSheetPath(sheetId: string | number) {
   };
 }
 
-export function mockMoveSheet(_sheetId: string | number, _folderId: string | number) {
+export function mockMoveSheet() {
   return { message: "SUCCESS" };
 }
 
@@ -338,7 +338,7 @@ export function mockSearch(query: string) {
   return results;
 }
 
-export function mockListEvents(_since?: string) {
+export function mockListEvents() {
   return { data: [], morePolling: false, lastEventId: "demo-0" };
 }
 
@@ -380,7 +380,7 @@ export function mockDeleteColumn(sheetId: string | number, columnId: number) {
   return { message: "SUCCESS" };
 }
 
-export function mockCopyRows(_sheetId: string | number, rowIds: number[], toSheetId: number) {
+export function mockCopyRows(rowIds: number[], toSheetId: number) {
   return { result: rowIds.map((id) => ({ id, sheetId: toSheetId })) };
 }
 
@@ -394,7 +394,7 @@ export function mockMoveRows(sheetId: string | number, rowIds: number[], toSheet
   return { message: "SUCCESS" };
 }
 
-export function mockSendRowEmail(_sheetId: string | number, _rowIds: number[]) {
+export function mockSendRowEmail() {
   return { message: "SUCCESS" };
 }
 
@@ -414,7 +414,7 @@ export function mockUpdateReport(reportId: string | number, body: Record<string,
   return { result: { id: Number(reportId), ...body } };
 }
 
-export function mockDeleteReport(_reportId: string | number) {
+export function mockDeleteReport() {
   return { message: "SUCCESS" };
 }
 

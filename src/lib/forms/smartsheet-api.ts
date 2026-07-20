@@ -255,7 +255,7 @@ export async function attachFile(
 }
 
 export async function getAttachment(sheetId: string | number, attachmentId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetAttachment(sheetId, attachmentId);
+  if (config.demo) return mock.mockGetAttachment(attachmentId);
   return api(`/sheets/${sheetId}/attachments/${attachmentId}`);
 }
 
@@ -438,7 +438,7 @@ export async function copyRows(
   toSheetId: number,
   include?: string,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockCopyRows(sheetId, rowIds, toSheetId);
+  if (config.demo) return mock.mockCopyRows(rowIds, toSheetId);
   const q = include ? `?include=${include}` : "";
   return api(`/sheets/${sheetId}/rows/copy${q}`, {
     method: "POST",
