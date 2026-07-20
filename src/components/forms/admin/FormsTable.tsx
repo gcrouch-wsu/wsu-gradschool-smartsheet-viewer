@@ -80,10 +80,10 @@ export function FormsTable({
       ) : forms.length === 0 ? (
         <p className="px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">No forms yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="max-h-[min(28rem,55vh)] overflow-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-[color:var(--wsu-border)] text-xs text-[color:var(--wsu-muted)]">
+            <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_var(--wsu-border)]">
+              <tr className="text-xs text-[color:var(--wsu-muted)]">
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Source</th>
                 <th className="px-4 py-2.5 font-medium">Slug</th>
