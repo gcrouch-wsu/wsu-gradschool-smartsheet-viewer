@@ -7,7 +7,6 @@ import {
   IconFile,
   IconGrid,
   IconPencil,
-  IconWebhook,
 } from "@/components/forms/icons";
 
 export type AdminTab = "forms" | "webhooks";
@@ -18,7 +17,6 @@ type NavItem =
 
 const SECTIONS: NavItem[] = [
   { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
-  // { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/builder", label: "Builder", icon: <IconPencil className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/sheet", label: "Sheet", icon: <IconGrid className="h-3.5 w-3.5" /> },
 ];

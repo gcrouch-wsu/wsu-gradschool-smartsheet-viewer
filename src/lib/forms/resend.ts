@@ -128,7 +128,6 @@ export function findPendingContactEmail(
   const byId = new Map((cells ?? []).map((c) => [c.columnId, c]));
 
   const candidates = columns.filter((c) => {
-    const t = c.title.toLowerCase();
     if (isResendColumnTitle(c.title)) return false;
     if (/\bapproval\b/i.test(c.title)) return false;
     return /e-?mail/i.test(c.title) || /contact/i.test(String(c.type ?? ""));

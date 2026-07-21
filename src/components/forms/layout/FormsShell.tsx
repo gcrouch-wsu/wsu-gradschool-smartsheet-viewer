@@ -36,7 +36,6 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    setSessionLoaded(false);
     fetch("/api/forms/session")
       .then((r) => r.json())
       .then((payload) => {

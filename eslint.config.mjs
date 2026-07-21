@@ -5,11 +5,13 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Pre-existing React Compiler rules across large client components — warn until migrated.
+  // React Compiler rules flag common data-fetch / reset-in-effect patterns across large
+  // client surfaces (ViewBuilder, FormBuilder, trackers). Keep off until those are migrated.
   {
     rules: {
-      "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/incompatible-library": "off",
       "@typescript-eslint/no-unused-vars": [
         "warn",
         {

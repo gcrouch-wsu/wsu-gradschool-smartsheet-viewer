@@ -219,7 +219,7 @@ export function mockDeleteRows(sheetId: string | number, rowIds: (string | numbe
   return { message: "SUCCESS", result: [...ids] };
 }
 
-export function mockSendUpdateRequest() {
+export function mockSendUpdateRequest(sheetId: string | number, payload: { rowIds: number[]; columnIds: number[]; message?: string; sendTo?: { email: string; }[]; }) {
   return { message: "SUCCESS", result: { id: nextId() } };
 }
 
@@ -269,7 +269,7 @@ export function mockListWorkspaces() {
   return [{ id: 1, name: "WSU Graduate School", permalink: "https://demo.local/ws/1" }];
 }
 
-export function mockListFolderChildren() {
+export function mockListFolderChildren(folderId: string | number) {
   return [
     { id: 101, name: "Forms", type: "folder" },
     { id: Number(SAMPLE_SHEET_ID), name: "WSU Nomination Form (Sample)", type: "sheet" },
@@ -286,7 +286,7 @@ export function mockGetSheetPath(sheetId: string | number) {
   };
 }
 
-export function mockMoveSheet() {
+export function mockMoveSheet(sheetId: string | number, folderId: string | number) {
   return { message: "SUCCESS" };
 }
 
@@ -338,7 +338,7 @@ export function mockSearch(query: string) {
   return results;
 }
 
-export function mockListEvents() {
+export function mockListEvents(since: string | undefined) {
   return { data: [], morePolling: false, lastEventId: "demo-0" };
 }
 
@@ -394,7 +394,7 @@ export function mockMoveRows(sheetId: string | number, rowIds: number[], toSheet
   return { message: "SUCCESS" };
 }
 
-export function mockSendRowEmail() {
+export function mockSendRowEmail(sheetId: string | number, rowIds: number[]) {
   return { message: "SUCCESS" };
 }
 
@@ -414,7 +414,7 @@ export function mockUpdateReport(reportId: string | number, body: Record<string,
   return { result: { id: Number(reportId), ...body } };
 }
 
-export function mockDeleteReport() {
+export function mockDeleteReport(reportId: string | number) {
   return { message: "SUCCESS" };
 }
 

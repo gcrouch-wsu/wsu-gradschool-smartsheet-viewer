@@ -76,8 +76,8 @@ export default function ManagePage() {
 function ManagePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tab = tabFromSearchParam(searchParams.get("tab"));
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [tab, setTab] = useState<AdminTab>(() => tabFromSearchParam(searchParams.get("tab")));
   const [forms, setForms] = useState<FormEntry[]>([]);
   const [activeId, setActiveId] = useState("");
   const [query, setQuery] = useState("");
@@ -214,18 +214,12 @@ function ManagePageContent() {
   );
 
   function handleSectionSelect(id: AdminTab) {
-    setTab(id);
     const href = id === "forms" ? "/forms/manage" : `/forms/manage?tab=${id}`;
     router.replace(href);
   }
 
   useEffect(() => {
-    setTab(tabFromSearchParam(searchParams.get("tab")));
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (tab === "webhooks") loadWebhooks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load helpers are stable closures over setters
+    if (tab === "webhooks") void loadWebhooks();
   }, [tab]);
 
   function openCreateModal() {

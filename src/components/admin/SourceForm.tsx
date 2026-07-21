@@ -98,7 +98,6 @@ function SmartsheetResourcePicker({
     setQuery("");
     setOpen(false);
     setManualMode(false);
-    setManualId(smartsheetId > 0 ? String(smartsheetId) : "");
   }, [sourceType]);
 
   useEffect(() => {

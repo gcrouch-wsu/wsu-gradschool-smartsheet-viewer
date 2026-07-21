@@ -1,6 +1,5 @@
 import type { FormFieldConfig, FormFieldDefinition } from "@/lib/forms/form-field-config";
 import {
-  isFieldFormItem,
   isLayoutFormItem,
   normalizeFormFieldConfig,
 } from "@/lib/forms/form-field-config";
