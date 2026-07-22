@@ -399,6 +399,11 @@ export async function updateWebhook(webhookId: number, enabled: boolean): Promis
   });
 }
 
+export async function deleteWebhook(webhookId: number): Promise<unknown> {
+  if (config.demo) return mock.mockDeleteWebhook(webhookId);
+  return api(`/webhooks/${webhookId}`, { method: "DELETE" });
+}
+
 export async function listColumns(sheetId: string | number): Promise<unknown[]> {
   if (config.demo) return mock.mockListColumns(sheetId);
   const data = (await api(`/sheets/${sheetId}/columns`)) as { data?: unknown[] };

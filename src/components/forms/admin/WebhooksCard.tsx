@@ -41,9 +41,11 @@ interface WebhooksCardProps {
   onRegister: () => void;
   onRefresh?: () => void;
   onSetEnabled?: (webhookId: number, enabled: boolean) => void;
+  onDelete?: (webhookId: number) => void;
   registering?: boolean;
   refreshing?: boolean;
   togglingId?: number | null;
+  deletingId?: number | null;
 }
 
 function formatWhen(iso: string | null | undefined): string {
@@ -79,9 +81,11 @@ export function WebhooksCard({
   onRegister,
   onRefresh,
   onSetEnabled,
+  onDelete,
   registering = false,
   refreshing = false,
   togglingId = null,
+  deletingId = null,
 }: WebhooksCardProps) {
   const state = webhookInfo?.state;
   const active = webhookInfo?.active ?? null;
@@ -125,29 +129,41 @@ export function WebhooksCard({
                 </p>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {onRefresh ? (
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <div className="flex flex-wrap gap-2">
+                {onRefresh ? (
+                  <button
+                    type="button"
+                    onClick={onRefresh}
+                    disabled={refreshing || registering}
+                    className={secondaryBtnClass}
+                  >
+                    {refreshing ? "Refreshing…" : "Refresh status"}
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={onRefresh}
-                  disabled={refreshing || registering}
-                  className={secondaryBtnClass}
+                  onClick={onRegister}
+                  disabled={registering || !active || activeRegistered}
+                  className={primaryBtnClass}
+                  title={
+                    activeRegistered
+                      ? "A webhook is already registered for this sheet. Use Enable/Disable or Delete below."
+                      : undefined
+                  }
                 >
-                  {refreshing ? "Refreshing…" : "Refresh status"}
+                  {registering ? "Registering…" : "Register webhook"}
                 </button>
+              </div>
+              {activeReady ? (
+                <p className="max-w-xs text-right text-[11px] text-[color:var(--wsu-muted)]">
+                  Already registered. Use Enable/Disable or Delete on the list below.
+                </p>
+              ) : activeRegistered ? (
+                <p className="max-w-xs text-right text-[11px] text-[color:var(--wsu-muted)]">
+                  A webhook exists but is disabled — use Enable on the list below.
+                </p>
               ) : null}
-              <button
-                type="button"
-                onClick={onRegister}
-                disabled={registering || !active}
-                className={primaryBtnClass}
-              >
-                {registering
-                  ? "Registering…"
-                  : activeReady
-                    ? "Re-register webhook"
-                    : "Register webhook"}
-              </button>
             </div>
           </div>
         </div>
@@ -206,7 +222,12 @@ export function WebhooksCard({
                         {onSetEnabled && wh.id != null ? (
                           <button
                             type="button"
-                            disabled={togglingId === wh.id || registering || refreshing}
+                            disabled={
+                              togglingId === wh.id ||
+                              deletingId === wh.id ||
+                              registering ||
+                              refreshing
+                            }
                             onClick={() => onSetEnabled(wh.id!, !wh.enabled)}
                             className={secondaryBtnClass}
                           >
@@ -217,6 +238,21 @@ export function WebhooksCard({
                               : wh.enabled
                                 ? "Disable"
                                 : "Enable"}
+                          </button>
+                        ) : null}
+                        {onDelete && wh.id != null ? (
+                          <button
+                            type="button"
+                            disabled={
+                              deletingId === wh.id ||
+                              togglingId === wh.id ||
+                              registering ||
+                              refreshing
+                            }
+                            onClick={() => onDelete(wh.id!)}
+                            className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            {deletingId === wh.id ? "Deleting…" : "Delete"}
                           </button>
                         ) : null}
                       </div>

@@ -13,6 +13,7 @@ import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { WebhooksCard, type WebhookInfo } from "@/components/forms/admin/WebhooksCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { IconPlus } from "@/components/forms/icons";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface FormEntry {
   id: string;
@@ -103,6 +104,8 @@ function ManagePageContent() {
   const [webhookRegistering, setWebhookRegistering] = useState(false);
   const [webhookRefreshing, setWebhookRefreshing] = useState(false);
   const [webhookTogglingId, setWebhookTogglingId] = useState<number | null>(null);
+  const [webhookDeletingId, setWebhookDeletingId] = useState<number | null>(null);
+  const [deleteWebhookId, setDeleteWebhookId] = useState<number | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [formsLoading, setFormsLoading] = useState(true);
   const [sheetsLoading, setSheetsLoading] = useState(true);
@@ -475,6 +478,38 @@ function ManagePageContent() {
     }
   }
 
+  function openDeleteWebhookModal(webhookId: number) {
+    setDeleteWebhookId(webhookId);
+    setFormsError("");
+  }
+
+  function closeDeleteWebhookModal() {
+    if (webhookDeletingId != null) return;
+    setDeleteWebhookId(null);
+  }
+
+  async function confirmDeleteWebhook() {
+    const webhookId = deleteWebhookId;
+    if (webhookId == null) return;
+
+    setWebhookDeletingId(webhookId);
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/webhooks/${encodeURIComponent(String(webhookId))}`, {
+        method: "DELETE",
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setFormsError(d.error || d.message || "Could not delete webhook.");
+        return;
+      }
+      setDeleteWebhookId(null);
+      await loadWebhooks({ silent: true });
+    } finally {
+      setWebhookDeletingId(null);
+    }
+  }
+
   return (
     <FormsWorkspaceChrome
       activeTab={tab}
@@ -540,9 +575,11 @@ function ManagePageContent() {
           onRegister={registerWebhook}
           onRefresh={() => void loadWebhooks()}
           onSetEnabled={(id, enabled) => void setWebhookEnabled(id, enabled)}
+          onDelete={openDeleteWebhookModal}
           registering={webhookRegistering}
           refreshing={webhookRefreshing}
           togglingId={webhookTogglingId}
+          deletingId={webhookDeletingId}
         />
       ) : null}
 
@@ -575,6 +612,18 @@ function ManagePageContent() {
         duplicating={duplicating}
         onConfirm={() => void confirmDuplicateForm()}
         error={duplicateError}
+      />
+
+      <ConfirmModal
+        open={deleteWebhookId != null}
+        onClose={closeDeleteWebhookModal}
+        onConfirm={() => void confirmDeleteWebhook()}
+        title="Delete webhook"
+        message="Are you sure you want to delete this webhook? Smartsheet will stop notifying this app for that sheet until you register again. This cannot be undone."
+        confirmLabel="Delete webhook"
+        danger
+        busy={webhookDeletingId != null}
+        busyLabel="Deleting…"
       />
     </FormsWorkspaceChrome>
   );

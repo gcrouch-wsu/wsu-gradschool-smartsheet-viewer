@@ -124,6 +124,18 @@ export async function setWebhookRegistration(input: {
   });
 }
 
+/** Clear stored webhook id/callback when the matching Smartsheet webhook is deleted. */
+export async function clearWebhookRegistration(webhookId: number): Promise<void> {
+  const current = await loadState();
+  if (current.webhookId != null && Number(current.webhookId) !== Number(webhookId)) return;
+  await saveState(undefined, {
+    ...current,
+    webhookId: undefined,
+    sheetId: undefined,
+    callbackUrl: undefined,
+  });
+}
+
 export async function setWebhookSecret(secret: string, sheetId?: string | number): Promise<void> {
   const current = await loadState(sheetId);
   await saveState(sheetId, { ...current, webhookSecret: secret });

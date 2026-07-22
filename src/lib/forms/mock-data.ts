@@ -354,6 +354,10 @@ export function mockUpdateWebhook(_webhookId: number, enabled: boolean) {
   return { result: { enabled } };
 }
 
+export function mockDeleteWebhook(webhookId: number) {
+  return { result: { id: webhookId } };
+}
+
 export function mockListColumns(sheetId: string | number) {
   return clone(get(sheetId).columns);
 }
