@@ -24,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title="Smartsheet Workspace"
       description="Register sources, build views, manage submissions, and administer approval workflows."
       identity={
-        <div className="flex w-full min-w-0 items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left xl:w-auto">
+        <div className="flex w-full min-w-0 items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left transition hover:border-mist xl:w-auto">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
             {principalLabel.slice(0, 2).toUpperCase()}
           </span>

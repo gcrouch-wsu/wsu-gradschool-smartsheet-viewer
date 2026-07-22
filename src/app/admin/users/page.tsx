@@ -8,11 +8,11 @@ export default async function AdminUsersPage() {
   const accounts = await listAdminAccounts();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title="Admins"
-        description="Accounts that can manage sources, views, forms, and other admins."
+        description="Bootstrap owner plus managed admins who can run sources, views, and forms. Everyone signs in at /sign-in."
       />
       <AdminUsersManager
         bootstrapUser={accounts.bootstrap}

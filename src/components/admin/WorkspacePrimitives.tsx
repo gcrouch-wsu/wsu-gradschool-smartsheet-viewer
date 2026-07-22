@@ -21,7 +21,7 @@ export function Button({
     <button
       {...props}
       className={[
-        "inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-[13.5px] font-medium transition duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-[13.5px] font-medium transition duration-150 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60",
         buttonVariants[variant],
         className,
       ].join(" ")}
@@ -32,12 +32,12 @@ export function Button({
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-[18px] border border-line bg-surface ${className}`}>{children}</section>;
+  return <section className={`rounded-xl border border-line bg-surface ${className}`}>{children}</section>;
 }
 
 export function SectionLabel({ children, tone = "crimson" }: { children: ReactNode; tone?: "crimson" | "mist" }) {
   return (
-    <p className={`font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] ${tone === "crimson" ? "text-crimson" : "text-mist"}`}>
+    <p className={`text-xs font-normal ${tone === "crimson" ? "text-crimson" : "text-mist"}`}>
       {children}
     </p>
   );
@@ -45,7 +45,7 @@ export function SectionLabel({ children, tone = "crimson" }: { children: ReactNo
 
 export function IconTile({ children }: { children: ReactNode }) {
   return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[var(--crimson-soft)] text-crimson">
+    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--crimson-soft)] text-crimson">
       {children}
     </span>
   );
@@ -63,16 +63,14 @@ export function StatCard({
   icon: ReactNode;
 }) {
   return (
-    <Card className="group p-[18px_18px_20px] transition duration-200 hover:-translate-y-[3px] hover:border-[var(--crimson-line)] hover:shadow-[var(--shadow-md)]">
+    <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <SectionLabel>{label}</SectionLabel>
-        <IconTile>{icon}</IconTile>
+        <p className="text-xs font-normal text-[color:var(--wsu-muted)]">{label}</p>
+        <span className="text-crimson">{icon}</span>
       </div>
-      <p className="mt-5 font-serif text-[clamp(2.5rem,5vw,3.25rem)] font-medium leading-[0.95] tracking-[-0.02em] tabular-nums text-ink">
-        {value}
-      </p>
-      <p className="mt-3 text-[13px] leading-5 text-sub">{description}</p>
-    </Card>
+      <p className="mt-2 text-[22px] font-medium leading-none tabular-nums text-[color:var(--wsu-ink)]">{value}</p>
+      <p className="mt-2 text-[12.5px] leading-4 text-[color:var(--wsu-muted)]">{description}</p>
+    </div>
   );
 }
 
@@ -88,17 +86,17 @@ export function SessionPanel({
   action?: ReactNode;
 }) {
   return (
-    <section className="rounded-[18px] border border-line bg-[radial-gradient(circle_at_100%_0%,var(--crimson-soft),transparent_55%)] bg-surface px-5 py-5 sm:px-[26px] sm:py-6">
-      <div className="flex flex-wrap items-center justify-between gap-5">
+    <section className="rounded-xl border border-line bg-surface px-4 py-4 sm:px-5 sm:py-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <SectionLabel>Session</SectionLabel>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
+          <div className="mt-2 flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
               {avatarInitials}
             </span>
-            <h2 className="font-serif text-xl font-medium text-ink">{title}</h2>
+            <h2 className="text-sm font-medium text-ink">{title}</h2>
           </div>
-          <p className="mt-3 max-w-[58ch] text-[13px] leading-5 text-sub">{body}</p>
+          <p className="mt-2 max-w-[58ch] text-[13px] leading-5 text-sub">{body}</p>
         </div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
@@ -118,15 +116,15 @@ export function RecentCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="flex h-fit flex-col self-start p-[22px]">
+    <Card className="flex h-fit flex-col self-start p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-serif text-xl font-medium text-ink">{title}</h2>
-          <p className="mt-1 text-[13px] text-sub">{subtitle}</p>
+          <h2 className="text-sm font-medium text-ink">{title}</h2>
+          <p className="mt-1 text-xs text-sub">{subtitle}</p>
         </div>
         {action}
       </div>
-      <div className="mt-4 max-h-[min(32rem,55vh)] overflow-y-auto overscroll-contain">{children}</div>
+      <div className="mt-3 max-h-[min(32rem,55vh)] overflow-y-auto overscroll-contain">{children}</div>
     </Card>
   );
 }
@@ -147,14 +145,14 @@ export function EmptyState({
   const panel = variant === "panel";
   return (
     <div className={`rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] text-center ${panel ? "px-5 py-12" : "px-5 py-7"}`}>
-      <div className={`mx-auto flex items-center justify-center rounded-xl border border-[var(--crimson-line)] bg-white text-crimson shadow-[var(--shadow-sm)] ${panel ? "h-12 w-12" : "h-10 w-10"}`}>
+      <div className={`mx-auto flex items-center justify-center rounded-lg border border-[var(--crimson-line)] bg-white text-crimson ${panel ? "h-11 w-11" : "h-9 w-9"}`}>
         {icon}
       </div>
-      <h3 className={`mt-3 font-serif font-medium text-ink ${panel ? "text-lg" : "text-[15.5px]"}`}>{title}</h3>
+      <h3 className={`mt-3 font-medium text-ink ${panel ? "text-[15px]" : "text-sm"}`}>{title}</h3>
       <p className={`mx-auto mt-1 max-w-[34ch] text-sub ${panel ? "text-sm" : "text-[13px]"}`}>{description}</p>
       {action ? (
-        <Link href={action.href} className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-crimson hover:underline">
-          {action.label} <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+        <Link href={action.href} className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-crimson hover:underline">
+          {action.label} <span aria-hidden>→</span>
         </Link>
       ) : null}
     </div>
@@ -189,19 +187,15 @@ export function TableShell({
             : "sm:grid-cols-6";
 
   return (
-    <section className={`overflow-hidden rounded-2xl border border-line bg-surface ${className}`}>
+    <section className={`overflow-hidden rounded-xl border border-line bg-surface ${className}`}>
       {headers ? (
-        <div
-          className={`grid grid-cols-2 gap-3 border-b border-line bg-[#fbf9fa] px-5 py-3 ${smColsClass}`}
-        >
+        <div className={`grid grid-cols-2 gap-3 border-b border-line bg-[#fbf9fa] px-4 py-2.5 ${smColsClass}`}>
           {headers.map((header, index) => {
             const isLast = index === headers.length - 1;
             return (
               <span
                 key={`${header}-${index}`}
-                className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink ${
-                  endAlignLastHeader && isLast ? "sm:text-right" : ""
-                }`}
+                className={`text-xs font-medium text-sub ${endAlignLastHeader && isLast ? "sm:text-right" : ""}`}
               >
                 {header}
               </span>
@@ -216,7 +210,11 @@ export function TableShell({
 
 export function Chip({ children, tone = "crimson" }: { children: ReactNode; tone?: "crimson" | "neutral" }) {
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-1 font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] ${tone === "crimson" ? "bg-[var(--crimson-soft)] text-crimson" : "bg-[#f4f0f1] text-sub"}`}>
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+        tone === "crimson" ? "bg-[var(--crimson-soft)] text-crimson" : "bg-[#f4f0f1] text-sub"
+      }`}
+    >
       {children}
     </span>
   );

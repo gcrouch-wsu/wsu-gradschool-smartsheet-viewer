@@ -40,7 +40,7 @@ export default async function AdminActivityPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Admin"
+        eyebrow="Admin builder"
         title="Activity"
         description="Audit trail for source/view publishes, form registry changes, builder saves, and related actions."
       />

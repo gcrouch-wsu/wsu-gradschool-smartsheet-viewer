@@ -24,7 +24,7 @@ export default async function ViewsIndexPage({
   const page = resolveAdminTablePage(params.page, views.length);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title="Views"

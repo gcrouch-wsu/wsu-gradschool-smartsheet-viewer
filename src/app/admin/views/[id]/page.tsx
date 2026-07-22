@@ -19,7 +19,7 @@ export default async function ViewEditorPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title={view?.label ?? "New view"}
