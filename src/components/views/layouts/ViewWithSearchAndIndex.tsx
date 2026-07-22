@@ -303,7 +303,7 @@ export function ViewWithSearchAndIndex({
         >
           <div className="relative">
         {!embed && editingConfig && (contributorEmail || adminUnrestrictedEditing) && (
-          <div className="view-surface-muted mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-[color:var(--wsu-border)] px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
+          <div className="view-surface-muted mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--wsu-border)] px-3.5 py-2.5 text-sm text-[color:var(--wsu-muted)]">
             <div className="flex flex-wrap items-center gap-3">
               <span className="font-medium text-[color:var(--wsu-ink)]">
                 {adminUnrestrictedEditing ? (
@@ -355,9 +355,9 @@ export function ViewWithSearchAndIndex({
         )}
 
         {showSearchAndIndex && (
-          <div className="mb-4 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="mb-3 flex flex-col gap-2.5">
+            <div className="view-toolbar">
+              <div className="relative min-w-[200px] max-w-lg flex-1">
                 <input
                   type="search"
                   value={searchQuery}
@@ -367,11 +367,11 @@ export function ViewWithSearchAndIndex({
                       ? "Search within your assigned rows..."
                       : "Search programs, names, emails..."
                   }
-                  className="view-input w-full rounded-xl px-4 py-2.5 pl-10 text-sm"
+                  className="view-input w-full rounded-lg px-3.5 py-2 pl-9 text-sm"
                   aria-label={contributorRowsFiltered ? "Search your assigned rows" : "Search"}
                 />
                 <svg
-                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wsu-muted)]"
+                  className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--wsu-muted)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -380,7 +380,7 @@ export function ViewWithSearchAndIndex({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <span className="text-sm text-[color:var(--wsu-muted)]" aria-live="polite" aria-atomic="true">
+              <span className="text-xs tabular-nums text-[color:var(--wsu-muted)]" aria-live="polite" aria-atomic="true">
                 {countSummary}
               </span>
             </div>
@@ -427,7 +427,7 @@ export function ViewWithSearchAndIndex({
           </div>
         )}
 
-        <div className={showSearchAndIndex && showAlphabetIndex ? "flex items-start gap-3" : ""}>
+        <div className={showSearchAndIndex && showAlphabetIndex ? "flex items-start gap-2.5" : ""}>
           <div className="min-w-0 flex-1">
             <PublicViewRenderer
               layout={layout}
@@ -448,7 +448,7 @@ export function ViewWithSearchAndIndex({
           {showSearchAndIndex && showAlphabetIndex && (
             <nav
               aria-label="Alphabetical index"
-              className="sticky top-6 shrink-0 flex flex-col gap-0.5 rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)]/95 px-1.5 py-2 shadow-lg backdrop-blur-sm"
+              className="sticky top-5 shrink-0 flex flex-col gap-px rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)]/95 px-1 py-1.5 shadow-sm backdrop-blur-sm"
             >
               {["#", ...ALPHABET].map((letter) => {
                 const hasEntries = activeLetters.has(letter);
@@ -459,7 +459,7 @@ export function ViewWithSearchAndIndex({
                     type="button"
                     onClick={() => hasEntries && scrollToLetter(letter)}
                     disabled={!hasEntries}
-                    className={`flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition ${
+                    className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-medium transition ${
                       hasEntries
                         ? isActive
                           ? "bg-[color:var(--wsu-crimson)] text-white"

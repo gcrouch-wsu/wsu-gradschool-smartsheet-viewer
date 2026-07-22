@@ -33,7 +33,7 @@ export function ViewTabs({
   embed?: boolean;
 }) {
   return (
-    <nav aria-label="Views" className="flex flex-wrap gap-2">
+    <nav aria-label="Views" className="view-control-group">
       {views.map((view) => {
         const active = view.id === activeViewId;
         return (
@@ -41,15 +41,15 @@ export function ViewTabs({
             key={view.id}
             href={buildHref(slug, view.id, layout, embed)}
             aria-current={active ? "page" : undefined}
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
-              active
-                ? "border-[color:var(--wsu-crimson)] bg-[color:var(--wsu-crimson)] text-white"
-                : "border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
-            }`}
+            className={`inline-flex items-center gap-1.5 ${active ? "view-control-active" : "view-control"}`}
           >
             <span>{view.label}</span>
             {!view.hideCount && (
-              <span className={`rounded-full px-2 py-0.5 text-xs ${active ? "bg-white/20 text-white" : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"}`}>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] tabular-nums ${
+                  active ? "bg-white/20 text-white" : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"
+                }`}
+              >
                 {view.rowCount}
               </span>
             )}
