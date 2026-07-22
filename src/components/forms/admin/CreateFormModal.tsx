@@ -101,10 +101,12 @@ export function CreateFormModal({
             type="button"
             onClick={onClose}
             disabled={creating}
-            className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-sm text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--wsu-border)] text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)] hover:text-[color:var(--wsu-ink)] disabled:opacity-50"
             aria-label="Close"
           >
-            Close
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
 

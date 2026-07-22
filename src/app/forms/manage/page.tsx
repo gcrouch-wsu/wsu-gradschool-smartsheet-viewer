@@ -101,6 +101,8 @@ function ManagePageContent() {
   const [paths, setPaths] = useState<Record<string, string>>({});
   const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null);
   const [webhookRegistering, setWebhookRegistering] = useState(false);
+  const [webhookRefreshing, setWebhookRefreshing] = useState(false);
+  const [webhookTogglingId, setWebhookTogglingId] = useState<number | null>(null);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [formsLoading, setFormsLoading] = useState(true);
   const [sheetsLoading, setSheetsLoading] = useState(true);
@@ -424,10 +426,16 @@ function ManagePageContent() {
     }
   }
 
-  async function loadWebhooks() {
-    const r = await fetch("/api/forms/webhooks");
-    const d = await r.json();
-    if (r.ok) setWebhookInfo(d);
+  async function loadWebhooks(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setWebhookRefreshing(true);
+    try {
+      const r = await fetch("/api/forms/webhooks");
+      const d = await r.json();
+      if (r.ok) setWebhookInfo(d);
+      else if (!opts?.silent) setFormsError(d.error || d.message || "Could not load webhooks.");
+    } finally {
+      if (!opts?.silent) setWebhookRefreshing(false);
+    }
   }
 
   async function registerWebhook() {
@@ -441,9 +449,29 @@ function ManagePageContent() {
       });
       const d = await r.json();
       if (!r.ok) setFormsError(d.error || d.message || "Webhook registration failed.");
-      else await loadWebhooks();
+      else await loadWebhooks({ silent: true });
     } finally {
       setWebhookRegistering(false);
+    }
+  }
+
+  async function setWebhookEnabled(webhookId: number, enabled: boolean) {
+    setWebhookTogglingId(webhookId);
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/webhooks/${encodeURIComponent(String(webhookId))}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setFormsError(d.error || d.message || `Could not ${enabled ? "enable" : "disable"} webhook.`);
+        return;
+      }
+      await loadWebhooks({ silent: true });
+    } finally {
+      setWebhookTogglingId(null);
     }
   }
 
@@ -510,7 +538,11 @@ function ManagePageContent() {
         <WebhooksCard
           webhookInfo={webhookInfo}
           onRegister={registerWebhook}
+          onRefresh={() => void loadWebhooks()}
+          onSetEnabled={(id, enabled) => void setWebhookEnabled(id, enabled)}
           registering={webhookRegistering}
+          refreshing={webhookRefreshing}
+          togglingId={webhookTogglingId}
         />
       ) : null}
 

@@ -4,8 +4,7 @@ import * as registry from "@/lib/forms/registry";
 import {
   ensureWebhookSecret,
   getSyncState,
-  setWebhookCallbackUrl,
-  setWebhookId,
+  setWebhookRegistration,
 } from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -15,14 +14,56 @@ import { buildCallbackUrl, maskCallbackUrl } from "@/lib/forms/webhook-callback"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type SmartsheetWebhook = {
+  id?: number;
+  name?: string;
+  enabled?: boolean;
+  status?: string;
+  callbackUrl?: string;
+  scope?: string;
+  scopeObjectId?: number;
+};
+
 function adminStateView(state: Awaited<ReturnType<typeof getSyncState>>) {
   const envSecret = Boolean(process.env[FORM_WEBHOOK_SECRET_ENV_VAR]?.trim());
   return {
     lastWebhookAt: state.lastWebhookAt ?? null,
     webhookId: state.webhookId ?? null,
+    sheetId: state.sheetId ?? null,
     callbackUrl: state.callbackUrl ? maskCallbackUrl(state.callbackUrl) : null,
     secretConfigured: envSecret || Boolean(state.webhookSecret?.trim()),
     secretSource: envSecret ? ("env" as const) : state.webhookSecret?.trim() ? ("stored" as const) : ("none" as const),
+  };
+}
+
+function normalizeWebhook(
+  raw: unknown,
+  formNameBySheetId: Map<string, string>,
+): {
+  id: number | null;
+  name: string;
+  enabled: boolean;
+  status: string | null;
+  sheetId: string | null;
+  sheetName: string | null;
+  callbackUrl: string | null;
+  isFormsWebhook: boolean;
+} {
+  const wh = (raw && typeof raw === "object" ? raw : {}) as SmartsheetWebhook;
+  const sheetId = wh.scopeObjectId != null ? String(wh.scopeObjectId) : null;
+  const callbackUrl = typeof wh.callbackUrl === "string" ? wh.callbackUrl : null;
+  const isFormsWebhook = Boolean(
+    callbackUrl && callbackUrl.includes("/api/forms/webhooks/smartsheet"),
+  );
+  return {
+    id: typeof wh.id === "number" ? wh.id : wh.id != null ? Number(wh.id) : null,
+    name: typeof wh.name === "string" && wh.name.trim() ? wh.name : "Webhook",
+    enabled: Boolean(wh.enabled),
+    status: typeof wh.status === "string" ? wh.status : null,
+    sheetId,
+    sheetName: sheetId ? formNameBySheetId.get(sheetId) ?? null : null,
+    callbackUrl: callbackUrl ? maskCallbackUrl(callbackUrl) : null,
+    isFormsWebhook,
   };
 }
 
@@ -33,10 +74,30 @@ export async function GET() {
   await ensureBootstrapped();
 
   try {
-    const webhooks = await ss.listWebhooks();
-    const state = await getSyncState();
+    const [webhooksRaw, state, forms, activeSheetId] = await Promise.all([
+      ss.listWebhooks(),
+      getSyncState(),
+      registry.listForms(),
+      registry.activeSheetId(),
+    ]);
+    const formNameBySheetId = new Map(forms.map((f) => [String(f.id), f.name]));
+    const webhooks = (Array.isArray(webhooksRaw) ? webhooksRaw : []).map((w) =>
+      normalizeWebhook(w, formNameBySheetId),
+    );
+    const active = activeSheetId
+      ? {
+          sheetId: activeSheetId,
+          sheetName: formNameBySheetId.get(activeSheetId) ?? null,
+          hasWebhook: webhooks.some((w) => w.sheetId === activeSheetId && w.isFormsWebhook),
+          enabledWebhook: webhooks.some(
+            (w) => w.sheetId === activeSheetId && w.isFormsWebhook && w.enabled,
+          ),
+        }
+      : null;
+
     return Response.json({
       webhooks,
+      active,
       state: adminStateView(state),
       demo: config.demo,
     });
@@ -75,19 +136,23 @@ export async function POST(request: Request) {
     };
     const webhookId = result.result?.id;
     if (webhookId) {
-      await setWebhookId(webhookId);
       try {
         await ss.updateWebhook(webhookId, true);
       } catch {
         // Challenge handshake may still be pending; webhook remains registered but disabled.
       }
     }
-    await setWebhookCallbackUrl(callbackUrl);
+    await setWebhookRegistration({
+      webhookId,
+      sheetId: targetSheetId,
+      callbackUrl,
+    });
     const state = await getSyncState();
     return Response.json({
       ok: true,
       result,
       sheetId: targetSheetId,
+      sheetName: registered.name,
       callbackUrl: maskCallbackUrl(callbackUrl),
       state: adminStateView(state),
       demo: config.demo,

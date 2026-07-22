@@ -110,6 +110,20 @@ export async function setWebhookId(id: number, sheetId?: string | number): Promi
   await saveState(sheetId, { ...current, webhookId: id });
 }
 
+export async function setWebhookRegistration(input: {
+  webhookId?: number;
+  sheetId: string;
+  callbackUrl: string;
+}): Promise<void> {
+  const current = await loadState();
+  await saveState(undefined, {
+    ...current,
+    webhookId: input.webhookId ?? current.webhookId,
+    sheetId: input.sheetId,
+    callbackUrl: input.callbackUrl,
+  });
+}
+
 export async function setWebhookSecret(secret: string, sheetId?: string | number): Promise<void> {
   const current = await loadState(sheetId);
   await saveState(sheetId, { ...current, webhookSecret: secret });

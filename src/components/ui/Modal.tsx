@@ -25,6 +25,14 @@ function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+function CloseIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function Modal({ open, onClose, children, title, size = "md", className }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -61,6 +69,9 @@ export function Modal({ open, onClose, children, title, size = "md", className }
 
   if (!mounted || !open) return null;
 
+  const closeButtonClass =
+    "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--wsu-border)] text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)] hover:text-[color:var(--wsu-ink)]";
+
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6">
       <button
@@ -86,21 +97,18 @@ export function Modal({ open, onClose, children, title, size = "md", className }
             <h2 id={titleId} className="text-base font-medium text-[color:var(--wsu-ink)]">
               {title}
             </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)]"
-            >
-              Close
+            <button type="button" onClick={onClose} className={closeButtonClass} aria-label="Close">
+              <CloseIcon />
             </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 z-10 rounded-lg border border-[color:var(--wsu-border)] bg-white/90 px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)]"
+            className={`absolute right-3 top-3 z-10 bg-white/90 ${closeButtonClass}`}
+            aria-label="Close"
           >
-            Close
+            <CloseIcon />
           </button>
         )}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>

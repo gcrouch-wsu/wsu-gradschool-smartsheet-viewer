@@ -9,7 +9,8 @@
   },
   "formsEnabled": true,
   "formSlug": "test-user-form-duplicate",
-  "formPublic": false,
+  "formPublic": true,
+  "formPublishedAt": "2026-07-22T19:33:44.848Z",
   "formProvenance": "template",
   "formRegisteredAt": "2026-07-22T19:18:00.874Z"
 }
