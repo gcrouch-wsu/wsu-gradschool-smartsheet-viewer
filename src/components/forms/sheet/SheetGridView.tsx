@@ -47,6 +47,8 @@ interface SheetGridViewProps {
   /** Pulse the RESEND checkbox for a row (re-triggers Smartsheet approval email). */
   onResend?: (row: SheetGridRow, column: SheetGridColumn) => void | Promise<void>;
   resendBusyRowId?: number | null;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 type ColumnFilter = "all" | "form" | "workflow";
@@ -147,6 +149,8 @@ export function SheetGridView({
   onRowClick,
   onResend,
   resendBusyRowId,
+  onRefresh,
+  refreshing = false,
 }: SheetGridViewProps) {
   const [query, setQuery] = useState("");
   const [highlightApprovals, setHighlightApprovals] = useState(true);
@@ -222,18 +226,34 @@ export function SheetGridView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">Sheet grid</h1>
-          <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-            {demo ? "Demo" : "Live"} · {sheetName} · {rows.length} row{rows.length === 1 ? "" : "s"} × {columns.length}{" "}
-            column{columns.length === 1 ? "" : "s"}
+          <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">{sheetName}</h1>
+          <p className="mt-1 text-sm">
+            {demo ? (
+              <span className="font-medium text-[color:var(--wsu-muted)]">Demo</span>
+            ) : (
+              <span className="font-medium text-emerald-700">Live</span>
+            )}
           </p>
         </div>
-        <Link
-          href="/forms/manage"
-          className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
-        >
-          Manage forms
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {onRefresh ? (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+            >
+              <IconRefresh className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          ) : null}
+          <Link
+            href="/forms/manage"
+            className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+          >
+            Manage forms
+          </Link>
+        </div>
       </div>
 
       <div

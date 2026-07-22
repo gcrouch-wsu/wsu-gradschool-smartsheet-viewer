@@ -102,6 +102,12 @@ export interface WebhookState {
   lastEventId?: string;
   lastWebhookAt?: string;
   webhookId?: number;
+  /** Sheet id this app last registered a webhook for. */
+  sheetId?: string;
+  /** Auto-generated or admin-managed secret for callback auth (env FORM_WEBHOOK_SECRET overrides). */
+  webhookSecret?: string;
+  /** Last registered Smartsheet callback URL (secret may be present as query param). */
+  callbackUrl?: string;
   recentEvents: { at: string; type: string; objectId: number; sheetId?: number }[];
 }
 

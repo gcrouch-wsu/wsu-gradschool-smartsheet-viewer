@@ -43,6 +43,7 @@ interface FormsTableProps {
   onEdit: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onShareActiveSheet: (email: string) => Promise<{ ok: boolean; text: string }>;
   busyId?: string | null;
   loading?: boolean;
@@ -55,6 +56,7 @@ function FormRowActions({
   onEdit,
   onPublish,
   onUnpublish,
+  onDuplicate,
   onShareActiveSheet,
 }: {
   form: FormEntryRow;
@@ -63,6 +65,7 @@ function FormRowActions({
   onEdit: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onShareActiveSheet: (email: string) => Promise<{ ok: boolean; text: string }>;
 }) {
   const isPublished = Boolean(form.public);
@@ -181,6 +184,18 @@ function FormRowActions({
                   Share sheet
                 </button>
               ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClass}
+                disabled={busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDuplicate(form.id);
+                }}
+              >
+                Duplicate
+              </button>
               {isPublished ? (
                 <button
                   type="button"
@@ -277,6 +292,7 @@ export function FormsTable({
   onEdit,
   onPublish,
   onUnpublish,
+  onDuplicate,
   onShareActiveSheet,
   busyId,
   loading = false,
@@ -382,6 +398,7 @@ export function FormsTable({
           onEdit={onEdit}
           onPublish={onPublish}
           onUnpublish={onUnpublish}
+          onDuplicate={onDuplicate}
           onShareActiveSheet={onShareActiveSheet}
         />
       ),

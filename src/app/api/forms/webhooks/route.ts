@@ -1,12 +1,30 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
-import { getSyncState, setWebhookId } from "@/lib/forms/sync-state";
+import {
+  ensureWebhookSecret,
+  getSyncState,
+  setWebhookCallbackUrl,
+  setWebhookId,
+} from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { FORM_WEBHOOK_SECRET_ENV_VAR } from "@/lib/forms/webhook-auth";
+import { buildCallbackUrl, maskCallbackUrl } from "@/lib/forms/webhook-callback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function adminStateView(state: Awaited<ReturnType<typeof getSyncState>>) {
+  const envSecret = Boolean(process.env[FORM_WEBHOOK_SECRET_ENV_VAR]?.trim());
+  return {
+    lastWebhookAt: state.lastWebhookAt ?? null,
+    webhookId: state.webhookId ?? null,
+    callbackUrl: state.callbackUrl ? maskCallbackUrl(state.callbackUrl) : null,
+    secretConfigured: envSecret || Boolean(state.webhookSecret?.trim()),
+    secretSource: envSecret ? ("env" as const) : state.webhookSecret?.trim() ? ("stored" as const) : ("none" as const),
+  };
+}
 
 export async function GET() {
   const access = await requireFormsAdminAccess();
@@ -17,7 +35,11 @@ export async function GET() {
   try {
     const webhooks = await ss.listWebhooks();
     const state = await getSyncState();
-    return Response.json({ webhooks, state, demo: config.demo });
+    return Response.json({
+      webhooks,
+      state: adminStateView(state),
+      demo: config.demo,
+    });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -40,15 +62,36 @@ export async function POST(request: Request) {
     return Response.json({ error: "Sheet is not in the forms registry." }, { status: 404 });
   }
 
-  const callbackUrl = String(body.callbackUrl ?? config.webhookCallbackUrl).trim();
-  if (!callbackUrl) {
-    return Response.json({ error: "callbackUrl or WEBHOOK_CALLBACK_URL is required." }, { status: 400 });
+  const secret = await ensureWebhookSecret();
+  const resolved = buildCallbackUrl(request, secret);
+  if ("error" in resolved) {
+    return Response.json({ error: resolved.error }, { status: 400 });
   }
+  const callbackUrl = resolved.url;
 
   try {
-    const result = (await ss.createWebhook(callbackUrl, Number(targetSheetId), ["*.*"])) as { result?: { id?: number } };
-    if (result.result?.id) await setWebhookId(result.result.id);
-    return Response.json({ ok: true, result, sheetId: targetSheetId, demo: config.demo });
+    const result = (await ss.createWebhook(callbackUrl, Number(targetSheetId), ["*.*"])) as {
+      result?: { id?: number };
+    };
+    const webhookId = result.result?.id;
+    if (webhookId) {
+      await setWebhookId(webhookId);
+      try {
+        await ss.updateWebhook(webhookId, true);
+      } catch {
+        // Challenge handshake may still be pending; webhook remains registered but disabled.
+      }
+    }
+    await setWebhookCallbackUrl(callbackUrl);
+    const state = await getSyncState();
+    return Response.json({
+      ok: true,
+      result,
+      sheetId: targetSheetId,
+      callbackUrl: maskCallbackUrl(callbackUrl),
+      state: adminStateView(state),
+      demo: config.demo,
+    });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

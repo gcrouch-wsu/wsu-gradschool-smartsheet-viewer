@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import {
   SheetGridView,
@@ -22,11 +22,14 @@ export default function SheetViewPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [resendBusyRowId, setResendBusyRowId] = useState<number | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadSheet = useCallback((silent = false) => {
-    if (!silent) setLoading(true);
+    if (silent) setRefreshing(true);
+    else setLoading(true);
     fetch("/api/forms/sheet-view")
       .then(async (r) => {
         const d = await r.json();
@@ -46,13 +49,37 @@ export default function SheetViewPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not load sheet."))
       .finally(() => {
-        if (!silent) setLoading(false);
+        if (silent) setRefreshing(false);
+        else setLoading(false);
       });
   }, []);
+
+  const scheduleSheetRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    // Debounce bursts of Smartsheet webhook events into one grid reload.
+    refreshTimerRef.current = setTimeout(() => loadSheet(true), 400);
+  }, [loadSheet]);
 
   useEffect(() => {
     loadSheet();
   }, [loadSheet]);
+
+  // Live updates only when Smartsheet posts a webhook (row/column/sheet change).
+  useEffect(() => {
+    const source = new EventSource("/api/forms/sync/stream");
+    source.onmessage = (message) => {
+      try {
+        const data = JSON.parse(message.data) as { type?: string };
+        if (data.type === "sheet_changed") scheduleSheetRefresh();
+      } catch {
+        // ignore malformed frames
+      }
+    };
+    return () => {
+      source.close();
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [scheduleSheetRefresh]);
 
   async function handleResend(row: SheetGridRow, column: SheetGridColumn) {
     setResendBusyRowId(row.id);
@@ -113,6 +140,8 @@ export default function SheetViewPage() {
         onRowClick={(row) => setSelectedRowId(row.id)}
         onResend={handleResend}
         resendBusyRowId={resendBusyRowId}
+        onRefresh={() => loadSheet(true)}
+        refreshing={refreshing}
       />
       <SubmissionDetailModal
         rowId={selectedRowId}

@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { ADMIN_SESSION_COOKIE_NAME } from "@/lib/admin-auth";
 import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/approver-auth";
 import { hasAdminSessionToken, hasApproverSessionToken } from "@/lib/identity";
-import { validateWebhookSecret } from "@/lib/forms/webhook-auth";
 
 const FORMS_PUBLIC_PATHS = new Set([
   "/forms/approver/sign-in",
@@ -63,8 +62,8 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
   }
 
   if (pathname === "/api/forms/webhooks/smartsheet" && request.method === "POST") {
-    if (validateWebhookSecret(request)) return NextResponse.next();
-    return NextResponse.json({ message: "Invalid webhook secret." }, { status: 401 });
+    // Auth is enforced in the route (env or persisted secret).
+    return NextResponse.next();
   }
 
   if (FORMS_PUBLIC_PATHS.has(pathname)) {

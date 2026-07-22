@@ -7,9 +7,10 @@ import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
 import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
+import { DuplicateFormModal } from "@/components/forms/admin/DuplicateFormModal";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
-import { WebhooksCard } from "@/components/forms/admin/WebhooksCard";
+import { WebhooksCard, type WebhookInfo } from "@/components/forms/admin/WebhooksCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { IconPlus } from "@/components/forms/icons";
 
@@ -98,10 +99,43 @@ function ManagePageContent() {
   const [autoNotice, setAutoNotice] = useState("");
   const [autoLoading, setAutoLoading] = useState(false);
   const [paths, setPaths] = useState<Record<string, string>>({});
-  const [webhookInfo, setWebhookInfo] = useState<{ webhooks?: unknown[]; state?: { lastWebhookAt?: string } } | null>(null);
+  const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null);
+  const [webhookRegistering, setWebhookRegistering] = useState(false);
   const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
   const [formsLoading, setFormsLoading] = useState(true);
   const [sheetsLoading, setSheetsLoading] = useState(true);
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateSourceId, setDuplicateSourceId] = useState<string | null>(null);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [duplicateError, setDuplicateError] = useState("");
+  const [duplicating, setDuplicating] = useState(false);
+
+  const duplicateSource = useMemo(
+    () => forms.find((f) => String(f.id) === String(duplicateSourceId ?? "")) ?? null,
+    [forms, duplicateSourceId],
+  );
+
+  function defaultDuplicateName(sourceName: string): string {
+    const base = sourceName.trim() || "Form";
+    if (/\(copy\)\s*$/i.test(base)) return `${base} ${Date.now().toString().slice(-4)}`;
+    return `${base} (copy)`;
+  }
+
+  function openDuplicateModal(id: string) {
+    const source = forms.find((f) => String(f.id) === String(id));
+    setDuplicateSourceId(id);
+    setDuplicateName(defaultDuplicateName(source?.name ?? "Form"));
+    setDuplicateError("");
+    setDuplicateModalOpen(true);
+  }
+
+  function closeDuplicateModal() {
+    if (duplicating) return;
+    setDuplicateModalOpen(false);
+    setDuplicateSourceId(null);
+    setDuplicateName("");
+    setDuplicateError("");
+  }
 
   async function publishForm(id: string) {
     setPublishBusyId(id);
@@ -137,6 +171,43 @@ function ManagePageContent() {
     } catch (e: unknown) {
       setFormsError(e instanceof Error ? e.message : "Unpublish failed.");
     } finally {
+      setPublishBusyId(null);
+    }
+  }
+
+  async function confirmDuplicateForm() {
+    const id = duplicateSourceId;
+    if (!id) return;
+    const newName = duplicateName.trim();
+    if (!newName) {
+      setDuplicateError("Enter a name for the duplicated sheet.");
+      return;
+    }
+
+    setDuplicating(true);
+    setPublishBusyId(id);
+    setDuplicateError("");
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newName }),
+      });
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Duplicate failed."));
+      setDuplicateModalOpen(false);
+      setDuplicateSourceId(null);
+      setDuplicateName("");
+      await loadForms();
+      await loadSheets();
+      router.push("/forms/builder");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Duplicate failed.";
+      setDuplicateError(message);
+      setFormsError(message);
+    } finally {
+      setDuplicating(false);
       setPublishBusyId(null);
     }
   }
@@ -360,10 +431,20 @@ function ManagePageContent() {
   }
 
   async function registerWebhook() {
-    const r = await fetch("/api/forms/webhooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-    const d = await r.json();
-    if (!r.ok) setFormsError(d.error || d.message || "Webhook registration failed.");
-    else await loadWebhooks();
+    setWebhookRegistering(true);
+    setFormsError("");
+    try {
+      const r = await fetch("/api/forms/webhooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const d = await r.json();
+      if (!r.ok) setFormsError(d.error || d.message || "Webhook registration failed.");
+      else await loadWebhooks();
+    } finally {
+      setWebhookRegistering(false);
+    }
   }
 
   return (
@@ -396,6 +477,7 @@ function ManagePageContent() {
             onEdit={editForm}
             onPublish={publishForm}
             onUnpublish={unpublishForm}
+            onDuplicate={openDuplicateModal}
             onShareActiveSheet={shareActiveSheet}
             busyId={publishBusyId}
             loading={formsLoading}
@@ -425,7 +507,11 @@ function ManagePageContent() {
       ) : null}
 
       {tab === "webhooks" ? (
-        <WebhooksCard webhookInfo={webhookInfo} onRegister={registerWebhook} />
+        <WebhooksCard
+          webhookInfo={webhookInfo}
+          onRegister={registerWebhook}
+          registering={webhookRegistering}
+        />
       ) : null}
 
       <CreateFormModal
@@ -446,6 +532,17 @@ function ManagePageContent() {
         creating={creating}
         onCreate={createForm}
         createMsg={createMsg}
+      />
+
+      <DuplicateFormModal
+        open={duplicateModalOpen}
+        onClose={closeDuplicateModal}
+        sourceName={duplicateSource?.name ?? ""}
+        newName={duplicateName}
+        onNewNameChange={setDuplicateName}
+        duplicating={duplicating}
+        onConfirm={() => void confirmDuplicateForm()}
+        error={duplicateError}
       />
     </FormsWorkspaceChrome>
   );

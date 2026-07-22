@@ -1,0 +1,15 @@
+{
+  "id": "test-user-form-duplicate",
+  "label": "Test User Form Duplicate",
+  "sourceType": "sheet",
+  "smartsheetId": 3999394264207236,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "test-user-form-duplicate",
+  "formPublic": false,
+  "formProvenance": "template",
+  "formRegisteredAt": "2026-07-22T19:18:00.874Z"
+}

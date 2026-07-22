@@ -1,6 +1,8 @@
 import { config } from "@/lib/forms/config";
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
 import { readWebhookState, writeWebhookState, type WebhookState } from "@/lib/forms/store/file-store";
+import { publishWebhookEvent } from "@/lib/forms/webhook-bus";
+import { randomBytes } from "node:crypto";
 
 export type SyncState = WebhookState;
 
@@ -95,6 +97,7 @@ export async function recordWebhookEvent(sheetId: number, eventType: string, obj
   }
 
   await saveState(sheetId, next);
+  publishWebhookEvent({ at, sheetId, eventType, objectId });
 }
 
 export async function setLastEventId(id: string, sheetId?: string | number): Promise<void> {
@@ -105,4 +108,30 @@ export async function setLastEventId(id: string, sheetId?: string | number): Pro
 export async function setWebhookId(id: number, sheetId?: string | number): Promise<void> {
   const current = await loadState(sheetId);
   await saveState(sheetId, { ...current, webhookId: id });
+}
+
+export async function setWebhookSecret(secret: string, sheetId?: string | number): Promise<void> {
+  const current = await loadState(sheetId);
+  await saveState(sheetId, { ...current, webhookSecret: secret });
+}
+
+export async function setWebhookCallbackUrl(callbackUrl: string, sheetId?: string | number): Promise<void> {
+  const current = await loadState(sheetId);
+  await saveState(sheetId, { ...current, callbackUrl });
+}
+
+/**
+ * Ensure a persisted webhook secret exists (app-global under the default sync key).
+ * Env FORM_WEBHOOK_SECRET always wins when set.
+ */
+export async function ensureWebhookSecret(): Promise<string> {
+  const fromEnv = process.env.FORM_WEBHOOK_SECRET?.trim() ?? "";
+  if (fromEnv) return fromEnv;
+
+  const current = await loadState();
+  if (current.webhookSecret?.trim()) return current.webhookSecret.trim();
+
+  const secret = randomBytes(32).toString("hex");
+  await saveState(undefined, { ...current, webhookSecret: secret });
+  return secret;
 }
