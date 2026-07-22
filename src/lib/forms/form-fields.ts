@@ -10,6 +10,11 @@ const SYSTEM_TYPES = new Set([
   "AUTO_NUMBER",
 ]);
 
+/** True when Smartsheet owns the cell via a column formula (not writable via API). */
+export function hasColumnFormula(col: { formula?: string | null }): boolean {
+  return Boolean(col.formula && String(col.formula).trim());
+}
+
 /** Automation / routing columns that should not appear on a public submission form. */
 export function isInternalFormColumn(title: string): boolean {
   const t = title.trim();
@@ -72,7 +77,10 @@ export async function resolveFormColumns(
         : configured.columns;
     const picked = (titles ?? [])
       .map((title) => byTitle.get(titleKey(title)))
-      .filter((c): c is SmartsheetColumn => Boolean(c) && !isInternalFormColumn(c.title));
+      .filter(
+        (c): c is SmartsheetColumn =>
+          Boolean(c) && !isInternalFormColumn(c!.title) && !hasColumnFormula(c!),
+      );
     if (picked.length) return { columns: picked, source: "smartsheet-config" };
   }
 
@@ -85,6 +93,7 @@ export async function resolveFormColumns(
 
   const filtered = columns.filter((col) => {
     if (isSystemColumn(col)) return false;
+    if (hasColumnFormula(col)) return false;
     const key = titleKey(col.title);
     if (exclude.has(key)) return false;
     if (isInternalFormColumn(col.title)) return false;
@@ -98,6 +107,7 @@ export async function resolveFormColumns(
 export async function formExcludeForSheet(sheet: { id?: string | number; columns?: unknown[] }): Promise<Set<string>> {
   const all: SmartsheetColumn[] = (sheet.columns ?? []).map((c) => {
     const col = c as Record<string, unknown>;
+    const formula = typeof col.formula === "string" ? col.formula.trim() : "";
     return {
       id: col.id as number,
       title: String(col.title),
@@ -106,6 +116,7 @@ export async function formExcludeForSheet(sheet: { id?: string | number; columns
       validation: col.validation as boolean | undefined,
       primary: col.primary as boolean | undefined,
       systemColumnType: col.systemColumnType as string | undefined,
+      formula: formula || undefined,
     };
   });
   const { columns } = await resolveFormColumns(sheet, all);

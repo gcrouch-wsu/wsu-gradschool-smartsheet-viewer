@@ -156,7 +156,7 @@ describe("PrintViewDocument", () => {
       />,
     );
 
-    const sections = html.match(/class="print-group"/g) ?? [];
+    const sections = html.match(/print-group/g) ?? [];
     expect(sections.length).toBe(2);
     expect(html).toContain("Program Name: Athletic Training");
     expect(html).toContain("Program Name: Biology");
@@ -189,5 +189,19 @@ describe("PrintViewDocument", () => {
     };
     const opts = buildPrintColumnPickerOptions(v);
     expect(opts.some((o) => o.key === "note")).toBe(false);
+  });
+
+  it("chunkPrintColumns keeps heading and splits data columns", async () => {
+    const { chunkPrintColumns } = await import("@/components/views/print/PrintViewDocument");
+    const cols = [
+      { key: "name", label: "Name", heading: true },
+      ...Array.from({ length: 10 }, (_, i) => ({ key: `c${i}`, label: `Col ${i}` })),
+    ];
+    const chunks = chunkPrintColumns(cols, 4);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]?.[0]?.heading).toBe(true);
+    expect(chunks[0]).toHaveLength(5);
+    expect(chunks[1]?.[0]?.heading).toBe(true);
+    expect(chunks[2]).toHaveLength(3);
   });
 });

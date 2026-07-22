@@ -120,6 +120,7 @@ export async function getSheet(sheetId: string | number): Promise<Record<string,
 export function extractColumns(sheet: { columns?: unknown[] }): SmartsheetColumn[] {
   return (sheet.columns ?? []).map((c) => {
     const col = c as Record<string, unknown>;
+    const formula = typeof col.formula === "string" ? col.formula.trim() : "";
     return {
       id: col.id as number,
       title: col.title as string,
@@ -128,6 +129,7 @@ export function extractColumns(sheet: { columns?: unknown[] }): SmartsheetColumn
       validation: col.validation as boolean | undefined,
       primary: col.primary as boolean | undefined,
       systemColumnType: col.systemColumnType as string | undefined,
+      formula: formula || undefined,
     };
   });
 }

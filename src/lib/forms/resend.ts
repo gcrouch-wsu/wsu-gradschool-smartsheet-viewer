@@ -9,6 +9,32 @@ export function resendTargetLabel(title: string): string {
   return title.trim().replace(/^resend\s+/i, "").trim();
 }
 
+/**
+ * RESEND helpers that are not tied to an approval stage (e.g. RESEND Final PDF).
+ * These should always offer a Resend trigger in the grid.
+ */
+export function isStandaloneResendColumn(title: string): boolean {
+  if (!isResendColumnTitle(title)) return false;
+  const target = resendTargetLabel(title);
+  return /\b(pdf|document|file|packet)\b/i.test(target);
+}
+
+/**
+ * Whether the grid/modal should show a Resend action for this RESEND column on a row.
+ * Stage-linked columns only when waiting at the matching stage; standalone (Final PDF) always.
+ */
+export function canTriggerResendForColumn(
+  columnTitle: string,
+  approvalStatus?: { state?: string; stage?: string } | null,
+): boolean {
+  if (!isResendColumnTitle(columnTitle)) return false;
+  if (isStandaloneResendColumn(columnTitle)) return true;
+  if (approvalStatus?.state !== "current" || !approvalStatus.stage) return false;
+  return Boolean(
+    findResendColumnForStage([{ id: 0, title: columnTitle }], approvalStatus.stage),
+  );
+}
+
 const SYNONYMS: Record<string, string> = {
   chair: "chr",
   chairs: "chr",
@@ -72,6 +98,67 @@ export interface SheetColumnRef {
   id: number;
   title: string;
   type?: string;
+  options?: string[];
+}
+
+export interface ResendPulseValues {
+  clear: string | boolean;
+  set: string | boolean;
+  /** True when the cell is already in the "armed/trigger" state. */
+  isArmed: (value: unknown, displayValue?: unknown) => boolean;
+}
+
+const ON_OPTION = /^(yes|true|resend|send|1|checked|x|y)$/i;
+const OFF_OPTION = /^(no|false|unchecked|clear|none|n|0|-)$/i;
+
+/**
+ * Values used to pulse a RESEND helper column so Smartsheet automations re-fire.
+ * CHECKBOX uses booleans; PICKLIST must use an option from the column (strict validation).
+ */
+export function resolveResendPulseValues(column: SheetColumnRef): ResendPulseValues | null {
+  const type = String(column.type ?? "").toUpperCase();
+  const options = (column.options ?? []).map((o) => String(o)).filter(Boolean);
+
+  if (type === "CHECKBOX" || (!type && options.length === 0)) {
+    return {
+      clear: false,
+      set: true,
+      isArmed: (value, displayValue) => isCheckboxChecked(value, displayValue),
+    };
+  }
+
+  if (type === "PICKLIST" || options.length > 0) {
+    if (options.length === 0) {
+      return null;
+    }
+    const on =
+      options.find((o) => ON_OPTION.test(o.trim())) ??
+      options.find((o) => /resend|send/i.test(o)) ??
+      options.find((o) => !OFF_OPTION.test(o.trim())) ??
+      options[0];
+    const off = options.find((o) => OFF_OPTION.test(o.trim()) && o !== on) ?? "";
+    return {
+      clear: off,
+      set: on,
+      isArmed: (value, displayValue) => {
+        const raw = String(displayValue ?? value ?? "").trim().toLowerCase();
+        return Boolean(raw) && raw === String(on).trim().toLowerCase();
+      },
+    };
+  }
+
+  if (type === "TEXT_NUMBER" || type === "TEXT" || !type) {
+    return {
+      clear: "",
+      set: "Resend",
+      isArmed: (value, displayValue) => {
+        const raw = String(displayValue ?? value ?? "").trim().toLowerCase();
+        return raw === "resend" || raw === "yes" || raw === "true";
+      },
+    };
+  }
+
+  return null;
 }
 
 /**

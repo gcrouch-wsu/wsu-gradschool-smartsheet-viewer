@@ -55,6 +55,16 @@ describe("forms validation", () => {
     const result = validateSubmission(columns, { "1": "13/40/2026" }, []);
     expect(result.ok).toBe(false);
   });
+
+  it("skips column-formula fields and does not write them", () => {
+    const columns: SmartsheetColumn[] = [
+      { id: 1, title: "Full Name", type: "TEXT_NUMBER" },
+      { id: 2, title: "Computed", type: "TEXT_NUMBER", formula: '=[Full Name]@row' },
+    ];
+    const result = validateSubmission(columns, { "1": "Jane", "2": "should-ignore" }, []);
+    expect(result.ok).toBe(true);
+    expect(result.cells).toEqual([{ columnId: 1, value: "Jane" }]);
+  });
 });
 
 describe("form ui helpers", () => {

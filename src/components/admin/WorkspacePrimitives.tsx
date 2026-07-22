@@ -165,20 +165,48 @@ export function TableShell({
   headers,
   children,
   className = "",
+  columns,
+  endAlignLastHeader = false,
 }: {
   headers?: string[];
   children: ReactNode;
   className?: string;
+  /** Desktop column count. Defaults to `headers.length` (falls back to 4). */
+  columns?: number;
+  /** Right-align the last header (use when the last column is action buttons). */
+  endAlignLastHeader?: boolean;
 }) {
+  const colCount = Math.min(6, Math.max(2, columns ?? headers?.length ?? 4));
+  const smColsClass =
+    colCount === 2
+      ? "sm:grid-cols-2"
+      : colCount === 3
+        ? "sm:grid-cols-3"
+        : colCount === 4
+          ? "sm:grid-cols-4"
+          : colCount === 5
+            ? "sm:grid-cols-5"
+            : "sm:grid-cols-6";
+
   return (
     <section className={`overflow-hidden rounded-2xl border border-line bg-surface ${className}`}>
       {headers ? (
-        <div className="grid grid-cols-2 gap-3 border-b border-line bg-[#fbf9fa] px-5 py-3 sm:grid-cols-4">
-          {headers.map((header) => (
-            <span key={header} className="font-mono text-[10.5px] font-medium uppercase tracking-[0.1em] text-mist">
-              {header}
-            </span>
-          ))}
+        <div
+          className={`grid grid-cols-2 gap-3 border-b border-line bg-[#fbf9fa] px-5 py-3 ${smColsClass}`}
+        >
+          {headers.map((header, index) => {
+            const isLast = index === headers.length - 1;
+            return (
+              <span
+                key={`${header}-${index}`}
+                className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink ${
+                  endAlignLastHeader && isLast ? "sm:text-right" : ""
+                }`}
+              >
+                {header}
+              </span>
+            );
+          })}
         </div>
       ) : null}
       {children}

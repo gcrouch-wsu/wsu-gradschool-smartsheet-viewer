@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { approvalTone, approvalToneLabel, type ApprovalTone } from "@/lib/forms/approval-style";
-import { findResendColumnForStage } from "@/lib/forms/resend";
+import { canTriggerResendForColumn } from "@/lib/forms/resend";
 import { IconRefresh, IconSearch } from "@/components/forms/icons";
 
 export interface SheetGridColumn {
@@ -480,10 +480,7 @@ export function SheetGridView({
                       const canResendHere =
                         Boolean(onResend) &&
                         col.workflowRole === "resend" &&
-                        row.approvalStatus?.state === "current" &&
-                        Boolean(
-                          findResendColumnForStage([{ id: col.id, title: col.title }], row.approvalStatus.stage),
-                        );
+                        canTriggerResendForColumn(col.title, row.approvalStatus);
 
                       return (
                         <td
@@ -509,7 +506,7 @@ export function SheetGridView({
                             <button
                               type="button"
                               disabled={resendBusyRowId === row.id}
-                              title={`Resend approval notification for ${row.approvalStatus?.stage ?? "pending stage"}`}
+                              title={`Resend / re-trigger automation for ${col.title}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void onResend?.(row, col);

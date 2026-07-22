@@ -6,6 +6,8 @@ export interface SmartsheetColumn {
   validation?: boolean;
   primary?: boolean;
   systemColumnType?: string;
+  /** When set, Smartsheet computes the cell — API writes are rejected (error 1302). */
+  formula?: string;
 }
 
 export interface SmartsheetRow {

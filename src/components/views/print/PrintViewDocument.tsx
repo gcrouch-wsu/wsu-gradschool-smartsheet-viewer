@@ -58,6 +58,26 @@ function getPrintableColumns(view: ResolvedView, selectedKeys?: string[]): Print
   return columns;
 }
 
+/**
+ * Split wide column sets into readable print sections.
+ * Each chunk keeps the heading/title column and up to `maxDataCols` other fields.
+ */
+export function chunkPrintColumns(
+  columns: PrintableColumn[],
+  maxDataCols = 5,
+): PrintableColumn[][] {
+  const heading = columns.find((c) => c.heading);
+  const data = columns.filter((c) => !c.heading);
+  if (data.length <= maxDataCols) return [columns];
+
+  const chunks: PrintableColumn[][] = [];
+  for (let i = 0; i < data.length; i += maxDataCols) {
+    const slice = data.slice(i, i + maxDataCols);
+    chunks.push(heading ? [heading, ...slice] : slice);
+  }
+  return chunks;
+}
+
 /** Keys and labels for the print page column picker (includes heading row). */
 export function buildPrintColumnPickerOptions(
   view: ResolvedView,
@@ -112,9 +132,7 @@ function PrintDataTableSection({
       style={{ borderRadius: tableBorderRadius }}
     >
       <table className="print-data-table min-w-full border-separate border-spacing-0 text-left">
-        <caption>
-          {caption}
-        </caption>
+        <caption>{caption}</caption>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -138,7 +156,9 @@ function PrintDataTableSection({
                         </PrintCellInner>
                       ) : (
                         <>
-                          <span className="print-empty-cell" aria-hidden="true">—</span>
+                          <span className="print-empty-cell" aria-hidden="true">
+                            —
+                          </span>
                           <span className="sr-only">Empty</span>
                         </>
                       )}
@@ -155,7 +175,9 @@ function PrintDataTableSection({
                       </PrintCellInner>
                     ) : (
                       <>
-                        <span className="print-empty-cell" aria-hidden="true">—</span>
+                        <span className="print-empty-cell" aria-hidden="true">
+                          —
+                        </span>
                         <span className="sr-only">Empty</span>
                       </>
                     )}
@@ -203,6 +225,7 @@ export function PrintViewDocument({
   const preview = printConfig.screenPreview;
   const refreshedPrinted = formatFetchedAtInViewTimeZone(fetchedAt, view.displayTimeZone);
   const columns = getPrintableColumns(view, printColumnKeys);
+  const columnChunks = chunkPrintColumns(columns, printConfig.table.columnsPerSection ?? 5);
   const groupByKey = view.presentation?.printGroupByFieldKey;
   const rowGroups = bucketPrintRowGroups(view, groupByKey);
   const groupFieldLabel = groupByKey
@@ -212,110 +235,123 @@ export function PrintViewDocument({
   return (
     <ViewStyleWrapper style={view.style} themePresetId={view.themePresetId}>
       <CampusBadgeStyleProvider style={view.presentation?.campusBadgeStyle}>
-      <style dangerouslySetInnerHTML={{ __html: printStyles }} />
-      {printCompact ? (
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
+        <style dangerouslySetInnerHTML={{ __html: printStyles }} />
+        {printCompact ? (
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
           .print-export.print-root.print-export--compact {
-            --print-masthead-title: 1.125rem;
-            --print-masthead-meta: 0.6875rem;
-            --print-masthead-subtitle: 0.8125rem;
-            --print-th-size: 0.65rem;
-            --print-td-size: 0.6875rem;
-            --print-td-lh: 1.35;
-            --print-td-padding: 0.35rem 0.45rem;
+            --print-masthead-title: 12pt;
+            --print-masthead-meta: 8pt;
+            --print-masthead-subtitle: 8.5pt;
+            --print-th-size: 8.5pt;
+            --print-td-size: 9pt;
+            --print-td-lh: 1.3;
+            --print-td-padding: 4pt 6pt;
           }
         `,
-          }}
-        />
-      ) : null}
-      <main
-        className={`print-export print-root mx-auto px-3 py-6 sm:px-4 sm:py-8${printCompact ? " print-export--compact" : ""}`}
-        style={{ maxWidth: preview.rootMaxWidth }}
-        lang="en"
-      >
-        <PrintViewToolbar
-          slug={slug}
-          viewId={viewId}
-          singlePublishedView={singlePublishedView}
-          columnOptions={printableColumnOptions}
-          compact={printCompact}
-        />
+            }}
+          />
+        ) : null}
+        <main
+          className={`print-export print-root mx-auto px-3 py-6 sm:px-4 sm:py-8${printCompact ? " print-export--compact" : ""}`}
+          style={{ maxWidth: preview.rootMaxWidth }}
+          lang="en"
+        >
+          <PrintViewToolbar
+            slug={slug}
+            viewId={viewId}
+            singlePublishedView={singlePublishedView}
+            columnOptions={printableColumnOptions}
+            compact={printCompact}
+          />
 
-        <header className="print-masthead mb-6">
-          <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-6">
-            <div className="min-w-0">
-              <p className="view-header-source-label">{sourceLabel}</p>
-              <h1 className="view-header-page-title mt-1 text-balance">{pageTitle}</h1>
+          <header className="print-masthead mb-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-6">
+              <div className="min-w-0">
+                <p className="view-header-source-label">{sourceLabel}</p>
+                <h1 className="view-header-page-title mt-1 text-balance">{pageTitle}</h1>
+              </div>
+              <p className="print-masthead-meta shrink-0">
+                <span className="font-medium" style={{ color: "var(--print-ink)" }}>
+                  Source:
+                </span>{" "}
+                {sourceName}
+                <span className="mx-1.5 opacity-60">|</span>
+                <span className="font-medium" style={{ color: "var(--print-ink)" }}>
+                  Printed
+                </span>{" "}
+                <time dateTime={fetchedAt} className="tabular-nums">
+                  {refreshedPrinted}
+                </time>
+              </p>
             </div>
-            <p className="print-masthead-meta shrink-0">
-              <span className="font-medium" style={{ color: "var(--print-ink)" }}>
-                Source:
-              </span>{" "}
-              {sourceName}
-              <span className="mx-1.5 opacity-60">|</span>
-              <span className="font-medium" style={{ color: "var(--print-ink)" }}>
-                Printed
-              </span>{" "}
-              <time dateTime={fetchedAt} className="tabular-nums">
-                {refreshedPrinted}
-              </time>
-            </p>
-          </div>
-          {(view.label !== pageTitle || view.description) && (
-            <p className="print-masthead-subtitle mt-2 max-w-[70ch]">
-              <span className="font-medium" style={{ color: "var(--print-ink)" }}>
-                {view.label}
-              </span>
-              {view.description ? ` — ${view.description}` : null}
-            </p>
+            {(view.label !== pageTitle || view.description) && (
+              <p className="print-masthead-subtitle mt-2 max-w-[70ch]">
+                <span className="font-medium" style={{ color: "var(--print-ink)" }}>
+                  {view.label}
+                </span>
+                {view.description ? ` — ${view.description}` : null}
+              </p>
+            )}
+          </header>
+
+          {view.rows.length > 0 ? (
+            <div className="space-y-10">
+              {rowGroups.map((groupRows, gi) => {
+                const groupTitle =
+                  groupByKey && groupRows[0]?.fieldMap[groupByKey]
+                    ? groupRows[0]!.fieldMap[groupByKey]!.textValue?.trim() ||
+                      (groupRows[0]!.fieldMap[groupByKey]!.listValue?.length
+                        ? groupRows[0]!.fieldMap[groupByKey]!.listValue.join("; ")
+                        : "—")
+                    : null;
+                const baseCaption = `${pageTitle}${view.label !== pageTitle ? ` · ${view.label}` : ""} (${view.rows.length} row${view.rows.length === 1 ? "" : "s"} total)`;
+                const groupCaption =
+                  rowGroups.length > 1
+                    ? `${baseCaption} — ${groupFieldLabel ?? "Group"}: ${groupTitle ?? gi + 1} (${groupRows.length} row${groupRows.length === 1 ? "" : "s"})`
+                    : baseCaption;
+
+                return (
+                  <section key={gi} className="print-group space-y-8">
+                    {rowGroups.length > 1 && groupFieldLabel && groupTitle != null ? (
+                      <h2
+                        className="mb-3 text-base font-semibold tracking-tight sm:text-lg"
+                        style={{ color: "var(--print-ink)" }}
+                      >
+                        {groupFieldLabel}: {groupTitle}{" "}
+                        <span style={{ color: "var(--print-muted)", fontWeight: 400 }}>
+                          ({groupRows.length} row{groupRows.length === 1 ? "" : "s"})
+                        </span>
+                      </h2>
+                    ) : null}
+                    {columnChunks.map((chunk, chunkIndex) => {
+                      const caption =
+                        columnChunks.length > 1
+                          ? `${groupCaption} — columns ${chunkIndex + 1} of ${columnChunks.length}`
+                          : groupCaption;
+                      return (
+                        <div
+                          key={`${gi}-${chunkIndex}`}
+                          className={chunkIndex === 0 ? undefined : "print-column-chunk"}
+                        >
+                          <PrintDataTableSection
+                            columns={chunk}
+                            groupRows={groupRows}
+                            caption={caption}
+                            tableBorderRadius={preview.tableBorderRadius}
+                          />
+                        </div>
+                      );
+                    })}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-[color:var(--wsu-muted)]">No rows to display for this view.</p>
           )}
-        </header>
-
-        {view.rows.length > 0 ? (
-          <div className="space-y-10">
-            {rowGroups.map((groupRows, gi) => {
-              const groupTitle =
-                groupByKey && groupRows[0]?.fieldMap[groupByKey]
-                  ? groupRows[0]!.fieldMap[groupByKey]!.textValue?.trim() ||
-                    (groupRows[0]!.fieldMap[groupByKey]!.listValue?.length
-                      ? groupRows[0]!.fieldMap[groupByKey]!.listValue.join("; ")
-                      : "—")
-                  : null;
-              const baseCaption = `${pageTitle}${view.label !== pageTitle ? ` · ${view.label}` : ""} (${view.rows.length} row${view.rows.length === 1 ? "" : "s"} total)`;
-              const caption =
-                rowGroups.length > 1
-                  ? `${baseCaption} — ${groupFieldLabel ?? "Group"}: ${groupTitle ?? gi + 1} (${groupRows.length} row${groupRows.length === 1 ? "" : "s"})`
-                  : baseCaption;
-
-              return (
-                <section key={gi} className="print-group">
-                  {rowGroups.length > 1 && groupFieldLabel && groupTitle != null ? (
-                    <h2
-                      className="mb-3 text-base font-semibold tracking-tight sm:text-lg"
-                      style={{ color: "var(--print-ink)" }}
-                    >
-                      {groupFieldLabel}: {groupTitle}{" "}
-                      <span style={{ color: "var(--print-muted)", fontWeight: 400 }}>
-                        ({groupRows.length} row{groupRows.length === 1 ? "" : "s"})
-                      </span>
-                    </h2>
-                  ) : null}
-                  <PrintDataTableSection
-                    columns={columns}
-                    groupRows={groupRows}
-                    caption={caption}
-                    tableBorderRadius={preview.tableBorderRadius}
-                  />
-                </section>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-[color:var(--wsu-muted)]">No rows to display for this view.</p>
-        )}
-      </main>
+        </main>
       </CampusBadgeStyleProvider>
     </ViewStyleWrapper>
   );

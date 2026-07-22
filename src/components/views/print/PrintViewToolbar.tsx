@@ -57,7 +57,9 @@ function PrintViewToolbarInner({
         <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-4 text-sm">
           <p className="font-medium text-[color:var(--wsu-ink)]">Print columns</p>
           <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-            Uncheck fields you donâ€¦t need so the table stays wider. The row title column always prints.
+            Uncheck fields you don&apos;t need. Wide views split into readable sections (title column
+            repeats). In the print dialog, use actual size — not &quot;fit to page&quot; — so type stays
+            large enough to read.
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {columnOptions!.map((col) => {
@@ -117,9 +119,10 @@ function PrintViewToolbarInner({
       ) : null}
 
       <p className="text-xs text-[color:var(--wsu-muted)]">
-        Opens the browser print dialog. Choose &quot;Save as PDF&quot; to download. Landscape table layout; base print sizes are in{" "}
-        <code className="rounded bg-black/[0.04] px-1 py-0.5 text-[10px]">src/config/print-export-defaults.json</code> (not the page
-        theme). Use compact type above to fit more on one page when you use fewer columns.
+        Opens the browser print dialog. Choose &quot;Save as PDF&quot; to download. Landscape layout; if there
+        are many columns they print as readable sections instead of shrinking. Base print sizes are in{" "}
+        <code className="rounded bg-black/[0.04] px-1 py-0.5 text-[10px]">src/config/print-export-defaults.json</code>{" "}
+        (not the page theme). Use compact type above for denser type when you keep fewer columns.
       </p>
     </div>
   );

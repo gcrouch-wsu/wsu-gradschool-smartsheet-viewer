@@ -146,7 +146,11 @@ export async function submitFormRows(
     return { ok: false, errors: result.errors, status: 422 };
   }
 
-  const addResult = (await ss.addRow(sheetId, result.cells as SubmissionCell[])) as {
+  // Belt-and-suspenders: never write formula columns even if they slipped into the payload.
+  const formulaIds = new Set(extracted.filter((c) => c.formula?.trim()).map((c) => c.id));
+  const writableCells = result.cells.filter((c) => !formulaIds.has(c.columnId));
+
+  const addResult = (await ss.addRow(sheetId, writableCells as SubmissionCell[])) as {
     result?: { id?: number } | { id?: number }[];
   };
   const rowId = Array.isArray(addResult?.result) ? addResult.result[0]?.id : addResult?.result?.id;

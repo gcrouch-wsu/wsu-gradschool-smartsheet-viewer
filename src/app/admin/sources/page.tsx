@@ -25,7 +25,7 @@ export default async function SourcesIndexPage() {
           </Link>
         }
       />
-      <TableShell headers={["Source", "Connection", "Views", "Forms", "Actions"]}>
+      <TableShell headers={["Source", "Connection", "Views", "Forms", "Actions"]} endAlignLastHeader>
         {sources.length === 0 ? (
           <div className="p-5">
             <EmptyState
@@ -54,14 +54,16 @@ export default async function SourcesIndexPage() {
                     <p className="font-medium text-ink">{source.label}</p>
                     <p className="mt-1 text-xs text-sub">{source.id}</p>
                   </Link>
-                  <Link href={`/admin/sources/${source.id}`} className="text-sm text-sub">
-                    {source.sourceType} · {source.smartsheetId}
+                  <Link href={`/admin/sources/${source.id}`} className="min-w-0 text-sm text-sub">
+                    <span className="break-all">
+                      {source.sourceType} · {source.smartsheetId}
+                    </span>
                   </Link>
                   <Link href={`/admin/sources/${source.id}`} className="text-sm text-sub">
                     {viewsBySource.get(source.id) ?? 0} attached
                   </Link>
-                  <p className="text-sm text-sub">{formsStatus}</p>
-                  <div className="flex justify-end">
+                  <p className="min-w-0 text-sm text-sub">{formsStatus}</p>
+                  <div className="flex justify-start sm:justify-end">
                     {formsEnabled ? (
                       <SourcesUseInFormsButton sourceId={source.id} sheetId={source.smartsheetId} />
                     ) : (

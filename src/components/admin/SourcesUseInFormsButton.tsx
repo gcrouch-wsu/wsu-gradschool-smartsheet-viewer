@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/admin/WorkspacePrimitives";
@@ -26,14 +25,15 @@ export function SourcesUseInFormsButton({ sourceId, sheetId, disabled }: Sources
       const res = await fetch("/api/forms/registry/select", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ id: sourceId }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!res.ok) {
-        // Fallback: select by sheet id if source id not yet linked
         const res2 = await fetch("/api/forms/registry/select", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ id: String(sheetId) }),
         });
         if (!res2.ok) {
@@ -50,14 +50,18 @@ export function SourcesUseInFormsButton({ sourceId, sheetId, disabled }: Sources
   }
 
   return (
-    <div className="flex flex-col items-end gap-1" onClick={(e) => e.stopPropagation()}>
-      <Button type="button" variant="primary" onClick={useInForms} disabled={disabled || busy}>
+    <div className="relative z-10 flex flex-col items-end gap-1">
+      <Button
+        type="button"
+        variant="primary"
+        onClick={useInForms}
+        disabled={disabled || busy}
+        className="cursor-pointer"
+        aria-label="Use this source in Forms"
+      >
         {busy ? "Opening…" : "Use in Forms"}
       </Button>
-      {error ? <p className="max-w-[12rem] text-right text-[10px] text-red-700">{error}</p> : null}
-      <Link href="/forms/builder" className="text-[10px] font-medium text-crimson hover:underline" onClick={(e) => e.stopPropagation()}>
-        Form builder →
-      </Link>
+      {error ? <p className="max-w-[14rem] text-right text-xs text-red-700">{error}</p> : null}
     </div>
   );
 }

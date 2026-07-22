@@ -65,6 +65,11 @@ export function validateSubmission(
       (/e-?mail/i.test(col.title) && col.type !== "MULTI_PICKLIST") ||
       col.type === "CONTACT_LIST";
 
+    // Column formulas are computed by Smartsheet — never send a cell write (API error 1302).
+    if (col.formula && String(col.formula).trim()) {
+      continue;
+    }
+
     // Parent of a per-column checkbox group: validate group, skip writing this column.
     if (meta?.checkboxColumns?.length) {
       const byTitle = new Map(columns.map((c) => [c.title.toLowerCase(), c]));

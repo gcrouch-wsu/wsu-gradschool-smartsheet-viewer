@@ -30,6 +30,7 @@ export function ViewBuilderFieldsTab({
   schemaLoading,
   fetchSchema,
   toggleColumnIncluded,
+  setSchemaColumnsIncluded,
   isColumnIncluded,
   getFieldForColumn,
   addRoleGroupFieldToView,
@@ -50,6 +51,7 @@ export function ViewBuilderFieldsTab({
   schemaLoading: boolean;
   fetchSchema: () => Promise<void>;
   toggleColumnIncluded: (col: SmartsheetColumn) => void;
+  setSchemaColumnsIncluded: (include: boolean) => void;
   isColumnIncluded: (col: SmartsheetColumn) => boolean;
   getFieldForColumn: (col: SmartsheetColumn) => ViewFieldConfig | undefined;
   addRoleGroupFieldToView: (roleGroupId: string) => void;
@@ -60,6 +62,12 @@ export function ViewBuilderFieldsTab({
   livePreviewLoading: boolean;
   livePreviewError: string | null;
 }) {
+  const includedCount = schema
+    ? schema.columns.filter((col) => isColumnIncluded(col)).length
+    : 0;
+  const totalColumns = schema?.columns.length ?? 0;
+  const allSelected = totalColumns > 0 && includedCount === totalColumns;
+  const someSelected = includedCount > 0 && includedCount < totalColumns;
   return (
     <div id="tabpanel-fields" role="tabpanel" aria-labelledby="tab-fields" className="mt-6 space-y-6">
             <div className="rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/20 px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
@@ -104,8 +112,48 @@ export function ViewBuilderFieldsTab({
             )}
             {schema && (
               <div className="mt-4 space-y-3">
-                <p className="text-sm font-medium text-[color:var(--wsu-ink)]">Select columns to include and edit display names:</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-[color:var(--wsu-ink)]">
+                    Select columns to include and edit display names:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-[color:var(--wsu-muted)]">
+                      {includedCount} of {totalColumns} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSchemaColumnsIncluded(true)}
+                      disabled={allSelected}
+                      className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium hover:border-[color:var(--wsu-crimson)] disabled:opacity-40"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSchemaColumnsIncluded(false)}
+                      disabled={includedCount === 0}
+                      className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium hover:border-[color:var(--wsu-crimson)] disabled:opacity-40"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
                 <div className="max-h-64 space-y-2 overflow-y-auto rounded-2xl border border-[color:var(--wsu-border)] bg-white p-4">
+                  <label className="sticky top-0 z-10 -mx-1 mb-2 flex min-h-[44px] items-center gap-2 border-b border-[color:var(--wsu-border)] bg-white px-1 pb-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected;
+                      }}
+                      onChange={() => setSchemaColumnsIncluded(!allSelected)}
+                      className="rounded border-[color:var(--wsu-border)]"
+                      aria-label={allSelected ? "Clear all columns" : "Select all columns"}
+                    />
+                    <span className="text-sm font-medium text-[color:var(--wsu-ink)]">
+                      {allSelected ? "Deselect all columns" : "Select all columns"}
+                    </span>
+                  </label>
                   {schema.columns.map((col) => {
                     const included = isColumnIncluded(col);
                     const field = getFieldForColumn(col);

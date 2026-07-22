@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  canTriggerResendForColumn,
   findPendingContactEmail,
   findResendColumnForStage,
   isResendColumnTitle,
+  isStandaloneResendColumn,
   resendMatchScore,
   resendTargetLabel,
+  resolveResendPulseValues,
 } from "@/lib/forms/resend";
 
 describe("resend helpers", () => {
@@ -16,6 +19,22 @@ describe("resend helpers", () => {
 
   it("strips RESEND prefix", () => {
     expect(resendTargetLabel("RESEND Student Approval")).toBe("Student Approval");
+  });
+
+  it("treats Final PDF as a standalone resend helper", () => {
+    expect(isStandaloneResendColumn("RESEND Final PDF")).toBe(true);
+    expect(isStandaloneResendColumn("RESEND Chair Approval")).toBe(false);
+    expect(canTriggerResendForColumn("RESEND Final PDF", { state: "complete" })).toBe(true);
+    expect(canTriggerResendForColumn("RESEND Final PDF", null)).toBe(true);
+  });
+
+  it("only shows stage-linked resend when waiting at that stage", () => {
+    expect(
+      canTriggerResendForColumn("RESEND Chair Approval", { state: "current", stage: "CHR Approval" }),
+    ).toBe(true);
+    expect(
+      canTriggerResendForColumn("RESEND Chair Approval", { state: "complete", stage: "CHR Approval" }),
+    ).toBe(false);
   });
 
   it("matches RESEND Student Approval to Student Approval stage", () => {
@@ -60,5 +79,36 @@ describe("resend helpers", () => {
       "CHR Approval",
     );
     expect(email).toBe("chair@wsu.edu");
+  });
+
+  it("pulses CHECKBOX with booleans", () => {
+    const pulse = resolveResendPulseValues({ id: 1, title: "RESEND Student Approval", type: "CHECKBOX" });
+    expect(pulse).toEqual(expect.objectContaining({ clear: false, set: true }));
+    expect(pulse?.isArmed(true)).toBe(true);
+    expect(pulse?.isArmed(false)).toBe(false);
+  });
+
+  it("pulses PICKLIST with listed Yes/No options (not booleans)", () => {
+    const pulse = resolveResendPulseValues({
+      id: 791433464549252,
+      title: "RESEND Chair Approval",
+      type: "PICKLIST",
+      options: ["No", "Yes"],
+    });
+    expect(pulse?.clear).toBe("No");
+    expect(pulse?.set).toBe("Yes");
+    expect(pulse?.isArmed("Yes")).toBe(true);
+    expect(pulse?.isArmed("No")).toBe(false);
+  });
+
+  it("returns null for PICKLIST with no options", () => {
+    expect(
+      resolveResendPulseValues({
+        id: 1,
+        title: "RESEND Chair Approval",
+        type: "PICKLIST",
+        options: [],
+      }),
+    ).toBeNull();
   });
 });

@@ -5,8 +5,10 @@ import { findCurrentStage } from "@/lib/forms/submission-actions";
 import {
   findPendingContactEmail,
   findResendColumnForStage,
-  isCheckboxChecked,
   isResendColumnTitle,
+  isStandaloneResendColumn,
+  resolveResendPulseValues,
+  type SheetColumnRef,
 } from "@/lib/forms/resend";
 import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
@@ -16,8 +18,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Re-trigger the sheet's Path A notification for the pending approval stage by
- * pulsing the matching RESEND* checkbox (Smartsheet automations watch that change).
+ * Re-trigger a Smartsheet automation by pulsing a RESEND* helper column.
+ * - Stage-linked helpers (RESEND Chair Approval, …): require a matching pending stage.
+ * - Standalone helpers (RESEND Final PDF): can be pulsed anytime by columnTitle.
  */
 export async function POST(
   request: Request,
@@ -42,77 +45,120 @@ export async function POST(
   try {
     const sheet = await ss.getSheet(active);
     const rowIdNum = Number(rowId);
-    const columns = (sheet.columns ?? []) as Array<{ id: number; title?: string; type?: string }>;
-    const colRefs = columns.map((c) => ({
+    const columns = (sheet.columns ?? []) as Array<{
+      id: number;
+      title?: string;
+      type?: string;
+      options?: string[];
+    }>;
+    const colRefs: SheetColumnRef[] = columns.map((c) => ({
       id: c.id,
       title: String(c.title ?? ""),
       type: c.type,
+      options: Array.isArray(c.options) ? c.options.map(String) : undefined,
     }));
 
     const current = await findCurrentStage(sheet, rowIdNum);
-    if (!current) {
-      return Response.json(
-        { error: "No pending approval stage for this submission — nothing to resend." },
-        { status: 409 },
-      );
-    }
+    let resendCol: SheetColumnRef | null = null;
+    let stageLabel = current?.name ?? "";
 
-    let resendCol = findResendColumnForStage(colRefs, current.name);
     if (requestedColumnTitle) {
       if (!isResendColumnTitle(requestedColumnTitle)) {
         return Response.json({ error: "columnTitle must be a RESEND* column." }, { status: 422 });
       }
       const explicit = colRefs.find((c) => c.title.toLowerCase() === requestedColumnTitle.toLowerCase());
       if (!explicit) return Response.json({ error: "Resend column not found on this sheet." }, { status: 422 });
-      const matched = findResendColumnForStage([explicit], current.name);
-      if (!matched) {
+
+      if (isStandaloneResendColumn(explicit.title)) {
+        resendCol = explicit;
+        stageLabel = resendTargetFromTitle(explicit.title);
+      } else {
+        if (!current) {
+          return Response.json(
+            { error: "No pending approval stage for this submission — nothing to resend." },
+            { status: 409 },
+          );
+        }
+        const matched = findResendColumnForStage([explicit], current.name);
+        if (!matched) {
+          return Response.json(
+            {
+              error: `Resend column "${explicit.title}" does not match the pending stage "${current.name}".`,
+            },
+            { status: 409 },
+          );
+        }
+        resendCol = explicit;
+        stageLabel = current.name;
+      }
+    } else {
+      if (!current) {
+        return Response.json(
+          { error: "No pending approval stage for this submission — nothing to resend." },
+          { status: 409 },
+        );
+      }
+      resendCol = findResendColumnForStage(colRefs, current.name);
+      stageLabel = current.name;
+      if (!resendCol) {
         return Response.json(
           {
-            error: `Resend column "${explicit.title}" does not match the pending stage "${current.name}".`,
+            error: `No RESEND column matched the pending stage "${current.name}". Add a helper column like "RESEND ${current.name}" and wire it to Automation → Request an approval.`,
           },
           { status: 409 },
         );
       }
-      resendCol = explicit;
     }
 
-    if (!resendCol) {
+    const pulse = resolveResendPulseValues(resendCol);
+    if (!pulse) {
+      const opts = resendCol.options?.length ? resendCol.options.join(", ") : "(none)";
       return Response.json(
         {
-          error: `No RESEND column matched the pending stage "${current.name}". Add a checkbox like "RESEND ${current.name}" and wire it to Automation → Request an approval.`,
+          error: `Cannot pulse "${resendCol.title}" (${resendCol.type ?? "unknown"}). Picklist options: ${opts}.`,
         },
-        { status: 409 },
+        { status: 422 },
       );
     }
 
     const row =
-      ((sheet.rows ?? []) as Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }> }>).find(
-        (r) => r.id === rowIdNum,
-      ) ?? ((await ss.getRow(active, rowIdNum)) as { cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }> });
+      ((sheet.rows ?? []) as Array<{
+        id: number;
+        cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }>;
+      }>).find((r) => r.id === rowIdNum) ??
+      ((await ss.getRow(active, rowIdNum)) as {
+        cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }>;
+      });
 
     const cell = (row.cells ?? []).find((c) => c.columnId === resendCol.id);
-    const alreadyChecked = isCheckboxChecked(cell?.value, cell?.displayValue);
+    const alreadyArmed = pulse.isArmed(cell?.value, cell?.displayValue);
 
-    // Automations typically fire when the checkbox becomes checked. If it is already
-    // checked, clear it first so the second write re-fires the workflow.
-    if (alreadyChecked) {
-      await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: false }] }]);
+    if (alreadyArmed) {
+      await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.clear }] }]);
     }
-    await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: true }] }]);
+    await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.set }] }]);
 
-    const recipientEmail = findPendingContactEmail(colRefs, row.cells, current.name);
+    const recipientEmail = current
+      ? findPendingContactEmail(colRefs, row.cells, current.name)
+      : findPendingContactEmail(colRefs, row.cells, stageLabel);
 
     return Response.json({
       ok: true,
       demo: config.demo,
-      stage: current.name,
+      stage: stageLabel || null,
       resendColumn: resendCol.title,
+      resendColumnType: resendCol.type ?? null,
+      pulsedValue: pulse.set,
       recipientEmail: recipientEmail || null,
       message: recipientEmail
-        ? `Resend triggered for ${current.name}. Smartsheet should notify ${recipientEmail}.`
-        : `Resend triggered for ${current.name}. Smartsheet will email contacts configured on that automation.`,
+        ? `Resend triggered for ${stageLabel || resendCol.title}. Smartsheet should notify ${recipientEmail}.`
+        : `Resend triggered for ${stageLabel || resendCol.title}. Smartsheet will run the automation for that helper column.`,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
+}
+
+function resendTargetFromTitle(title: string): string {
+  return title.trim().replace(/^resend\s+/i, "").trim();
 }

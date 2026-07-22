@@ -291,6 +291,45 @@ export function ViewBuilder({
     );
   }
 
+  /** Include or exclude every loaded schema column (keeps role-group fields and existing labels). */
+  function setSchemaColumnsIncluded(include: boolean) {
+    if (!schema?.columns.length) return;
+    setView((current) => {
+      const roleGroupFields = current.fields.filter((f) => isRoleGroupFieldSource(f.source));
+      if (!include) {
+        const schemaIds = new Set(schema.columns.map((c) => c.id));
+        const schemaTitles = new Set(schema.columns.map((c) => c.title.toLowerCase()));
+        const remainingColumnFields = current.fields.filter((f) => {
+          if (isRoleGroupFieldSource(f.source)) return false;
+          const src = f.source as ViewFieldSource;
+          const idMatch = src.columnId != null && schemaIds.has(src.columnId);
+          const titleMatch = Boolean(src.columnTitle && schemaTitles.has(src.columnTitle.toLowerCase()));
+          return !idMatch && !titleMatch;
+        });
+        return { ...current, fields: [...remainingColumnFields, ...roleGroupFields] };
+      }
+
+      const usedKeys = new Set(roleGroupFields.map((f) => f.key));
+      const nextColumnFields: ViewFieldConfig[] = [];
+      for (const col of schema.columns) {
+        const existing = current.fields.find(
+          (f) =>
+            !isRoleGroupFieldSource(f.source) &&
+            (f.source.columnTitle === col.title || f.source.columnId === col.id),
+        );
+        if (existing) {
+          nextColumnFields.push(existing);
+          usedKeys.add(existing.key);
+        } else {
+          const created = columnToField(col, col.title, usedKeys);
+          nextColumnFields.push(created);
+          usedKeys.add(created.key);
+        }
+      }
+      return { ...current, fields: [...nextColumnFields, ...roleGroupFields] };
+    });
+  }
+
   function addRoleGroupFieldToView(roleGroupId: string) {
     const src = sources.find((s) => s.id === view.sourceId);
     const rg = src?.roleGroups?.find((g) => g.id === roleGroupId);
@@ -874,6 +913,7 @@ export function ViewBuilder({
             schemaLoading={schemaLoading}
             fetchSchema={fetchSchema}
             toggleColumnIncluded={toggleColumnIncluded}
+            setSchemaColumnsIncluded={setSchemaColumnsIncluded}
             isColumnIncluded={isColumnIncluded}
             getFieldForColumn={getFieldForColumn}
             addRoleGroupFieldToView={addRoleGroupFieldToView}
