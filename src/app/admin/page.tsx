@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listManagedAdminUsers } from "@/lib/admin-users";
-import { Button, EmptyState, RecentCard, SectionLabel, StatCard } from "@/components/admin/WorkspacePrimitives";
+import { Button, EmptyState, RecentCard, StatCard } from "@/components/admin/WorkspacePrimitives";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 
@@ -25,7 +25,6 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-5">
-      <SectionLabel>Dashboard</SectionLabel>
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Sources" value={sources.length} description="Smartsheet sheets and reports you've registered." icon={<DataIcon kind="sources" />} />
         <StatCard label="Views" value={views.length} description="Public view definitions across every slug." icon={<DataIcon kind="views" />} />
