@@ -1,21 +1,22 @@
 import { csvResponse, rowsToCsv } from "@/lib/export-csv";
 import { requireFormsAccess } from "@/lib/forms/forms-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
-import * as registry from "@/lib/forms/registry";
+import { resolveFormsSheetId, sheetIdFromRequest } from "@/lib/forms/sheet-access";
 import * as ss from "@/lib/forms/smartsheet-api";
 
 export const dynamic = "force-dynamic";
 
-/** CSV export of the active form sheet grid. */
-export async function GET() {
+/** CSV export of a form sheet grid (optional ?sheetId=). */
+export async function GET(request: Request) {
   const access = await requireFormsAccess();
   if ("response" in access) return access.response;
 
   await ensureBootstrapped();
-  const sheetId = await registry.activeSheetId();
-  if (!sheetId) {
-    return Response.json({ message: "No form selected." }, { status: 409 });
+  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
+  if (!resolved.ok) {
+    return Response.json({ message: resolved.error }, { status: resolved.status });
   }
+  const sheetId = resolved.sheetId;
 
   const sheet = await ss.getSheet(sheetId);
   const columns = ss.extractColumns(sheet);

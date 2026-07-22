@@ -121,7 +121,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
       }
       actions={
         canSearch ? (
-          <form onSubmit={runSearch} className="relative">
+          <form onSubmit={runSearch} className="relative w-full sm:w-56">
             <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" />
             <input
               type="search"
@@ -129,7 +129,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
               onChange={(e) => setSearchQ(e.target.value)}
               placeholder="Search…"
               aria-label="Global search"
-              className="w-44 rounded-full border border-line-strong bg-white py-2 pl-9 pr-3 text-[13.5px] text-ink placeholder:text-mist focus:border-crimson focus:outline-none focus:ring-1 focus:ring-crimson sm:w-56"
+              className="w-full rounded-full border border-line-strong bg-white py-2 pl-9 pr-3 text-[13.5px] text-ink placeholder:text-mist focus:border-crimson focus:outline-none focus:ring-1 focus:ring-crimson"
             />
           </form>
         ) : undefined

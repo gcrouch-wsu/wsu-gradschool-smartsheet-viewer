@@ -29,7 +29,7 @@ export function ProductShell({
       <div className="mx-auto max-w-[1200px]">
         <div className="overflow-hidden rounded-[22px] border border-line bg-surface shadow-[var(--shadow-md)]">
           <header className="border-b border-line px-5 py-5 sm:px-8 sm:py-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-start gap-3.5">
                 <div
                   className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] bg-[linear-gradient(155deg,#b0263c,var(--crimson)_55%,var(--crimson-deep))] text-[15px] font-semibold tracking-[0.04em] text-white shadow-[0_5px_12px_rgba(152,30,50,0.25)]"
@@ -43,12 +43,18 @@ export function ProductShell({
                   <p className="mt-2 max-w-[58ch] text-[13px] leading-5 text-sub">{description}</p>
                 </div>
               </div>
-              {identity ? <div className="flex shrink-0 items-center">{identity}</div> : null}
-            </div>
 
-            {actions ? (
-              <div className="mt-4 flex flex-wrap items-center justify-end gap-2 sm:mt-3">{actions}</div>
-            ) : null}
+              {identity || actions ? (
+                <div className="flex w-full min-w-0 items-center gap-2 sm:ml-auto sm:w-auto sm:max-w-xl sm:justify-end lg:max-w-none">
+                  {identity ? <div className="shrink-0">{identity}</div> : null}
+                  {actions ? (
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-none sm:justify-end">
+                      {actions}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
 
             {globalNav.length > 0 ? (
               <div className="mt-4">

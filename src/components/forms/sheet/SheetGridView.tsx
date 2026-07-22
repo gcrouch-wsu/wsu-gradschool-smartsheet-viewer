@@ -5,6 +5,7 @@ import Link from "next/link";
 import { approvalTone, approvalToneLabel, type ApprovalTone } from "@/lib/forms/approval-style";
 import { canTriggerResendForColumn } from "@/lib/forms/resend";
 import { IconRefresh, IconSearch } from "@/components/forms/icons";
+import { FormSheetPicker } from "@/components/forms/sheet/FormSheetPicker";
 
 export interface SheetGridColumn {
   id: number;
@@ -43,6 +44,10 @@ interface SheetGridViewProps {
   totalRowCount: number | null;
   approvedValues: string[];
   declinedValues: string[];
+  /** Registered forms for the sheet picker (independent of Manage “Use”). */
+  forms?: Array<{ id: string; name: string }>;
+  selectedSheetId?: string;
+  onSheetChange?: (sheetId: string) => void;
   onRowClick?: (row: SheetGridRow) => void;
   /** Pulse the RESEND checkbox for a row (re-triggers Smartsheet approval email). */
   onResend?: (row: SheetGridRow, column: SheetGridColumn) => void | Promise<void>;
@@ -146,6 +151,9 @@ export function SheetGridView({
   totalRowCount,
   approvedValues,
   declinedValues,
+  forms,
+  selectedSheetId,
+  onSheetChange,
   onRowClick,
   onResend,
   resendBusyRowId,
@@ -224,9 +232,9 @@ export function SheetGridView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-medium text-[color:var(--wsu-ink)]">{sheetName}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-medium text-[color:var(--wsu-ink)]">{sheetName}</h1>
           <p className="mt-1 text-sm">
             {demo ? (
               <span className="font-medium text-[color:var(--wsu-muted)]">Demo</span>
@@ -235,21 +243,29 @@ export function SheetGridView({
             )}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
+          {forms && forms.length > 0 && onSheetChange && selectedSheetId ? (
+            <FormSheetPicker
+              forms={forms}
+              selectedSheetId={selectedSheetId}
+              onSheetChange={onSheetChange}
+            />
+          ) : null}
           {onRefresh ? (
             <button
               type="button"
               onClick={onRefresh}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+              aria-label={refreshing ? "Refreshing" : "Refresh"}
+              title={refreshing ? "Refreshing…" : "Refresh"}
+              className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[color:var(--wsu-border)] bg-white p-2 text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
             >
               <IconRefresh className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           ) : null}
           <Link
             href="/forms/manage"
-            className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+            className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
           >
             Manage forms
           </Link>

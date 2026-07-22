@@ -1,6 +1,5 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
 import { findCurrentStage } from "@/lib/forms/submission-actions";
 import {
   findPendingContactEmail,
@@ -13,6 +12,7 @@ import {
 import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsApproverAccess } from "@/lib/forms/forms-api";
+import { resolveFormsSheetId, sheetIdFromRequestOrBody } from "@/lib/forms/sheet-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,14 +36,17 @@ export async function POST(
     return Response.json({ error: "Too many resend requests. Please wait a minute." }, { status: 429 });
   }
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+  const resolved = await resolveFormsSheetId(sheetIdFromRequestOrBody(request, body));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
+
   const requestedColumnTitle = body.columnTitle ? String(body.columnTitle).trim() : "";
 
   try {
-    const sheet = await ss.getSheet(active);
+    const sheet = await ss.getSheet(sheetId);
     const rowIdNum = Number(rowId);
     const columns = (sheet.columns ?? []) as Array<{
       id: number;
@@ -126,7 +129,7 @@ export async function POST(
         id: number;
         cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }>;
       }>).find((r) => r.id === rowIdNum) ??
-      ((await ss.getRow(active, rowIdNum)) as {
+      ((await ss.getRow(sheetId, rowIdNum)) as {
         cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }>;
       });
 
@@ -134,9 +137,9 @@ export async function POST(
     const alreadyArmed = pulse.isArmed(cell?.value, cell?.displayValue);
 
     if (alreadyArmed) {
-      await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.clear }] }]);
+      await ss.updateRows(sheetId, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.clear }] }]);
     }
-    await ss.updateRows(active, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.set }] }]);
+    await ss.updateRows(sheetId, [{ id: rowIdNum, cells: [{ columnId: resendCol.id, value: pulse.set }] }]);
 
     const recipientEmail = current
       ? findPendingContactEmail(colRefs, row.cells, current.name)

@@ -1,12 +1,16 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import {
   formsAuthErrorResponse,
   requireFormsAccess,
   requireFormsApproverAccess,
 } from "@/lib/forms/forms-api";
+import {
+  resolveFormsSheetId,
+  sheetIdFromRequest,
+  sheetIdFromRequestOrBody,
+} from "@/lib/forms/sheet-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,12 +24,15 @@ export async function GET(
 
   const { rowId } = await params;
   await ensureBootstrapped();
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
+  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
 
   try {
-    const discussions = await ss.listDiscussions(active, rowId);
-    return Response.json({ discussions, demo: config.demo });
+    const discussions = await ss.listDiscussions(sheetId, rowId);
+    return Response.json({ sheetId, discussions, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -41,16 +48,19 @@ export async function POST(
   const { rowId } = await params;
   await ensureBootstrapped();
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+  const resolved = await resolveFormsSheetId(sheetIdFromRequestOrBody(request, body));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
+
   const text = String(body.text ?? "").trim();
   if (!text) return Response.json({ error: "text is required." }, { status: 400 });
 
   try {
-    const result = await ss.addDiscussion(active, rowId, text);
-    return Response.json({ ok: true, result, demo: config.demo });
+    const result = await ss.addDiscussion(sheetId, rowId, text);
+    return Response.json({ ok: true, sheetId, result, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

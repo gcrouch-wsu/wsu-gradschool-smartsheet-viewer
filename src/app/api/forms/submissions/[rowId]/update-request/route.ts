@@ -1,9 +1,9 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
 import { stageColumns } from "@/lib/forms/tracker";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveFormsSheetId, sheetIdFromRequestOrBody } from "@/lib/forms/sheet-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,19 +18,22 @@ export async function POST(
   const { rowId } = await params;
   await ensureBootstrapped();
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+  const resolved = await resolveFormsSheetId(sheetIdFromRequestOrBody(request, body));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
+
   const email = String(body.email ?? "").trim();
   const message = body.message ? String(body.message) : undefined;
   if (!email) return Response.json({ error: "email is required." }, { status: 400 });
 
   try {
-    const sheet = await ss.getSheet(active);
+    const sheet = await ss.getSheet(sheetId);
     const stages = await stageColumns(sheet);
     const columnIds = stages.map((s) => s.columnId);
-    const result = await ss.sendUpdateRequest(active, {
+    const result = await ss.sendUpdateRequest(sheetId, {
       rowIds: [Number(rowId)],
       columnIds,
       message,

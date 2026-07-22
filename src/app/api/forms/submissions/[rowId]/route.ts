@@ -1,6 +1,5 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
 import { buildSubmissions } from "@/lib/forms/tracker";
 import {
   findCurrentStage,
@@ -18,6 +17,11 @@ import {
   requireFormsAdminAccess,
   requireFormsApproverAccess,
 } from "@/lib/forms/forms-api";
+import {
+  resolveFormsSheetId,
+  sheetIdFromRequest,
+  sheetIdFromRequestOrBody,
+} from "@/lib/forms/sheet-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,12 +35,15 @@ export async function GET(
 
   const { rowId } = await params;
   await ensureBootstrapped();
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
+  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
 
   try {
-    const sheet = await ss.getSheet(active);
-    const row = await ss.getRow(active, rowId);
+    const sheet = await ss.getSheet(sheetId);
+    const row = await ss.getRow(sheetId, rowId);
     const submissions = await buildSubmissions({ ...sheet, rows: [row] });
     const submission = submissions[0] ?? null;
 
@@ -52,6 +59,7 @@ export async function GET(
     const recipientEmail = stageName ? findPendingContactEmail(colRefs, rowCells, stageName) : "";
 
     return Response.json({
+      sheetId,
       submission,
       row,
       demo: config.demo,
@@ -82,10 +90,13 @@ export async function PATCH(
     return Response.json({ error: "Too many updates. Please wait a minute." }, { status: 429 });
   }
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+  const resolved = await resolveFormsSheetId(sheetIdFromRequestOrBody(request, body));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
+
   const action = String(body.action ?? "").toLowerCase();
   const columnTitle = body.columnTitle ? String(body.columnTitle) : "";
   const customValue = body.value !== undefined ? String(body.value) : "";
@@ -95,7 +106,7 @@ export async function PATCH(
   }
 
   try {
-    const sheet = await ss.getSheet(active);
+    const sheet = await ss.getSheet(sheetId);
     const wf = await resolveWorkflow(sheet);
     const rowIdNum = Number(rowId);
     let targetColumn = columnTitle;
@@ -131,15 +142,15 @@ export async function PATCH(
       }
     }
 
-    await ss.updateRows(active, [{ id: rowIdNum, cells }]);
-    return Response.json({ ok: true, columnTitle: targetColumn, value, demo: config.demo });
+    await ss.updateRows(sheetId, [{ id: rowIdNum, cells }]);
+    return Response.json({ ok: true, sheetId, columnTitle: targetColumn, value, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ rowId: string }> },
 ) {
   const access = await requireFormsAdminAccess();
@@ -148,12 +159,15 @@ export async function DELETE(
   const { rowId } = await params;
   await ensureBootstrapped();
 
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
+  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
 
   try {
-    await ss.deleteRows(active, [rowId]);
-    return Response.json({ ok: true, rowId, demo: config.demo });
+    await ss.deleteRows(sheetId, [rowId]);
+    return Response.json({ ok: true, sheetId, rowId, demo: config.demo });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

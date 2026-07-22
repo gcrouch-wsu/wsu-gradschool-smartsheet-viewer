@@ -20,15 +20,29 @@ async function parseApiJson(r: Response): Promise<Record<string, unknown>> {
   }
 }
 
+function withSheetId(path: string, sheetId?: string | null): string {
+  if (!sheetId) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}sheetId=${encodeURIComponent(sheetId)}`;
+}
+
 interface SubmissionDetailModalProps {
   rowId: number | null;
+  /** When set, row APIs target this form sheet instead of the global active sheet. */
+  sheetId?: string | null;
   open: boolean;
   onClose: () => void;
   /** Called after approve/decline/delete so the parent (e.g. grid) can refresh. */
   onChanged?: () => void;
 }
 
-export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: SubmissionDetailModalProps) {
+export function SubmissionDetailModal({
+  rowId,
+  sheetId,
+  open,
+  onClose,
+  onChanged,
+}: SubmissionDetailModalProps) {
   const [submission, setSubmission] = useState<TrackerSubmission | null>(null);
   const [roles, setRoles] = useState<string[]>(["viewer"]);
   const [loading, setLoading] = useState(false);
@@ -42,38 +56,41 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
   const [resendHint, setResendHint] = useState<string | null>(null);
   const [resendColumnTitle, setResendColumnTitle] = useState<string | null>(null);
 
-  const loadSubmission = useCallback(async (id: number) => {
-    setLoading(true);
-    setError("");
-    try {
-      const r = await fetch(`/api/forms/submissions/${id}`);
-      const d = await parseApiJson(r);
-      if (!r.ok) {
-        throw new Error(
-          (typeof d.error === "string" && d.error) ||
-            (typeof d.message === "string" && d.message) ||
-            "Could not load submission.",
-        );
+  const loadSubmission = useCallback(
+    async (id: number) => {
+      setLoading(true);
+      setError("");
+      try {
+        const r = await fetch(withSheetId(`/api/forms/submissions/${id}`, sheetId));
+        const d = await parseApiJson(r);
+        if (!r.ok) {
+          throw new Error(
+            (typeof d.error === "string" && d.error) ||
+              (typeof d.message === "string" && d.message) ||
+              "Could not load submission.",
+          );
+        }
+        setSubmission((d.submission as TrackerSubmission) ?? null);
+        setRoles(Array.isArray(d.roles) ? (d.roles as string[]) : ["viewer"]);
+        const resend = d.resend as
+          | { available?: boolean; columnTitle?: string | null; recipientEmail?: string | null }
+          | undefined;
+        setCanResend(Boolean(resend?.available));
+        setResendColumnTitle(typeof resend?.columnTitle === "string" ? resend.columnTitle : null);
+        setResendHint(typeof resend?.recipientEmail === "string" ? resend.recipientEmail : null);
+        if (!d.submission) setError("Submission not found.");
+      } catch (e: unknown) {
+        setSubmission(null);
+        setCanResend(false);
+        setResendHint(null);
+        setResendColumnTitle(null);
+        setError(e instanceof Error ? e.message : "Could not load submission.");
+      } finally {
+        setLoading(false);
       }
-      setSubmission((d.submission as TrackerSubmission) ?? null);
-      setRoles(Array.isArray(d.roles) ? (d.roles as string[]) : ["viewer"]);
-      const resend = d.resend as
-        | { available?: boolean; columnTitle?: string | null; recipientEmail?: string | null }
-        | undefined;
-      setCanResend(Boolean(resend?.available));
-      setResendColumnTitle(typeof resend?.columnTitle === "string" ? resend.columnTitle : null);
-      setResendHint(typeof resend?.recipientEmail === "string" ? resend.recipientEmail : null);
-      if (!d.submission) setError("Submission not found.");
-    } catch (e: unknown) {
-      setSubmission(null);
-      setCanResend(false);
-      setResendHint(null);
-      setResendColumnTitle(null);
-      setError(e instanceof Error ? e.message : "Could not load submission.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [sheetId],
+  );
 
   useEffect(() => {
     if (!open || rowId == null) return;
@@ -92,7 +109,7 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
     }
     setTimeline("loading");
     try {
-      const r = await fetch(`/api/forms/submissions/${rowId}/history`);
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}/history`, sheetId));
       const d = await parseApiJson(r);
       if (!r.ok) {
         throw new Error(
@@ -112,14 +129,14 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
     if (rowId == null) return;
     if (!attachments) {
       setAttachments("loading");
-      fetch(`/api/forms/submissions/${rowId}/attachments`)
+      fetch(withSheetId(`/api/forms/submissions/${rowId}/attachments`, sheetId))
         .then((r) => r.json())
         .then((d) => setAttachments(d.attachments ?? []))
         .catch(() => setAttachments([]));
     }
     if (!discussions) {
       setDiscussions("loading");
-      fetch(`/api/forms/submissions/${rowId}/discussions`)
+      fetch(withSheetId(`/api/forms/submissions/${rowId}/discussions`, sheetId))
         .then((r) => r.json())
         .then((d) => setDiscussions(d.discussions ?? []))
         .catch(() => setDiscussions([]));
@@ -131,10 +148,10 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
     setActionBusy(rowId);
     setError("");
     try {
-      const r = await fetch(`/api/forms/submissions/${rowId}`, {
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}`, sheetId), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...(sheetId ? { sheetId } : {}) }),
       });
       const d = await parseApiJson(r);
       if (!r.ok) {
@@ -162,7 +179,10 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
       const r = await fetch(`/api/forms/submissions/${rowId}/resend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resendColumnTitle ? { columnTitle: resendColumnTitle } : {}),
+        body: JSON.stringify({
+          ...(resendColumnTitle ? { columnTitle: resendColumnTitle } : {}),
+          ...(sheetId ? { sheetId } : {}),
+        }),
       });
       const d = await parseApiJson(r);
       if (!r.ok) {
@@ -187,7 +207,7 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
     setActionBusy(rowId);
     setError("");
     try {
-      const r = await fetch(`/api/forms/submissions/${rowId}`, { method: "DELETE" });
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}`, sheetId), { method: "DELETE" });
       const d = await parseApiJson(r);
       if (!r.ok) {
         throw new Error(
@@ -210,10 +230,10 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
     const text = commentText.trim();
     if (!text) return;
     try {
-      const r = await fetch(`/api/forms/submissions/${rowId}/discussions`, {
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}/discussions`, sheetId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, ...(sheetId ? { sheetId } : {}) }),
       });
       const d = await parseApiJson(r);
       if (!r.ok) {
@@ -225,7 +245,7 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
       }
       setCommentText("");
       setDiscussions("loading");
-      const dr = await fetch(`/api/forms/submissions/${rowId}/discussions`);
+      const dr = await fetch(withSheetId(`/api/forms/submissions/${rowId}/discussions`, sheetId));
       const dd = await dr.json();
       setDiscussions(dd.discussions ?? []);
     } catch (e: unknown) {
@@ -257,15 +277,15 @@ export function SubmissionDetailModal({ rowId, open, onClose, onChanged }: Submi
               attachments={attachments}
               discussions={discussions}
               commentText={commentText}
-              onToggleTimeline={() => void toggleTimeline()}
-              onLoadExtras={loadExtras}
-              onApprove={() => void patchRow("approve")}
-              onDecline={() => void patchRow("decline")}
-              onDelete={() => void deleteRow()}
-              onResend={() => void resendNotification()}
               canResend={canResend}
               resendHint={resendHint}
               onCommentChange={setCommentText}
+              onApprove={() => void patchRow("approve")}
+              onDecline={() => void patchRow("decline")}
+              onResend={() => void resendNotification()}
+              onDelete={() => void deleteRow()}
+              onToggleTimeline={() => void toggleTimeline()}
+              onLoadExtras={loadExtras}
               onPostComment={() => void postComment()}
               className="border-0 shadow-none"
             />

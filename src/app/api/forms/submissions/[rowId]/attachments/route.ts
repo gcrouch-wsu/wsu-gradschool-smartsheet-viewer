@@ -1,7 +1,7 @@
 import * as ss from "@/lib/forms/smartsheet-api";
-import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAccess } from "@/lib/forms/forms-api";
+import { resolveFormsSheetId, sheetIdFromRequest } from "@/lib/forms/sheet-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +15,15 @@ export async function GET(
 
   const { rowId } = await params;
   await ensureBootstrapped();
-  const active = await registry.activeSheetId();
-  if (!active) return Response.json({ error: "No form selected yet." }, { status: 409 });
+  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
+  if (!resolved.ok) {
+    return Response.json({ error: resolved.error }, { status: resolved.status });
+  }
+  const sheetId = resolved.sheetId;
 
   try {
-    const attachments = await ss.listAttachments(active, rowId);
-    return Response.json({ attachments });
+    const attachments = await ss.listAttachments(sheetId, rowId);
+    return Response.json({ sheetId, attachments });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
