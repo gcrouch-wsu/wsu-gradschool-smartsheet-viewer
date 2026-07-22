@@ -5,8 +5,14 @@ import { getRowHeadingField } from "@/components/views/layouts/layout-utils";
 import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import { formatFetchedAtInViewTimeZone } from "@/lib/display-datetime";
 import type { ResolvedFieldValue, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
-import { buildPrintExportStylesheet, getPrintExportConfig } from "@/lib/print-export";
+import {
+  buildPrintExportStylesheet,
+  getPrintExportConfig,
+  type PrintTableLayout,
+} from "@/lib/print-export";
 import { PrintViewToolbar } from "./PrintViewToolbar";
+
+export type { PrintTableLayout };
 
 function PrintCellInner({ primary, children }: { primary?: boolean; children: ReactNode }) {
   return (
@@ -203,6 +209,7 @@ export function PrintViewDocument({
   view,
   printColumnKeys,
   printCompact,
+  printTableLayout = "sections",
   printableColumnOptions,
 }: {
   slug: string;
@@ -217,6 +224,11 @@ export function PrintViewDocument({
   printColumnKeys?: string[];
   /** Smaller type for dense PDFs */
   printCompact?: boolean;
+  /**
+   * `sections` (default): readable print chunks.
+   * `wide`: one full table with horizontal scroll on screen.
+   */
+  printTableLayout?: PrintTableLayout;
   /** All selectable columns for the print UI (non-hidden fields that appear in default print). */
   printableColumnOptions?: Array<{ key: string; label: string; heading?: boolean }>;
 }) {
@@ -225,7 +237,10 @@ export function PrintViewDocument({
   const preview = printConfig.screenPreview;
   const refreshedPrinted = formatFetchedAtInViewTimeZone(fetchedAt, view.displayTimeZone);
   const columns = getPrintableColumns(view, printColumnKeys);
-  const columnChunks = chunkPrintColumns(columns, printConfig.table.columnsPerSection ?? 5);
+  const isWideTable = printTableLayout === "wide";
+  const columnChunks = isWideTable
+    ? [columns]
+    : chunkPrintColumns(columns, printConfig.table.columnsPerSection ?? 5);
   const groupByKey = view.presentation?.printGroupByFieldKey;
   const rowGroups = bucketPrintRowGroups(view, groupByKey);
   const groupFieldLabel = groupByKey
@@ -254,7 +269,13 @@ export function PrintViewDocument({
           />
         ) : null}
         <main
-          className={`print-export print-root mx-auto px-3 py-6 sm:px-4 sm:py-8${printCompact ? " print-export--compact" : ""}`}
+          className={[
+            "print-export print-root mx-auto px-3 py-6 sm:px-4 sm:py-8",
+            printCompact ? "print-export--compact" : "",
+            isWideTable ? "print-export--wide" : "print-export--sections",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           style={{ maxWidth: preview.rootMaxWidth }}
           lang="en"
         >
@@ -264,6 +285,7 @@ export function PrintViewDocument({
             singlePublishedView={singlePublishedView}
             columnOptions={printableColumnOptions}
             compact={printCompact}
+            tableLayout={printTableLayout}
           />
 
           <header className="print-masthead mb-6">

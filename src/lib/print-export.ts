@@ -2,6 +2,9 @@ import printDefaults from "@/config/print-export-defaults.json";
 
 export type PrintExportConfig = typeof printDefaults;
 
+/** Print page table layout: chunked PDF sections vs one sideways-scrolling table. */
+export type PrintTableLayout = "sections" | "wide";
+
 /** Editable defaults: `src/config/print-export-defaults.json` */
 export function getPrintExportConfig(): PrintExportConfig {
   return printDefaults;
@@ -97,6 +100,16 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     line-height: var(--print-td-lh) !important;
     table-layout: auto;
     color: var(--print-ink) !important;
+  }
+  /* Full-table preview: keep column widths and scroll sideways on screen */
+  .print-export.print-export--wide .print-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .print-export.print-export--wide .print-data-table {
+    max-width: none;
+    width: max-content;
+    min-width: 100%;
   }
   .print-export .print-data-table caption {
     text-align: left;

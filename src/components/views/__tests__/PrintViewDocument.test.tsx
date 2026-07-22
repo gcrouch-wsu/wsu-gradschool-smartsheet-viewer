@@ -204,4 +204,68 @@ describe("PrintViewDocument", () => {
     expect(chunks[1]?.[0]?.heading).toBe(true);
     expect(chunks[2]).toHaveLength(3);
   });
+
+  it("wide layout keeps one table instead of column sections", () => {
+    const manyFields = [
+      { key: "program_name", label: "Program Name", renderType: "text" as const },
+      ...Array.from({ length: 8 }, (_, i) => ({
+        key: `extra_${i}`,
+        label: `Extra ${i}`,
+        renderType: "text" as const,
+      })),
+    ];
+    const rowFields = manyFields.map((f) => ({
+      key: f.key,
+      label: f.label,
+      renderType: "text" as const,
+      textValue: f.key === "program_name" ? "Athletic Training" : "x",
+      listValue: [f.key === "program_name" ? "Athletic Training" : "x"],
+      links: [] as { label: string; href: string }[],
+      isEmpty: false,
+      hideWhenEmpty: false,
+    }));
+    const wideRow = {
+      id: 101,
+      fields: rowFields,
+      fieldMap: Object.fromEntries(rowFields.map((f) => [f.key, f])),
+    };
+    const wideView: ResolvedView = {
+      ...view,
+      fields: manyFields,
+      rows: [wideRow],
+    };
+
+    const sectionsHtml = renderToStaticMarkup(
+      <PrintViewDocument
+        slug="grad-programs"
+        viewId={view.id}
+        singlePublishedView={false}
+        pageTitle="Graduate Programs"
+        sourceLabel="Programs"
+        sourceName="GRAD Programs"
+        fetchedAt="2026-03-31T12:00:00.000Z"
+        view={wideView}
+        printTableLayout="sections"
+      />,
+    );
+    const wideHtml = renderToStaticMarkup(
+      <PrintViewDocument
+        slug="grad-programs"
+        viewId={view.id}
+        singlePublishedView={false}
+        pageTitle="Graduate Programs"
+        sourceLabel="Programs"
+        sourceName="GRAD Programs"
+        fetchedAt="2026-03-31T12:00:00.000Z"
+        view={wideView}
+        printTableLayout="wide"
+      />,
+    );
+
+    expect(sectionsHtml).toContain("print-export--sections");
+    expect(sectionsHtml).toContain("print-column-chunk");
+    expect(wideHtml).toContain("print-export--wide");
+    expect(wideHtml).not.toContain("print-column-chunk");
+    expect(wideHtml).toContain("Extra 7");
+  });
 });

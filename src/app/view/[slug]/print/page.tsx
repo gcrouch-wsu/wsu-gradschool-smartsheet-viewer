@@ -99,6 +99,7 @@ export default async function PrintExportPage({
         .filter(Boolean)
     : undefined;
   const printCompact = firstValue(resolvedSearchParams.compact) === "1";
+  const printTableLayout = firstValue(resolvedSearchParams.layout) === "wide" ? "wide" : "sections";
   const printView = omitRecordSuppressedRowsFromResolvedView(activeView);
   const printableColumnOptions = buildPrintColumnPickerOptions(printView);
   const singlePublishedView = page.viewConfigs.length === 1;
@@ -118,6 +119,7 @@ export default async function PrintExportPage({
             view={printView}
             printColumnKeys={printColumnKeys && printColumnKeys.length > 0 ? printColumnKeys : undefined}
             printCompact={printCompact}
+            printTableLayout={printTableLayout}
             printableColumnOptions={printableColumnOptions}
           />
         </Suspense>

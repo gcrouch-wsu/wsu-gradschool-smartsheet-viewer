@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { PrintTableLayout } from "@/lib/print-export";
 import { publicInteractiveHref } from "@/lib/public-view-href";
 
 export type PrintColumnPickerRow = { key: string; label: string; heading?: boolean };
@@ -28,7 +29,9 @@ function PrintViewToolbarInner({
   columnOptions,
   initialSelectedOptional,
   initialCompact,
+  initialTableLayout,
   onApply,
+  onTableLayoutChange,
 }: {
   slug: string;
   viewId: string;
@@ -36,11 +39,14 @@ function PrintViewToolbarInner({
   columnOptions?: PrintColumnPickerRow[];
   initialSelectedOptional: string[];
   initialCompact: boolean;
+  initialTableLayout: PrintTableLayout;
   onApply: (selectedOptional: string[], compactLocal: boolean) => void;
+  onTableLayoutChange: (layout: PrintTableLayout) => void;
 }) {
   const [selectedOptional, setSelectedOptional] = useState<string[]>(() => initialSelectedOptional);
   const [compactLocal, setCompactLocal] = useState(initialCompact);
   const showPicker = Boolean(columnOptions && columnOptions.length > 0);
+  const isWide = initialTableLayout === "wide";
 
   return (
     <div className="no-print mb-8 flex flex-col gap-4 border-b border-[color:var(--wsu-border)] pb-6">
@@ -53,13 +59,51 @@ function PrintViewToolbarInner({
         </button>
       </div>
 
+      <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-4 text-sm">
+        <p className="font-medium text-[color:var(--wsu-ink)]">Preview layout</p>
+        <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
+          Use print sections for readable PDFs. Use the full table to browse every column with sideways
+          scroll.
+        </p>
+        <div
+          className="mt-3 inline-flex rounded-full border border-[color:var(--wsu-border)] p-0.5"
+          role="group"
+          aria-label="Print preview layout"
+        >
+          <button
+            type="button"
+            aria-pressed={!isWide}
+            onClick={() => onTableLayoutChange("sections")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+              !isWide
+                ? "bg-[color:var(--wsu-crimson)] text-white"
+                : "text-[color:var(--wsu-ink)] hover:bg-black/[0.04]"
+            }`}
+          >
+            Print sections
+          </button>
+          <button
+            type="button"
+            aria-pressed={isWide}
+            onClick={() => onTableLayoutChange("wide")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${
+              isWide
+                ? "bg-[color:var(--wsu-crimson)] text-white"
+                : "text-[color:var(--wsu-ink)] hover:bg-black/[0.04]"
+            }`}
+          >
+            Full table (scroll)
+          </button>
+        </div>
+      </div>
+
       {showPicker ? (
         <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-4 text-sm">
           <p className="font-medium text-[color:var(--wsu-ink)]">Print columns</p>
           <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-            Uncheck fields you don&apos;t need. Wide views split into readable sections (title column
-            repeats). In the print dialog, use actual size — not &quot;fit to page&quot; — so type stays
-            large enough to read.
+            {isWide
+              ? "Uncheck fields you don't need. The full table scrolls sideways on this page."
+              : "Uncheck fields you don't need. Wide views split into readable sections (title column repeats). In the print dialog, use actual size — not \"fit to page\" — so type stays large enough to read."}
           </p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {columnOptions!.map((col) => {
@@ -119,10 +163,15 @@ function PrintViewToolbarInner({
       ) : null}
 
       <p className="text-xs text-[color:var(--wsu-muted)]">
-        Opens the browser print dialog. Choose &quot;Save as PDF&quot; to download. Landscape layout; if there
-        are many columns they print as readable sections instead of shrinking. Base print sizes are in{" "}
-        <code className="rounded bg-black/[0.04] px-1 py-0.5 text-[10px]">src/config/print-export-defaults.json</code>{" "}
-        (not the page theme). Use compact type above for denser type when you keep fewer columns.
+        {isWide
+          ? "Full table shows every selected column in one grid — scroll sideways to review. Switch to Print sections before saving a PDF for readable type."
+          : "Print sections keep type readable across multiple pages. Base print sizes are in "}
+        {!isWide ? (
+          <>
+            <code className="rounded bg-black/[0.04] px-1 py-0.5 text-[10px]">src/config/print-export-defaults.json</code>
+            .
+          </>
+        ) : null}
       </p>
     </div>
   );
@@ -134,12 +183,14 @@ export function PrintViewToolbar({
   singlePublishedView,
   columnOptions,
   compact: compactActive,
+  tableLayout = "sections",
 }: {
   slug: string;
   viewId: string;
   singlePublishedView: boolean;
   columnOptions?: PrintColumnPickerRow[];
   compact?: boolean;
+  tableLayout?: PrintTableLayout;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -154,33 +205,50 @@ export function PrintViewToolbar({
     [optionalKeys, searchParams],
   );
   const initialCompact = searchParams.get("compact") === "1" || Boolean(compactActive);
+  const initialTableLayout: PrintTableLayout =
+    searchParams.get("layout") === "wide" || tableLayout === "wide" ? "wide" : "sections";
   const toolbarStateKey = `${viewId}|${searchParams.toString()}|${optionalKeys.join("|")}`;
 
-  function applyPrintSettings(selectedOptional: string[], compactLocal: boolean) {
+  function replaceParams(mutate: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
     if (singlePublishedView) {
       params.delete("view");
     } else {
       params.set("view", viewId);
     }
+    mutate(params);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }
 
-    const allSelected =
-      selectedOptional.length === optionalKeys.length &&
-      optionalKeys.every((k) => selectedOptional.includes(k));
+  function applyPrintSettings(selectedOptional: string[], compactLocal: boolean) {
+    replaceParams((params) => {
+      const allSelected =
+        selectedOptional.length === optionalKeys.length &&
+        optionalKeys.every((k) => selectedOptional.includes(k));
 
-    if (allSelected) {
-      params.delete("cols");
-    } else {
-      params.set("cols", selectedOptional.join(","));
-    }
+      if (allSelected) {
+        params.delete("cols");
+      } else {
+        params.set("cols", selectedOptional.join(","));
+      }
 
-    if (compactLocal) {
-      params.set("compact", "1");
-    } else {
-      params.delete("compact");
-    }
+      if (compactLocal) {
+        params.set("compact", "1");
+      } else {
+        params.delete("compact");
+      }
+    });
+  }
 
-    router.replace(`${pathname}?${params.toString()}`);
+  function applyTableLayout(layout: PrintTableLayout) {
+    replaceParams((params) => {
+      if (layout === "wide") {
+        params.set("layout", "wide");
+      } else {
+        params.delete("layout");
+      }
+    });
   }
 
   return (
@@ -192,7 +260,9 @@ export function PrintViewToolbar({
       columnOptions={columnOptions}
       initialSelectedOptional={initialSelectedOptional}
       initialCompact={initialCompact}
+      initialTableLayout={initialTableLayout}
       onApply={applyPrintSettings}
+      onTableLayoutChange={applyTableLayout}
     />
   );
 }
