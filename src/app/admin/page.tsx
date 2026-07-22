@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getManagedAdminStorageMode, listManagedAdminUsers } from "@/lib/admin-users";
-import { Button, EmptyState, RecentCard, SectionLabel, SessionPanel, StatCard } from "@/components/admin/WorkspacePrimitives";
+import { listManagedAdminUsers } from "@/lib/admin-users";
+import { Button, EmptyState, RecentCard, SectionLabel, StatCard } from "@/components/admin/WorkspacePrimitives";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 
@@ -22,7 +22,6 @@ export default async function AdminDashboardPage() {
   ]);
   const managedAdmins = principal.role === "owner" ? await listManagedAdminUsers() : [];
   const publicViews = views.filter((view) => view.public);
-  const adminStorageMode = getManagedAdminStorageMode();
 
   return (
     <div className="space-y-5">
@@ -33,19 +32,6 @@ export default async function AdminDashboardPage() {
         <StatCard label="Published" value={publicViews.length} description="Views currently live on public routes." icon={<DataIcon kind="published" />} />
         <StatCard label="Admins" value={managedAdmins.length + 1} description={`One owner, plus ${managedAdmins.length} managed admin account${managedAdmins.length === 1 ? "" : "s"}.`} icon={<DataIcon kind="admins" />} />
       </section>
-
-      <SessionPanel
-        title={`Signed in as ${principal.displayName ?? principal.username}`}
-        avatarInitials={(principal.displayName ?? principal.username).slice(0, 2).toUpperCase()}
-        body={
-          principal.role === "owner"
-            ? "This owner account is provisioned from environment configuration. Use it to manage additional admins and hand off day-to-day administration."
-            : adminStorageMode === "database"
-              ? "This managed admin account is stored in Postgres and is suitable for production deployments without additional environment-variable users."
-              : "This managed admin account is stored in the app's local configuration."
-        }
-        action={principal.role === "owner" ? <Link href="/admin/users"><Button variant="primary">Manage admin access</Button></Link> : undefined}
-      />
 
       <section className="grid gap-3 lg:grid-cols-2">
         <RecentCard title="Recent sources" subtitle="Connection, schema, and role groups." action={<Link href="/admin/sources"><Button>All sources</Button></Link>}>

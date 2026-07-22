@@ -40,14 +40,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <ToolbarIcon kind="guide" />
             Admin guide
           </Link>
-          <Link href="/admin/sources/new" className="flex items-center gap-1.5 rounded-full border border-line-strong bg-white px-4 py-2 text-[13.5px] font-medium text-ink transition hover:border-mist hover:bg-[#faf7f8]">
-            <ToolbarIcon kind="plus" />
-            New source
-          </Link>
-          <Link href="/admin/views/new" className="flex items-center gap-1.5 rounded-full border border-crimson bg-crimson px-4 py-2 text-[13.5px] font-medium text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)] transition hover:bg-[var(--crimson-deep)]">
-            <ToolbarIcon kind="plus" />
-            New view
-          </Link>
           <AdminLogoutButton />
         </>
       }
@@ -57,10 +49,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   );
 }
 
-function ToolbarIcon({ kind }: { kind: "guide" | "plus" }) {
+function ToolbarIcon({ kind }: { kind: "guide" }) {
   const paths = {
     guide: <><path d="M4 4.5A2.5 2.5 0 016.5 2H20v15H6.5A2.5 2.5 0 004 19.5z" /><path d="M4 19.5A2.5 2.5 0 016.5 17H20v5H6.5A2.5 2.5 0 014 19.5z" /></>,
-    plus: <path d="M12 5v14M5 12h14" />,
   };
   return (
     <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
