@@ -24,21 +24,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title="Smartsheet Workspace"
       description="Register sources, build views, manage submissions, and administer approval workflows."
       identity={
-        <div className="flex items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
+        <div className="flex w-full min-w-0 items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left xl:w-auto">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
             {principalLabel.slice(0, 2).toUpperCase()}
           </span>
-          <span>
-            <span className="block text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
-            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">{principal.role === "owner" ? "Owner" : "Admin"}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
+            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">
+              {principal.role === "owner" ? "Owner" : "Admin"}
+            </span>
           </span>
         </div>
       }
       actions={
         <>
-          <Link href="/instructions/admin" className="flex items-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-4 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)]">
+          <Link
+            href="/instructions/admin"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-3 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)] xl:flex-none xl:px-4"
+          >
             <ToolbarIcon kind="guide" />
-            Admin guide
+            <span className="xl:hidden">Guide</span>
+            <span className="hidden xl:inline">Admin guide</span>
           </Link>
           <AdminLogoutButton />
         </>
