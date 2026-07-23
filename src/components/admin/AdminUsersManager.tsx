@@ -314,7 +314,7 @@ export function AdminUsersManager({
       >
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
           <p className="text-sm text-sub">
-            Passwords are hashed before storage. Only the bootstrap owner can manage these accounts.
+            Passwords are hashed before storage. Any signed-in admin can create and manage these accounts.
           </p>
 
           <label className="block space-y-1.5">

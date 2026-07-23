@@ -17,7 +17,7 @@ function toUserInput(body: unknown) {
 }
 
 export async function GET() {
-  const auth = await requireAdminApiAccess({ ownerOnly: true });
+  const auth = await requireAdminApiAccess();
   if (auth.response) {
     return auth.response;
   }
@@ -26,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAdminApiAccess({ ownerOnly: true });
+  const auth = await requireAdminApiAccess();
   if (auth.response) {
     return auth.response;
   }

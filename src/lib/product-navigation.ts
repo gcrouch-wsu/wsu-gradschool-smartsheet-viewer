@@ -19,18 +19,16 @@ export interface ProductNavItem {
   icon?: ProductNavIcon;
 }
 
-export function productNav(isAdmin: boolean, isOwner = false): ProductNavItem[] {
+export function productNav(isAdmin: boolean): ProductNavItem[] {
   if (!isAdmin) return [];
 
-  const items: ProductNavItem[] = [
+  return [
     { href: "/admin", label: "Dashboard", exact: true, icon: "dashboard" },
     { href: "/admin/sources", label: "Sources", icon: "sources" },
     { href: "/admin/views", label: "Views", icon: "views" },
     { href: "/admin/contributors", label: "Contributors", icon: "contributors" },
     { href: "/admin/activity", label: "Activity", icon: "activity" },
     { href: "/forms/manage", label: "Forms", icon: "forms" },
+    { href: "/admin/users", label: "Admins", icon: "admins" },
   ];
-
-  if (isOwner) items.push({ href: "/admin/users", label: "Admins", icon: "admins" });
-  return items;
 }

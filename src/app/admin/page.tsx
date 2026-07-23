@@ -16,12 +16,12 @@ function DataIcon({ kind }: { kind: "sources" | "views" | "published" | "admins"
 }
 
 export default async function AdminDashboardPage() {
-  const principal = await requireAdminPageAccess("/admin");
+  await requireAdminPageAccess("/admin");
   const [sources, views] = await Promise.all([
     listSourceConfigs(),
     listViewConfigs(),
   ]);
-  const managedAdmins = principal.role === "owner" ? await listManagedAdminUsers() : [];
+  const managedAdmins = await listManagedAdminUsers();
   const publicViews = views.filter((view) => view.public);
 
   return (
@@ -31,11 +31,9 @@ export default async function AdminDashboardPage() {
         title="Workspace overview"
         description="Sources, views, and publishing at a glance. Open a list below to configure the catalog."
         actions={
-          principal.role === "owner" ? (
-            <Link href="/admin/users">
-              <Button variant="primary">Manage admins</Button>
-            </Link>
-          ) : undefined
+          <Link href="/admin/users">
+            <Button variant="primary">Manage admins</Button>
+          </Link>
         }
       />
 

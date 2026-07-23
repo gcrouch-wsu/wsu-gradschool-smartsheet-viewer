@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <ProductShell
-      globalNav={productNav(true, principal.role === "owner")}
+      globalNav={productNav(true)}
       eyebrow="Washington State University"
       title="Smartsheet Workspace"
       description="Register sources, build views, manage submissions, and administer approval workflows."
