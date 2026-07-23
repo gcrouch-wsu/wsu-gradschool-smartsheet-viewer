@@ -36,8 +36,12 @@ async function listMigrationFiles(): Promise<string[]> {
   try {
     const entries = await readdir(migrationsDir());
     return entries.filter((f) => f.endsWith(".sql")).sort();
-  } catch {
-    return [];
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Could not read migrations directory at ${migrationsDir()}. ` +
+        `Ensure ./migrations is deployed with the app (Vercel: outputFileTracingIncludes). ${detail}`,
+    );
   }
 }
 
@@ -78,6 +82,11 @@ export async function runDatabaseMigrations(): Promise<void> {
       await ensureMigrationsTable();
       const applied = await appliedMigrationIds();
       const files = await listMigrationFiles();
+      if (files.length === 0) {
+        throw new Error(
+          `No SQL migrations found in ${migrationsDir()}. Platform tables (including form_registry) were not created.`,
+        );
+      }
       for (const file of files) {
         if (applied.has(file)) continue;
         await applyMigrationFile(file);

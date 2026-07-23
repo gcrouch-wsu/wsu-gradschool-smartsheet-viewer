@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Keep build tracing scoped to this extracted app, even when a parent folder also has a lockfile.
   outputFileTracingRoot: process.cwd(),
+  // Runtime migrations read SQL from disk; include them in every serverless trace.
+  outputFileTracingIncludes: {
+    "/*": ["./migrations/**/*"],
+  },
   async headers() {
     return [
       {
