@@ -46,8 +46,8 @@ async function readConfigDir<T>(folderName: "sources" | "views", parser: (value:
     .map((entry) => entry.name)
     .sort();
 
-  const results = await Promise.all(
-    files.map(async (fileName) => {
+  const results: Array<T | null> = await Promise.all(
+    files.map(async (fileName): Promise<T | null> => {
       const filePath = path.join(folderPath, fileName);
       try {
         const raw = await readFile(filePath, "utf8");

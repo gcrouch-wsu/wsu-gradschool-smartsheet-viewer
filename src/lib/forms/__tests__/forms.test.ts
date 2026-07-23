@@ -5,13 +5,14 @@ import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
 import { checkPublicSpamGuards } from "@/lib/forms/turnstile";
 import { validateSubmission } from "@/lib/forms/validation";
 import type { SmartsheetColumn } from "@/lib/forms/types";
+import type { SyncState } from "@/lib/forms/sync-state";
 import { FORM_WEBHOOK_SECRET_ENV_VAR, validateWebhookSecret } from "@/lib/forms/webhook-auth";
 import { buildCallbackUrl, maskCallbackUrl } from "@/lib/forms/webhook-callback";
 
-const getSyncState = vi.fn(async () => ({ recentEvents: [] as { at: string; type: string; objectId: number }[] }));
+const getSyncState = vi.fn(async (): Promise<SyncState> => ({ recentEvents: [] }));
 
 vi.mock("@/lib/forms/sync-state", () => ({
-  getSyncState: (...args: unknown[]) => getSyncState(...args),
+  getSyncState,
 }));
 
 describe("forms validation", () => {
