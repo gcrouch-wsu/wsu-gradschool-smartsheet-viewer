@@ -15,191 +15,203 @@ interface MockDbUser {
   is_active: boolean;
 }
 
-const mockDbUsers: MockDbUser[] = [];
-const mockAdminLoginAttempts: { ip: string }[] = [];
-const mockInsertConflictUsernames = new Set<string>();
-const mockInsertConflictIds = new Set<string>();
+const {
+  mockDbUsers,
+  mockAdminLoginAttempts,
+  mockInsertConflictUsernames,
+  mockInsertConflictIds,
+  resetMockDb,
+  runMockQuery,
+} = vi.hoisted(() => {
+  const mockDbUsers: MockDbUser[] = [];
+  const mockAdminLoginAttempts: { ip: string }[] = [];
+  const mockInsertConflictUsernames = new Set<string>();
+  const mockInsertConflictIds = new Set<string>();
 
-function resetMockDb() {
-  mockDbUsers.length = 0;
-  mockAdminLoginAttempts.length = 0;
-  mockInsertConflictUsernames.clear();
-  mockInsertConflictIds.clear();
-}
-
-function cloneRow(user: MockDbUser) {
-  return { ...user };
-}
-
-function compareUsers(left: MockDbUser, right: MockDbUser) {
-  const leftLabel = left.display_name ?? left.username;
-  const rightLabel = right.display_name ?? right.username;
-  return leftLabel.localeCompare(rightLabel);
-}
-
-async function runMockQuery(text: string, params: unknown[] = []) {
-  const sql = text.replace(/\s+/g, " ").trim();
-
-  // Versioned migrations + RLS DDL (idempotent no-ops in unit tests).
-  if (
-    sql.includes("CREATE TABLE IF NOT EXISTS schema_migrations") ||
-    sql.includes("CREATE TABLE IF NOT EXISTS config_sources") ||
-    sql.includes("CREATE TABLE IF NOT EXISTS admin_users") ||
-    sql.startsWith("CREATE TABLE IF NOT EXISTS") ||
-    sql.startsWith("CREATE INDEX IF NOT EXISTS") ||
-    sql.startsWith("ALTER TABLE") ||
-    sql.startsWith("DO $$ BEGIN") ||
-    sql.includes("-- Platform schema")
-  ) {
-    return { rows: [], rowCount: 0 };
+  function resetMockDb() {
+    mockDbUsers.length = 0;
+    mockAdminLoginAttempts.length = 0;
+    mockInsertConflictUsernames.clear();
+    mockInsertConflictIds.clear();
   }
 
-  if (sql.startsWith("SELECT id FROM schema_migrations")) {
-    return { rows: [], rowCount: 0 };
+  function cloneRow(user: MockDbUser) {
+    return { ...user };
   }
 
-  if (sql.startsWith("INSERT INTO schema_migrations")) {
-    return { rows: [], rowCount: 1 };
+  function compareUsers(left: MockDbUser, right: MockDbUser) {
+    const leftLabel = left.display_name ?? left.username;
+    const rightLabel = right.display_name ?? right.username;
+    return leftLabel.localeCompare(rightLabel);
   }
 
-  if (sql.startsWith("SELECT COUNT(*)::int AS count FROM admin_users")) {
-    return { rows: [{ count: mockDbUsers.length }], rowCount: 1 };
-  }
+  async function runMockQuery(text: string, params: unknown[] = []) {
+    const sql = text.replace(/\s+/g, " ").trim();
 
-  if (sql.startsWith("SELECT id, username") && sql.includes("FROM admin_users WHERE id = $1")) {
-    const user = mockDbUsers.find((entry) => entry.id === params[0]);
-    return { rows: user ? [cloneRow(user)] : [], rowCount: user ? 1 : 0 };
-  }
-
-  if (sql.startsWith("SELECT id, username") && sql.includes("FROM admin_users WHERE username = $1")) {
-    const user = mockDbUsers.find((entry) => entry.username === params[0]);
-    return { rows: user ? [cloneRow(user)] : [], rowCount: user ? 1 : 0 };
-  }
-
-  if (sql.includes("FROM admin_users ORDER BY COALESCE(display_name, username), username")) {
-    return {
-      rows: [...mockDbUsers].sort(compareUsers).map(cloneRow),
-      rowCount: mockDbUsers.length,
-    };
-  }
-
-  if (sql.startsWith("INSERT INTO admin_users")) {
-    const record: MockDbUser = {
-      id: String(params[0]),
-      username: String(params[1]).toLowerCase().trim(),
-      display_name: params[2] == null ? null : String(params[2]),
-      password_hash: String(params[3]),
-      password_salt: String(params[4]),
-      created_at: String(params[5]),
-      updated_at: String(params[6]),
-      is_active: Boolean(params[7]),
-    };
-    const existingById = mockDbUsers.findIndex((entry) => entry.id === record.id);
-    const existingByUsername = mockDbUsers.findIndex((entry) => entry.username === record.username);
-    if (sql.includes("ON CONFLICT (id) DO NOTHING")) {
-      if (existingById === -1 && existingByUsername === -1) {
-        mockDbUsers.push(record);
-        return { rows: [], rowCount: 1 };
-      }
+    // Versioned migrations + RLS DDL (idempotent no-ops in unit tests).
+    if (
+      sql.includes("CREATE TABLE IF NOT EXISTS schema_migrations") ||
+      sql.includes("CREATE TABLE IF NOT EXISTS config_sources") ||
+      sql.includes("CREATE TABLE IF NOT EXISTS admin_users") ||
+      sql.startsWith("CREATE TABLE IF NOT EXISTS") ||
+      sql.startsWith("CREATE INDEX IF NOT EXISTS") ||
+      sql.startsWith("ALTER TABLE") ||
+      sql.startsWith("DO $$ BEGIN") ||
+      sql.includes("-- Platform schema")
+    ) {
       return { rows: [], rowCount: 0 };
     }
 
-    const usernameNorm = record.username.toLowerCase().trim();
-    if (mockInsertConflictIds.has(record.id)) {
-      mockInsertConflictIds.delete(record.id);
-      if (existingById === -1) {
-        mockDbUsers.push({
-          ...record,
-          username: `occupied-${record.id}@example.com`,
-          display_name: "Occupied",
-        });
-      }
-      const err = new Error("duplicate key value violates unique constraint") as Error & {
-        code?: string;
-        constraint?: string;
-        detail?: string;
-      };
-      err.code = "23505";
-      err.constraint = "admin_users_pkey";
-      err.detail = `Key (id)=(${record.id}) already exists.`;
-      throw err;
-    }
-
-    if (existingByUsername >= 0 || mockInsertConflictUsernames.has(usernameNorm)) {
-      const err = new Error("duplicate key value violates unique constraint") as Error & {
-        code?: string;
-        constraint?: string;
-        detail?: string;
-      };
-      err.code = "23505";
-      err.constraint = "admin_users_username_key";
-      err.detail = `Key (username)=(${record.username}) already exists.`;
-      throw err;
-    }
-    if (existingById >= 0) {
-      const err = new Error("duplicate key value violates unique constraint") as Error & {
-        code?: string;
-        constraint?: string;
-        detail?: string;
-      };
-      err.code = "23505";
-      err.constraint = "admin_users_pkey";
-      err.detail = `Key (id)=(${record.id}) already exists.`;
-      throw err;
-    }
-    mockDbUsers.push(record);
-    return { rows: [], rowCount: 1 };
-  }
-
-  if (sql.startsWith("UPDATE admin_users SET username = $2")) {
-    const user = mockDbUsers.find((entry) => entry.id === params[0]);
-    if (!user) {
+    if (sql.startsWith("SELECT id FROM schema_migrations")) {
       return { rows: [], rowCount: 0 };
     }
 
-    user.username = String(params[1]);
-    user.display_name = params[2] == null ? null : String(params[2]);
-    user.password_hash = String(params[3]);
-    user.password_salt = String(params[4]);
-    user.updated_at = String(params[5]);
-    user.is_active = Boolean(params[6]);
-    return { rows: [], rowCount: 1 };
+    if (sql.startsWith("INSERT INTO schema_migrations")) {
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (sql.startsWith("SELECT COUNT(*)::int AS count FROM admin_users")) {
+      return { rows: [{ count: mockDbUsers.length }], rowCount: 1 };
+    }
+
+    if (sql.startsWith("SELECT id, username") && sql.includes("FROM admin_users WHERE id = $1")) {
+      const user = mockDbUsers.find((entry) => entry.id === params[0]);
+      return { rows: user ? [cloneRow(user)] : [], rowCount: user ? 1 : 0 };
+    }
+
+    if (sql.startsWith("SELECT id, username") && sql.includes("FROM admin_users WHERE username = $1")) {
+      const user = mockDbUsers.find((entry) => entry.username === params[0]);
+      return { rows: user ? [cloneRow(user)] : [], rowCount: user ? 1 : 0 };
+    }
+
+    if (sql.includes("FROM admin_users ORDER BY COALESCE(display_name, username), username")) {
+      return {
+        rows: [...mockDbUsers].sort(compareUsers).map(cloneRow),
+        rowCount: mockDbUsers.length,
+      };
+    }
+
+    if (sql.startsWith("INSERT INTO admin_users")) {
+      const record: MockDbUser = {
+        id: String(params[0]),
+        username: String(params[1]).toLowerCase().trim(),
+        display_name: params[2] == null ? null : String(params[2]),
+        password_hash: String(params[3]),
+        password_salt: String(params[4]),
+        created_at: String(params[5]),
+        updated_at: String(params[6]),
+        is_active: Boolean(params[7]),
+      };
+      const existingById = mockDbUsers.findIndex((entry) => entry.id === record.id);
+      const existingByUsername = mockDbUsers.findIndex((entry) => entry.username === record.username);
+      if (sql.includes("ON CONFLICT (id) DO NOTHING")) {
+        if (existingById === -1 && existingByUsername === -1) {
+          mockDbUsers.push(record);
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      }
+
+      const usernameNorm = record.username.toLowerCase().trim();
+      if (mockInsertConflictIds.has(record.id)) {
+        mockInsertConflictIds.delete(record.id);
+        if (existingById === -1) {
+          mockDbUsers.push({
+            ...record,
+            username: `occupied-${record.id}@example.com`,
+            display_name: "Occupied",
+          });
+        }
+        const err = new Error("duplicate key value violates unique constraint") as Error & {
+          code?: string;
+          constraint?: string;
+          detail?: string;
+        };
+        err.code = "23505";
+        err.constraint = "admin_users_pkey";
+        err.detail = `Key (id)=(${record.id}) already exists.`;
+        throw err;
+      }
+
+      if (existingByUsername >= 0 || mockInsertConflictUsernames.has(usernameNorm)) {
+        const err = new Error("duplicate key value violates unique constraint") as Error & {
+          code?: string;
+          constraint?: string;
+          detail?: string;
+        };
+        err.code = "23505";
+        err.constraint = "admin_users_username_key";
+        err.detail = `Key (username)=(${record.username}) already exists.`;
+        throw err;
+      }
+      if (existingById >= 0) {
+        const err = new Error("duplicate key value violates unique constraint") as Error & {
+          code?: string;
+          constraint?: string;
+          detail?: string;
+        };
+        err.code = "23505";
+        err.constraint = "admin_users_pkey";
+        err.detail = `Key (id)=(${record.id}) already exists.`;
+        throw err;
+      }
+      mockDbUsers.push(record);
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (sql.startsWith("UPDATE admin_users SET username = $2")) {
+      const user = mockDbUsers.find((entry) => entry.id === params[0]);
+      if (!user) {
+        return { rows: [], rowCount: 0 };
+      }
+
+      user.username = String(params[1]);
+      user.display_name = params[2] == null ? null : String(params[2]);
+      user.password_hash = String(params[3]);
+      user.password_salt = String(params[4]);
+      user.updated_at = String(params[5]);
+      user.is_active = Boolean(params[6]);
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (sql.startsWith("DELETE FROM admin_users WHERE id = $1")) {
+      const before = mockDbUsers.length;
+      const next = mockDbUsers.filter((entry) => entry.id !== params[0]);
+      mockDbUsers.splice(0, mockDbUsers.length, ...next);
+      return { rows: [], rowCount: before - next.length };
+    }
+
+    if (sql.startsWith("INSERT INTO admin_login_attempts")) {
+      mockAdminLoginAttempts.push({ ip: String(params[0]) });
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (sql.startsWith("DELETE FROM admin_login_attempts WHERE attempted_at")) {
+      return { rows: [], rowCount: 0 };
+    }
+
+    if (sql.includes("FROM admin_login_attempts") && sql.includes("COUNT") && sql.includes("ip = $1")) {
+      const ip = String(params[0]);
+      const count = mockAdminLoginAttempts.filter((row) => row.ip === ip).length;
+      return { rows: [{ count: String(count) }], rowCount: 1 };
+    }
+
+    throw new Error(`Unhandled mock SQL: ${sql}`);
   }
 
-  if (sql.startsWith("DELETE FROM admin_users WHERE id = $1")) {
-    const before = mockDbUsers.length;
-    const next = mockDbUsers.filter((entry) => entry.id !== params[0]);
-    mockDbUsers.splice(0, mockDbUsers.length, ...next);
-    return { rows: [], rowCount: before - next.length };
-  }
-
-  if (sql.startsWith("INSERT INTO admin_login_attempts")) {
-    mockAdminLoginAttempts.push({ ip: String(params[0]) });
-    return { rows: [], rowCount: 1 };
-  }
-
-  if (sql.startsWith("DELETE FROM admin_login_attempts WHERE attempted_at")) {
-    return { rows: [], rowCount: 0 };
-  }
-
-  if (sql.includes("FROM admin_login_attempts") && sql.includes("COUNT") && sql.includes("ip = $1")) {
-    const ip = String(params[0]);
-    const count = mockAdminLoginAttempts.filter((row) => row.ip === ip).length;
-    return { rows: [{ count: String(count) }], rowCount: 1 };
-  }
-
-  throw new Error(`Unhandled mock SQL: ${sql}`);
-}
-
-vi.mock("pg", () => {
   return {
-    Pool: class MockPool {
-      async query(text: string, params?: unknown[]) {
-        return runMockQuery(text, params ?? []);
-      }
-    },
+    mockDbUsers,
+    mockAdminLoginAttempts,
+    mockInsertConflictUsernames,
+    mockInsertConflictIds,
+    resetMockDb,
+    runMockQuery,
   };
 });
+
+type PgMockGlobal = typeof globalThis & {
+  __smartsheetsViewPgMockQuery?: typeof runMockQuery;
+};
 
 const originalCwd = process.cwd();
 let tempDir = "";
@@ -208,6 +220,7 @@ beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "smartsheets-view-admin-"));
   process.chdir(tempDir);
   resetMockDb();
+  (globalThis as PgMockGlobal).__smartsheetsViewPgMockQuery = runMockQuery;
   delete (globalThis as { __smartsheetsViewAdminPool?: unknown }).__smartsheetsViewAdminPool;
   delete (globalThis as { __smartsheetsViewConfigPool?: unknown }).__smartsheetsViewConfigPool;
   vi.resetModules();
@@ -220,6 +233,7 @@ afterEach(async () => {
   process.chdir(originalCwd);
   await rm(tempDir, { recursive: true, force: true });
   resetMockDb();
+  delete (globalThis as PgMockGlobal).__smartsheetsViewPgMockQuery;
   delete (globalThis as { __smartsheetsViewAdminPool?: unknown }).__smartsheetsViewAdminPool;
   vi.unstubAllEnvs();
   vi.resetModules();

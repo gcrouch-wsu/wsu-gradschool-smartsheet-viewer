@@ -1,12 +1,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/views/print/PrintViewDocument";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
   usePathname: () => "/view/grad-programs/print",
   useSearchParams: () => new URLSearchParams(),
 }));
+
+vi.mock("@/components/views/print/PrintViewToolbar", () => ({
+  PrintViewToolbar: () => null,
+}));
+
+import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/views/print/PrintViewDocument";
 import type { ResolvedView } from "@/lib/config/types";
 
 const view: ResolvedView = {
@@ -265,7 +270,8 @@ describe("PrintViewDocument", () => {
     expect(sectionsHtml).toContain("print-export--sections");
     expect(sectionsHtml).toContain("print-column-chunk");
     expect(wideHtml).toContain("print-export--wide");
-    expect(wideHtml).not.toContain("print-column-chunk");
+    // CSS still mentions print-column-chunk; assert the markup has no chunk wrappers.
+    expect(wideHtml).not.toMatch(/class="[^"]*print-column-chunk/);
     expect(wideHtml).toContain("Extra 7");
   });
 });
