@@ -58,10 +58,10 @@
       "brace-expansion": "1.1.13"
     },
     "tinyglobby": {
-      "picomatch": "4.0.4"
+      "picomatch": "4.0.5"
     },
     "vitest": {
-      "picomatch": "4.0.4"
+      "picomatch": "4.0.5"
     }
   }
 }
