@@ -219,7 +219,7 @@ export function mockDeleteRows(sheetId: string | number, rowIds: (string | numbe
   return { message: "SUCCESS", result: [...ids] };
 }
 
-export function mockSendUpdateRequest(sheetId: string | number, payload: { rowIds: number[]; columnIds: number[]; message?: string; sendTo?: { email: string; }[]; }) {
+export function mockSendUpdateRequest(_sheetId: string | number, _payload: { rowIds: number[]; columnIds: number[]; message?: string; sendTo?: { email: string; }[]; }) {
   return { message: "SUCCESS", result: { id: nextId() } };
 }
 
@@ -269,7 +269,7 @@ export function mockListWorkspaces() {
   return [{ id: 1, name: "WSU Graduate School", permalink: "https://demo.local/ws/1" }];
 }
 
-export function mockListFolderChildren(folderId: string | number) {
+export function mockListFolderChildren(_folderId: string | number) {
   return [
     { id: 101, name: "Forms", type: "folder" },
     { id: Number(SAMPLE_SHEET_ID), name: "WSU Nomination Form (Sample)", type: "sheet" },
@@ -286,7 +286,7 @@ export function mockGetSheetPath(sheetId: string | number) {
   };
 }
 
-export function mockMoveSheet(sheetId: string | number, folderId: string | number) {
+export function mockMoveSheet(_sheetId: string | number, _folderId: string | number) {
   return { message: "SUCCESS" };
 }
 
@@ -338,7 +338,7 @@ export function mockSearch(query: string) {
   return results;
 }
 
-export function mockListEvents(since: string | undefined) {
+export function mockListEvents(_since: string | undefined) {
   return { data: [], morePolling: false, lastEventId: "demo-0" };
 }
 
@@ -398,7 +398,7 @@ export function mockMoveRows(sheetId: string | number, rowIds: number[], toSheet
   return { message: "SUCCESS" };
 }
 
-export function mockSendRowEmail(sheetId: string | number, rowIds: number[]) {
+export function mockSendRowEmail(_sheetId: string | number, _rowIds: number[]) {
   return { message: "SUCCESS" };
 }
 
@@ -418,7 +418,7 @@ export function mockUpdateReport(reportId: string | number, body: Record<string,
   return { result: { id: Number(reportId), ...body } };
 }
 
-export function mockDeleteReport(reportId: string | number) {
+export function mockDeleteReport(_reportId: string | number) {
   return { message: "SUCCESS" };
 }
 
