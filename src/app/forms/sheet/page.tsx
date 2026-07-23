@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import {
@@ -14,6 +14,22 @@ import { SubmissionDetailModal } from "@/components/forms/tracker/SubmissionDeta
 type FormOption = { id: string; name: string };
 
 export default function SheetViewPage() {
+  return (
+    <Suspense
+      fallback={
+        <FormsWorkspaceChrome>
+          <div className="flex min-h-[12rem] items-center justify-center rounded-xl border border-[color:var(--wsu-border)] bg-white">
+            <p className="text-sm text-[color:var(--wsu-muted)]">Loading sheet grid…</p>
+          </div>
+        </FormsWorkspaceChrome>
+      }
+    >
+      <SheetViewPageContent />
+    </Suspense>
+  );
+}
+
+function SheetViewPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlSheetId = searchParams.get("sheetId")?.trim() ?? "";
