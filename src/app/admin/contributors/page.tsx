@@ -1,11 +1,19 @@
+import { resolveAdminTablePage } from "@/components/admin/AdminDataTable";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listContributorUsers } from "@/lib/contributor-auth";
 import { ContributorAccountsManager } from "./ContributorAccountsManager";
 
-export default async function AdminContributorsPage() {
+export default async function AdminContributorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string }>;
+}) {
   await requireAdminPageAccess("/admin/contributors");
+
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
 
   let users: Awaited<ReturnType<typeof listContributorUsers>> = [];
   let dbError: string | null = null;
@@ -15,6 +23,12 @@ export default async function AdminContributorsPage() {
   } catch (err) {
     dbError = err instanceof Error ? err.message : "Unable to load contributor accounts.";
   }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredUsers = normalizedQuery
+    ? users.filter((user) => user.email.toLowerCase().includes(normalizedQuery))
+    : users;
+  const page = resolveAdminTablePage(params.page, filteredUsers.length);
 
   return (
     <div className="space-y-6">
@@ -32,7 +46,7 @@ export default async function AdminContributorsPage() {
           <p className="font-medium">Contributor editing requires DATABASE_URL.</p>
           <p className="mt-1 text-xs">{dbError}</p>
         </div>
-      ) : users.length === 0 ? (
+      ) : users.length === 0 && !normalizedQuery ? (
         <EmptyState
           icon={<span className="text-sm font-semibold">C</span>}
           title="No contributors yet"
@@ -41,9 +55,7 @@ export default async function AdminContributorsPage() {
           variant="panel"
         />
       ) : (
-        <div className="rounded-xl border border-line bg-surface p-4 sm:p-5">
-          <ContributorAccountsManager users={users} />
-        </div>
+        <ContributorAccountsManager users={users} page={page} query={query} />
       )}
     </div>
   );
