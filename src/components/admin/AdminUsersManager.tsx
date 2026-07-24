@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useToast } from "@/components/admin/Toast";
+import { useMemo, useState } from "react";
+import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
 import type { AdminAccountSummary, ManagedAdminStorageMode, ManagedAdminUserSummary } from "@/lib/admin-users";
 
 interface AdminUsersManagerProps {
@@ -19,7 +21,11 @@ interface UserFormState {
 }
 
 const USERNAME_PATTERN = "^[a-z0-9._@-]+$";
-const PASSWORD_HINT = "At least 8 characters, with one uppercase letter, one number, and one special character such as !, *, or _.";
+const PASSWORD_HINT =
+  "At least 8 characters, with one uppercase letter, one number, and one special character such as !, *, or _.";
+
+const inputClass =
+  "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson";
 
 function emptyForm(): UserFormState {
   return {
@@ -47,42 +53,70 @@ function formatTimestamp(value: string) {
 
 function buildErrorMessage(payload: { message?: string; error?: string; errors?: string[] } | null) {
   const lead = payload?.message ?? payload?.error ?? "Request failed.";
-  if (!payload?.errors?.length) {
-    return lead;
-  }
-
+  if (!payload?.errors?.length) return lead;
   return `${lead} ${payload.errors.join(" ")}`;
 }
 
-export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, storageMode }: AdminUsersManagerProps) {
+function StatusPill({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
+        active ? "bg-[var(--crimson-soft)] text-crimson" : "bg-[#f4f0f1] text-sub"
+      }`}
+    >
+      {active ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+export function AdminUsersManager({
+  bootstrapUser,
+  initialUsers,
+  ownerLabel,
+  storageMode,
+}: AdminUsersManagerProps) {
   const toast = useToast();
   const [users, setUsers] = useState(() => sortUsers(initialUsers));
   const [form, setForm] = useState<UserFormState>(() => emptyForm());
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
-  const storageLabel = storageMode === "database" ? "Postgres" : "local config files";
-  const storageDescription = storageMode === "database"
-    ? "These users are stored in Postgres and can sign in without changing environment variables. This is the recommended mode for production deployments."
-    : "These users are stored in the app's local config files and can sign in without changing environment variables. For Railway or any production deployment where local files are not durable, switch to Postgres by setting DATABASE_URL.";
-  const passwordStorageDescription = storageMode === "database"
-    ? "Passwords are hashed before they are written to Postgres. Use this form to provision or rotate admin credentials."
-    : "Passwords are hashed before they are written to local config files. Use this form to provision or rotate admin credentials.";
+  const storageLabel = storageMode === "database" ? "Postgres" : "Local files";
+  const storageDescription =
+    storageMode === "database"
+      ? "Managed admins are stored in Postgres and can sign in without environment variables."
+      : "Managed admins are stored in local config files. Use DATABASE_URL in production for durable storage.";
 
-  function resetForm() {
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((user) => {
+      const name = (user.displayName ?? "").toLowerCase();
+      return name.includes(q) || user.username.toLowerCase().includes(q);
+    });
+  }, [users, query]);
+
+  function closeModal() {
+    setModalOpen(false);
     setEditingUserId(null);
     setForm(emptyForm());
     setShowPassword(false);
+    setError(null);
   }
 
-  function handleInputChange<Key extends keyof UserFormState>(key: Key, value: UserFormState[Key]) {
-    setForm((current) => ({ ...current, [key]: value }));
+  function openCreate() {
+    setEditingUserId(null);
+    setForm(emptyForm());
+    setShowPassword(false);
+    setError(null);
+    setModalOpen(true);
   }
 
-  function handleEdit(user: ManagedAdminUserSummary) {
+  function openEdit(user: ManagedAdminUserSummary) {
     setEditingUserId(user.id);
     setForm({
       username: user.username,
@@ -92,14 +126,17 @@ export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, sto
     });
     setShowPassword(false);
     setError(null);
-    setSuccess(null);
+    setModalOpen(true);
+  }
+
+  function handleInputChange<Key extends keyof UserFormState>(key: Key, value: UserFormState[Key]) {
+    setForm((current) => ({ ...current, [key]: value }));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsPending(true);
     setError(null);
-    setSuccess(null);
 
     const endpoint = editingUserId ? `/api/admin/users/${editingUserId}` : "/api/admin/users";
     const method = editingUserId ? "PUT" : "POST";
@@ -107,9 +144,7 @@ export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, sto
     try {
       const response = await fetch(endpoint, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: form.username,
           displayName: form.displayName,
@@ -133,16 +168,9 @@ export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, sto
       }
 
       const savedUser = payload.user;
-      setUsers((current) =>
-        sortUsers([
-          ...current.filter((user) => user.id !== savedUser.id),
-          savedUser,
-        ]),
-      );
-      const successMsg = editingUserId ? "Admin user updated." : "Admin user created.";
-      setSuccess(successMsg);
-      toast.addToast(successMsg, "success");
-      resetForm();
+      setUsers((current) => sortUsers([...current.filter((user) => user.id !== savedUser.id), savedUser]));
+      toast.addToast(editingUserId ? "Admin updated." : "Admin created.", "success");
+      closeModal();
     } catch {
       setError("Unable to save the admin user.");
       toast.addToast("Unable to save the admin user.", "error");
@@ -153,35 +181,26 @@ export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, sto
 
   async function handleDelete(user: ManagedAdminUserSummary) {
     const confirmed = window.confirm(`Delete admin account ${user.displayName ?? user.username}?`);
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setIsPending(true);
-    setError(null);
-    setSuccess(null);
-
     try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-      });
-
-      const payload = (await response.json().catch(() => null)) as { message?: string; error?: string; errors?: string[] } | null;
+      const response = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        error?: string;
+        errors?: string[];
+      } | null;
       if (!response.ok) {
         const msg = buildErrorMessage(payload);
-        setError(msg);
         toast.addToast(msg, "error");
         return;
       }
 
       setUsers((current) => current.filter((entry) => entry.id !== user.id));
-      if (editingUserId === user.id) {
-        resetForm();
-      }
-      setSuccess("Admin user deleted.");
-      toast.addToast("Admin user deleted.", "success");
+      if (editingUserId === user.id) closeModal();
+      toast.addToast("Admin deleted.", "success");
     } catch {
-      setError("Unable to delete the admin user.");
       toast.addToast("Unable to delete the admin user.", "error");
     } finally {
       setIsPending(false);
@@ -189,165 +208,192 @@ export function AdminUsersManager({ bootstrapUser, initialUsers, ownerLabel, sto
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-      <section className="space-y-4">
-        <article className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">Owner access</p>
-          <h2 className="mt-2 text-2xl font-semibold text-[color:var(--wsu-ink)]">Bootstrap owner</h2>
-          <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">
-            {ownerLabel} can sign in with the environment-configured owner account and manage additional admins from here.
+    <div className="space-y-6">
+      <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-normal text-[color:var(--wsu-muted)]">Bootstrap owner</p>
+            <p className="mt-1 text-sm font-medium text-ink">{ownerLabel}</p>
+            <p className="mt-1 text-xs text-sub">
+              Environment-configured break-glass account. Read-only here — credentials stay in env vars.
+            </p>
+          </div>
+          <div className="rounded-lg border border-line bg-white px-3 py-2 text-xs text-sub">
+            <span className="font-medium text-ink">Username</span>
+            <p className="mt-0.5 font-mono text-[12px] text-ink">{bootstrapUser?.username ?? "Not configured"}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <label className="relative block min-w-[14rem] max-w-md flex-1">
+            <span className="sr-only">Search admins</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by name or username…"
+              className={inputClass}
+            />
+          </label>
+          <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-sub">
+            {storageLabel}
+          </span>
+        </div>
+        <Button type="button" variant="primary" onClick={openCreate}>
+          Create admin
+        </Button>
+      </div>
+
+      <p className="text-xs text-sub">{storageDescription}</p>
+
+      {filteredUsers.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] px-5 py-12 text-center">
+          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--crimson-line)] bg-white text-sm font-semibold text-crimson">
+            A
+          </div>
+          <h3 className="mt-3 text-sm font-medium text-ink">
+            {query.trim() ? "No admins match your search" : "No managed admins yet"}
+          </h3>
+          <p className="mx-auto mt-1 max-w-[34ch] text-[13px] text-sub">
+            {query.trim()
+              ? "Try a different name or username."
+              : "Create a managed admin so day-to-day work doesn’t depend on the bootstrap owner."}
           </p>
-          <div className="mt-4 rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-4 text-sm text-[color:var(--wsu-muted)]">
-            <p><span className="font-semibold text-[color:var(--wsu-ink)]">Username:</span> {bootstrapUser?.username ?? "Not configured"}</p>
-            <p className="mt-2">This account is read-only in the UI and still comes from environment variables.</p>
-          </div>
-        </article>
-
-        <article className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">Managed access</p>
-              <h2 className="mt-2 text-2xl font-semibold text-[color:var(--wsu-ink)]">Additional admins</h2>
-              <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">{storageDescription}</p>
+          {!query.trim() ? (
+            <div className="mt-4">
+              <Button type="button" variant="primary" onClick={openCreate}>
+                Create admin
+              </Button>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-muted)]">{storageLabel}</span>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
+          ) : null}
+        </div>
+      ) : (
+        <TableShell headers={["Admin", "Username", "Status", "Updated", "Actions"]} columns={5} endAlignLastHeader>
+          <div className="divide-y divide-line">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-5 sm:items-center"
               >
-                New admin
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 space-y-3">
-            {users.map((user) => (
-              <article key={user.id} className="rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">{user.isActive ? "Active" : "Inactive"}</p>
-                    <h3 className="mt-1 text-lg font-semibold text-[color:var(--wsu-ink)]">{user.displayName ?? user.username}</h3>
-                    <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Username: {user.username}</p>
-                    <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Updated: {formatTimestamp(user.updatedAt)}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(user)}
-                      className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(user)}
-                      disabled={isPending}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <div className="min-w-0 sm:col-span-1">
+                  <p className="truncate text-sm font-medium text-ink">{user.displayName ?? user.username}</p>
                 </div>
-              </article>
+                <p className="truncate text-xs text-sub sm:text-sm">{user.username}</p>
+                <div>
+                  <StatusPill active={user.isActive} />
+                </div>
+                <p className="hidden text-xs text-sub sm:block">{formatTimestamp(user.updatedAt)}</p>
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Button type="button" onClick={() => openEdit(user)} disabled={isPending}>
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleDelete(user)}
+                    disabled={isPending}
+                    className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
             ))}
-            {users.length === 0 && <p className="text-sm text-[color:var(--wsu-muted)]">No managed admins yet.</p>}
           </div>
-        </article>
-      </section>
+        </TableShell>
+      )}
 
-      <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">{editingUserId ? "Edit admin" : "Add admin"}</p>
-        <h2 className="mt-2 text-2xl font-semibold text-[color:var(--wsu-ink)]">{editingUserId ? "Update managed admin" : "Create managed admin"}</h2>
-        <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">{passwordStorageDescription}</p>
+      <Modal
+        open={modalOpen}
+        onClose={() => {
+          if (!isPending) closeModal();
+        }}
+        title={editingUserId ? "Edit admin" : "Create admin"}
+        size="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
+          <p className="text-sm text-sub">
+            Passwords are hashed before storage. Any signed-in admin can create and manage these accounts.
+          </p>
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Username</span>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-ink">Username</span>
             <input
               type="text"
               required
               pattern={USERNAME_PATTERN}
               value={form.username}
               onChange={(event) => handleInputChange("username", event.target.value.toLowerCase())}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-base text-[color:var(--wsu-ink)] outline-none transition focus:border-[color:var(--wsu-crimson)] focus:ring-2 focus:ring-[color:rgba(166,15,45,0.12)]"
+              disabled={Boolean(editingUserId) || isPending}
+              className={inputClass}
             />
-            <p className="text-xs text-[color:var(--wsu-muted)]">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</p>
+            <span className="text-xs text-sub">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</span>
           </label>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Display name</span>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-ink">Display name</span>
             <input
               type="text"
               value={form.displayName}
               onChange={(event) => handleInputChange("displayName", event.target.value)}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-base text-[color:var(--wsu-ink)] outline-none transition focus:border-[color:var(--wsu-crimson)] focus:ring-2 focus:ring-[color:rgba(166,15,45,0.12)]"
+              disabled={isPending}
+              className={inputClass}
             />
           </label>
 
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Password</span>
-            <div className="flex overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white focus-within:border-[color:var(--wsu-crimson)] focus-within:ring-2 focus-within:ring-[color:rgba(166,15,45,0.12)]">
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-ink">
+              {editingUserId ? "New password (optional)" : "Password"}
+            </span>
+            <div className="flex overflow-hidden rounded-lg border border-line bg-white focus-within:border-crimson focus-within:ring-1 focus-within:ring-crimson">
               <input
                 type={showPassword ? "text" : "password"}
                 required={!editingUserId}
                 value={form.password}
                 onChange={(event) => handleInputChange("password", event.target.value)}
-                className="w-full px-4 py-3 text-base text-[color:var(--wsu-ink)] outline-none"
+                disabled={isPending}
+                className="w-full px-3 py-2.5 text-sm text-ink outline-none disabled:bg-[#faf7f8]"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((value) => !value)}
-                className="border-l border-[color:var(--wsu-border)] px-4 text-sm font-medium text-[color:var(--wsu-crimson)] transition hover:bg-[color:rgba(166,15,45,0.05)]"
+                disabled={isPending}
+                className="border-l border-line px-3 text-sm font-medium text-crimson transition hover:bg-[var(--crimson-soft)] disabled:opacity-50"
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            <p className="text-xs text-[color:var(--wsu-muted)]">{editingUserId ? `Leave blank to keep the current password. ${PASSWORD_HINT}` : PASSWORD_HINT}</p>
+            <span className="text-xs text-sub">
+              {editingUserId ? `Leave blank to keep the current password. ${PASSWORD_HINT}` : PASSWORD_HINT}
+            </span>
           </label>
 
-          <label className="flex items-center gap-3 rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm text-[color:var(--wsu-ink)]">
+          <label className="flex items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
             <input
               type="checkbox"
               checked={form.isActive}
               onChange={(event) => handleInputChange("isActive", event.target.checked)}
-              className="h-4 w-4 rounded border-[color:var(--wsu-border)] text-[color:var(--wsu-crimson)] focus:ring-[color:var(--wsu-crimson)]"
+              disabled={isPending}
+              className="h-4 w-4 rounded border-line text-crimson focus:ring-crimson"
             />
             Allow this admin to sign in
           </label>
 
-          {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-              {error}
-            </div>
-          )}
+          {error ? (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div>
+          ) : null}
 
-          {success && (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              {success}
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={isPending}
-              className="rounded-full bg-[color:var(--wsu-crimson)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[color:var(--wsu-crimson-dark)] disabled:cursor-not-allowed disabled:bg-[color:rgba(166,15,45,0.45)]"
-            >
-              {isPending ? "Saving..." : editingUserId ? "Save admin" : "Create admin"}
-            </button>
-            {editingUserId && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-full border border-[color:var(--wsu-border)] bg-white px-5 py-3 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
-              >
-                Cancel
-              </button>
-            )}
+          <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" onClick={closeModal} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={isPending}>
+              {isPending ? "Saving…" : editingUserId ? "Save changes" : "Create admin"}
+            </Button>
           </div>
         </form>
-      </section>
+      </Modal>
     </div>
   );
 }

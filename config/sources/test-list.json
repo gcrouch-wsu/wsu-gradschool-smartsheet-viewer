@@ -1,0 +1,20 @@
+{
+  "id": "test-list",
+  "label": "TEST list",
+  "sourceType": "sheet",
+  "smartsheetId": 8803151154990980,
+  "connectionKey": "default",
+  "apiBaseUrl": "https://api.smartsheet.com/2.0",
+  "cacheTtlSeconds": 120,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true,
+    "level": 2
+  },
+  "formsEnabled": true,
+  "formSlug": "test-list",
+  "formPublic": true,
+  "formPublishedAt": "2026-07-15T18:55:38.423Z",
+  "formProvenance": "imported",
+  "formRegisteredAt": "2026-07-14T16:59:26.361Z"
+}

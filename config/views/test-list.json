@@ -1,0 +1,87 @@
+{
+  "id": "test-list",
+  "slug": "test-list",
+  "sourceId": "test-list",
+  "label": "Test List",
+  "layout": "table",
+  "public": true,
+  "tabOrder": 1,
+  "filters": [],
+  "defaultSort": [],
+  "fixedLayout": false,
+  "fields": [
+    {
+      "key": "task_name",
+      "label": "Task Name",
+      "source": {
+        "columnId": 4372959816011652,
+        "columnTitle": "Task Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "due_date",
+      "label": "Due Date",
+      "source": {
+        "columnId": 8876559443382148,
+        "columnTitle": "Due Date",
+        "columnType": "DATE"
+      },
+      "transforms": [
+        {
+          "op": "format_date"
+        }
+      ],
+      "render": {
+        "type": "date"
+      }
+    },
+    {
+      "key": "assigned_to",
+      "label": "Assigned To",
+      "source": {
+        "columnId": 4584066048544644,
+        "columnTitle": "Assigned To",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "status",
+      "label": "Status",
+      "source": {
+        "columnId": 2332266234859396,
+        "columnTitle": "Status",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "comments",
+      "label": "Comments",
+      "source": {
+        "columnId": 6835865862229892,
+        "columnTitle": "Comments",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    }
+  ]
+}

@@ -17,7 +17,8 @@ describe("db rls helpers", () => {
 
     expect(query).toHaveBeenCalledTimes(2);
     expect(query).toHaveBeenNthCalledWith(1, "ALTER TABLE config_views ENABLE ROW LEVEL SECURITY");
-    expect(query.mock.calls[1]?.[0]).toContain("config_views_app_role_access");
+    const secondCall = query.mock.calls[1] as unknown[] | undefined;
+    expect(String(secondCall?.[0] ?? "")).toContain("config_views_app_role_access");
   });
 
   it("rejects unsafe table names", async () => {

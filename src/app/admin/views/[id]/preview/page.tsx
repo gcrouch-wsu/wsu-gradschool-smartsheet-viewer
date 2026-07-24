@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PublicViewRenderer, formatLayoutLabel } from "@/components/public/ViewRenderer";
+import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
 import { requireAdminPageAccess } from "@/lib/admin-page";
-import { LAYOUT_OPTIONS } from "@/lib/config/options";
+import { LAYOUT_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import type { LayoutType } from "@/lib/config/types";
 import { getPublicViewsBySlug } from "@/lib/config/store";
 import { loadAdminViewPreview } from "@/lib/public-view";
@@ -44,28 +44,28 @@ export default async function ViewPreviewPage({
     : preview.resolvedView.layout;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
+    <div className="space-y-5">
+      <section className="rounded-[18px] border border-line bg-surface p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">Preview</p>
-            <h2 className="mt-2 text-3xl font-semibold text-[color:var(--wsu-ink)]">{preview.viewConfig.label}</h2>
-            <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">
+            <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-crimson">Preview</p>
+            <h2 className="mt-1 font-serif text-2xl font-medium text-ink">{preview.viewConfig.label}</h2>
+            <p className="mt-2 text-[13px] text-sub">
               Live preview from {preview.sourceConfig.label} ({preview.sourceName}) with {preview.resolvedView.rowCount} resolved rows.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/admin/views/${preview.viewConfig.id}`} className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]">Back to builder</Link>
+            <Link href={`/admin/views/${preview.viewConfig.id}`} className="rounded-full border border-line-strong bg-white px-4 py-2 text-[13.5px] font-medium text-ink hover:bg-[#faf7f8]">Back to builder</Link>
             {preview.viewConfig.public && (
-              <Link href={publicPageHref} className="rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--wsu-crimson-dark)]">Open public page</Link>
+              <Link href={publicPageHref} className="rounded-full bg-crimson px-4 py-2 text-[13.5px] font-medium text-white hover:bg-[var(--crimson-deep)]">Open public page</Link>
             )}
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-[color:var(--wsu-border)] bg-white p-4 text-sm text-[color:var(--wsu-muted)]">
-          <p><span className="font-semibold text-[color:var(--wsu-ink)]">Fetched:</span> {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(preview.fetchedAt))}</p>
-          <p className="mt-1"><span className="font-semibold text-[color:var(--wsu-ink)]">Layout:</span> {formatLayoutLabel(layout)}</p>
-          <p className="mt-1"><span className="font-semibold text-[color:var(--wsu-ink)]">Publication:</span> {preview.viewConfig.public ? "Published" : "Draft"}</p>
+        <div className="mt-4 rounded-xl border border-line bg-[#fbf9fa] p-4 text-[13px] text-sub">
+          <p><span className="font-medium text-ink">Fetched:</span> {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(preview.fetchedAt))}</p>
+          <p className="mt-1"><span className="font-medium text-ink">Layout:</span> {formatLayoutLabel(layout)}</p>
+          <p className="mt-1"><span className="font-medium text-ink">Publication:</span> {preview.viewConfig.public ? "Published" : "Draft"}</p>
         </div>
 
         {preview.schemaWarnings.length > 0 && (
@@ -88,8 +88,8 @@ export default async function ViewPreviewPage({
               href={`/admin/views/${preview.viewConfig.id}/preview?layout=${option}`}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 option === layout
-                  ? "border-[color:var(--wsu-crimson)] bg-[color:var(--wsu-crimson)] text-white"
-                  : "border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
+                  ? "border-crimson bg-crimson text-white"
+                  : "border-line-strong bg-white text-sub hover:border-[var(--crimson-line)] hover:text-crimson"
               }`}
             >
               {formatLayoutLabel(option)}

@@ -1,16 +1,11 @@
 import Link from "next/link";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
+import { ProductShell } from "@/components/layout/ProductShell";
 import { getCurrentAdminAuthResult } from "@/lib/admin-users";
+import { productNav } from "@/lib/product-navigation";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 
 export const dynamic = "force-dynamic";
-
-const BASE_NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/sources", label: "Sources" },
-  { href: "/admin/views", label: "Views" },
-  { href: "/admin/contributors", label: "Contributors" },
-];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const auth = await getCurrentAdminAuthResult();
@@ -20,50 +15,53 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <>{children}</>;
   }
 
-  const navItems = principal.role === "owner"
-    ? [...BASE_NAV_ITEMS, { href: "/admin/users", label: "Admins" }]
-    : BASE_NAV_ITEMS;
   const principalLabel = principal.displayName ?? principal.username;
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(166,15,45,0.06),rgba(248,246,243,0.8))] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header className="rounded-[2rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] px-6 py-6 shadow-[0_24px_64px_rgba(35,31,32,0.07)] sm:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--wsu-crimson)]">Smartsheet View</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[color:var(--wsu-ink)]">Admin Builder</h1>
-              <p className="mt-2 max-w-3xl text-sm text-[color:var(--wsu-muted)]">
-                Register Smartsheet sources, build views, preview output, publish safely, and manage admin access.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <div className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-right text-sm text-[color:var(--wsu-muted)]">
-                <p className="font-medium text-[color:var(--wsu-ink)]">{principalLabel}</p>
-                <p>{principal.role === "owner" ? "Bootstrap owner" : "Managed admin"}</p>
-              </div>
-              <Link href="/instructions/admin" className="rounded-full border border-[color:var(--wsu-crimson)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--wsu-crimson)]/8">
-                Admin guide
-              </Link>
-              <Link href="/admin/sources/new" className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]">
-                New source
-              </Link>
-              <Link href="/admin/views/new" className="btn-crimson rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--wsu-crimson-dark)]">
-                New view
-              </Link>
-              <AdminLogoutButton />
-            </div>
-          </div>
-          <nav className="mt-5 flex flex-wrap gap-2">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]">
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </header>
-        <AdminToastWrapper>{children}</AdminToastWrapper>
-      </div>
-    </main>
+    <ProductShell
+      globalNav={productNav(true)}
+      eyebrow="Washington State University"
+      title="Smartsheet Workspace"
+      description="Register sources, build views, manage submissions, and administer approval workflows."
+      identity={
+        <div className="flex w-full min-w-0 items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left transition hover:border-mist xl:w-auto">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
+            {principalLabel.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
+            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">
+              {principal.role === "owner" ? "Owner" : "Admin"}
+            </span>
+          </span>
+        </div>
+      }
+      actions={
+        <>
+          <Link
+            href="/instructions/admin"
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-3 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)] xl:flex-none xl:px-4"
+          >
+            <ToolbarIcon kind="guide" />
+            <span className="xl:hidden">Guide</span>
+            <span className="hidden xl:inline">Admin guide</span>
+          </Link>
+          <AdminLogoutButton />
+        </>
+      }
+    >
+      <AdminToastWrapper>{children}</AdminToastWrapper>
+    </ProductShell>
+  );
+}
+
+function ToolbarIcon({ kind }: { kind: "guide" }) {
+  const paths = {
+    guide: <><path d="M4 4.5A2.5 2.5 0 016.5 2H20v15H6.5A2.5 2.5 0 004 19.5z" /><path d="M4 19.5A2.5 2.5 0 016.5 17H20v5H6.5A2.5 2.5 0 014 19.5z" /></>,
+  };
+  return (
+    <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {paths[kind]}
+    </svg>
   );
 }

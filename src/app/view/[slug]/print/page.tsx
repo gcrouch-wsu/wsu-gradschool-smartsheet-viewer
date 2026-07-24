@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { DisplayTimezoneProvider } from "@/components/public/DisplayTimezoneContext";
-import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/public/PrintViewDocument";
+import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
+import { PrintViewDocument, buildPrintColumnPickerOptions } from "@/components/views/print/PrintViewDocument";
 import {
   loadPublicPageState,
   resolveRequestedResolvedView,
@@ -99,6 +99,7 @@ export default async function PrintExportPage({
         .filter(Boolean)
     : undefined;
   const printCompact = firstValue(resolvedSearchParams.compact) === "1";
+  const printTableLayout = firstValue(resolvedSearchParams.layout) === "wide" ? "wide" : "sections";
   const printView = omitRecordSuppressedRowsFromResolvedView(activeView);
   const printableColumnOptions = buildPrintColumnPickerOptions(printView);
   const singlePublishedView = page.viewConfigs.length === 1;
@@ -118,6 +119,7 @@ export default async function PrintExportPage({
             view={printView}
             printColumnKeys={printColumnKeys && printColumnKeys.length > 0 ? printColumnKeys : undefined}
             printCompact={printCompact}
+            printTableLayout={printTableLayout}
             printableColumnOptions={printableColumnOptions}
           />
         </Suspense>

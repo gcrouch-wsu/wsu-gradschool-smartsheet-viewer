@@ -1270,6 +1270,33 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
     }
   }
 
+  const formsEnabled =
+    input.formsEnabled === undefined ? undefined : asBoolean(input.formsEnabled, true);
+  const formSlug = asOptionalString(input.formSlug);
+  const formPublic =
+    input.formPublic === undefined ? undefined : asBoolean(input.formPublic, false);
+  const formPublishedAt = asOptionalString(input.formPublishedAt);
+  const formRegisteredAt = asOptionalString(input.formRegisteredAt);
+  const formProvenanceRaw = asOptionalString(input.formProvenance);
+  const formProvenanceAllowed = new Set(["template", "scratch", "imported", "sample"]);
+  let formProvenance: SourceConfig["formProvenance"] | undefined;
+  if (formProvenanceRaw) {
+    if (!formProvenanceAllowed.has(formProvenanceRaw)) {
+      errors.push('formProvenance must be "template", "scratch", "imported", or "sample".');
+    } else {
+      formProvenance = formProvenanceRaw as SourceConfig["formProvenance"];
+    }
+  }
+
+  if (sourceType === "report") {
+    if (formPublic) {
+      errors.push("Reports cannot be published as forms.");
+    }
+    if (formsEnabled === true) {
+      errors.push("Reports cannot be enabled for Forms (sheets only).");
+    }
+  }
+
   return {
     success: errors.length === 0,
     errors,
@@ -1289,6 +1316,12 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
             includeColumnOptions: asBoolean(fetchOptionsInput.includeColumnOptions, true),
             level,
           },
+          ...(formsEnabled !== undefined ? { formsEnabled } : {}),
+          ...(formSlug ? { formSlug } : {}),
+          ...(formPublic !== undefined ? { formPublic } : {}),
+          ...(formPublishedAt ? { formPublishedAt } : {}),
+          ...(formProvenance ? { formProvenance } : {}),
+          ...(formRegisteredAt ? { formRegisteredAt } : {}),
         },
   };
 }

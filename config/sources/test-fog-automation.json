@@ -1,0 +1,19 @@
+{
+  "id": "test-fog-automation",
+  "label": "Test_FOG_Automation",
+  "sourceType": "sheet",
+  "smartsheetId": 1292742352129924,
+  "connectionKey": "default",
+  "apiBaseUrl": "https://api.smartsheet.com/2.0",
+  "cacheTtlSeconds": 120,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true,
+    "level": 2
+  },
+  "formsEnabled": true,
+  "formSlug": "test-fog-automation",
+  "formPublic": false,
+  "formProvenance": "imported",
+  "formRegisteredAt": "2026-07-13T08:01:32.028Z"
+}

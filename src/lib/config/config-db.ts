@@ -3,7 +3,6 @@ import type { PublicPageSummary, SourceConfig, ViewConfig } from "@/lib/config/t
 import { normalizePublishedSlug } from "@/lib/slug-normalize";
 import { humanizeSlug } from "@/lib/utils";
 import { validateSourceConfig, validateViewConfig } from "@/lib/config/validation";
-import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 import { buildPgPoolOptions } from "@/lib/pg-connection";
 
 const DATABASE_URL_ENV_VAR = "DATABASE_URL";
@@ -36,60 +35,10 @@ export async function queryConfigDb<T = unknown>(text: string, params?: readonly
   return { rows: result.rows as T[], rowCount: result.rowCount ?? 0 };
 }
 
-let ensureTablesPromise: Promise<void> | null = null;
-
+/** Ensures platform tables exist via versioned migrations (no-op without DATABASE_URL). */
 export async function ensureConfigTables() {
-  if (!ensureTablesPromise) {
-    ensureTablesPromise = (async () => {
-      await queryConfigDb(`
-        CREATE TABLE IF NOT EXISTS config_sources (
-          id TEXT PRIMARY KEY,
-          data JSONB NOT NULL
-        )
-      `);
-      await queryConfigDb(`
-        CREATE TABLE IF NOT EXISTS config_views (
-          id TEXT PRIMARY KEY,
-          data JSONB NOT NULL
-        )
-      `);
-      await queryConfigDb(`
-        CREATE TABLE IF NOT EXISTS contributor_users (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          email TEXT UNIQUE NOT NULL,
-          password_hash TEXT NOT NULL,
-          password_salt TEXT NOT NULL,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
-      `);
-      await queryConfigDb(`
-        CREATE INDEX IF NOT EXISTS idx_contributor_users_email
-        ON contributor_users(email)
-      `);
-      await queryConfigDb(`
-        ALTER TABLE contributor_users ADD COLUMN IF NOT EXISTS reset_nonce TEXT
-      `);
-      await queryConfigDb(`
-        CREATE TABLE IF NOT EXISTS contributor_login_attempts (
-          ip TEXT NOT NULL,
-          attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )
-      `);
-      await queryConfigDb(`
-        CREATE INDEX IF NOT EXISTS idx_contributor_login_attempts_ip_at
-        ON contributor_login_attempts(ip, attempted_at)
-      `);
-      await ensureCurrentAppRoleRls(queryConfigDb, "config_sources");
-      await ensureCurrentAppRoleRls(queryConfigDb, "config_views");
-      await ensureCurrentAppRoleRls(queryConfigDb, "contributor_users");
-      await ensureCurrentAppRoleRls(queryConfigDb, "contributor_login_attempts");
-    })().catch((err) => {
-      ensureTablesPromise = null;
-      throw err;
-    });
-  }
-  await ensureTablesPromise;
+  const { runDatabaseMigrations } = await import("@/lib/db-migrations");
+  await runDatabaseMigrations();
 }
 
 function parseSourceConfig(value: unknown, id: string): SourceConfig {

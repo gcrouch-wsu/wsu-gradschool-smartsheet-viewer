@@ -1,0 +1,15 @@
+{
+  "id": "test-graduate-leave-standard-rou-copy",
+  "label": "Test - Graduate Leave - Standard(rou) (copy)",
+  "sourceType": "sheet",
+  "smartsheetId": 5580161272467332,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "test-graduate-leave-standard-rou-copy",
+  "formPublic": false,
+  "formProvenance": "template",
+  "formRegisteredAt": "2026-07-22T19:13:06.480Z"
+}

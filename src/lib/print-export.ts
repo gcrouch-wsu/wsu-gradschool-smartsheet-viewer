@@ -2,6 +2,9 @@ import printDefaults from "@/config/print-export-defaults.json";
 
 export type PrintExportConfig = typeof printDefaults;
 
+/** Print page table layout: chunked PDF sections vs one sideways-scrolling table. */
+export type PrintTableLayout = "sections" | "wide";
+
 /** Editable defaults: `src/config/print-export-defaults.json` */
 export function getPrintExportConfig(): PrintExportConfig {
   return printDefaults;
@@ -38,6 +41,7 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     --print-td-weight: ${table.cellFontWeight};
     --print-td-primary-weight: ${table.primaryColumnFontWeight};
     --print-td-padding: ${table.cellPadding};
+    --print-td-minw: ${table.minCellWidth};
     --print-td-maxw: ${table.maxCellWidth};
     --print-td-border-b: ${table.bodyBorderBottom};
     --print-td-border-r: ${table.gridBorderRight};
@@ -85,9 +89,10 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     color: var(--print-muted) !important;
   }
 
-  /* Screen + print: table shell */
+  /* Screen + print: natural table width — avoid forcing 100% (browsers shrink wide tables when printing) */
   .print-export .print-data-table {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-family: var(--print-table-font) !important;
@@ -95,6 +100,16 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     line-height: var(--print-td-lh) !important;
     table-layout: auto;
     color: var(--print-ink) !important;
+  }
+  /* Full-table preview: keep column widths and scroll sideways on screen */
+  .print-export.print-export--wide .print-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .print-export.print-export--wide .print-data-table {
+    max-width: none;
+    width: max-content;
+    min-width: 100%;
   }
   .print-export .print-data-table caption {
     text-align: left;
@@ -116,6 +131,10 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     padding: var(--print-td-padding) !important;
     vertical-align: bottom;
     color: var(--print-ink) !important;
+    min-width: var(--print-td-minw);
+    max-width: var(--print-td-maxw);
+    white-space: normal;
+    hyphens: manual;
   }
   .print-export .print-data-table thead th:last-child {
     border-right: none !important;
@@ -131,6 +150,7 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     background: #fff !important;
     padding: var(--print-td-padding) !important;
     vertical-align: top;
+    min-width: var(--print-td-minw);
     max-width: var(--print-td-maxw);
     color: var(--print-ink) !important;
   }
@@ -141,20 +161,34 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
     background: #fff !important;
     padding: var(--print-td-padding) !important;
     vertical-align: top;
+    min-width: var(--print-td-minw);
     max-width: var(--print-td-maxw);
     font-size: var(--print-td-size) !important;
     font-weight: var(--print-td-weight) !important;
     line-height: var(--print-td-lh) !important;
     color: var(--print-ink) !important;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    /* Prefer natural word breaks — avoid letter-by-letter stacking in narrow columns */
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: manual;
   }
   .print-export .print-data-table tbody td:last-child {
     border-right: none !important;
   }
   .print-export .print-data-table tbody th[scope="row"] {
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .print-export .print-data-table .print-cell-inner {
+    max-width: 100%;
+  }
+  /* Badges / pills should not crush to a single character width */
+  .print-export .print-data-table .print-cell-inner .inline-flex,
+  .print-export .print-data-table .print-cell-inner [class*="rounded-full"] {
+    max-width: 100%;
+    white-space: normal;
+    height: auto;
+    text-align: left;
   }
 
   /* Reset FieldValue / theme inside cells (program, campus, people blocks, etc.) */
@@ -199,15 +233,18 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
 
   @media print {
     .no-print { display: none !important; }
-    body {
+    html, body {
       background: white !important;
+      overflow: visible !important;
       /* economy: let the browser strip decorative fills; we rely on explicit white overrides below */
       -webkit-print-color-adjust: economy;
       print-color-adjust: economy;
     }
     .print-export.print-root {
       max-width: none !important;
+      width: 100% !important;
       padding: 0 !important;
+      overflow: visible !important;
     }
     .print-export .print-table-wrap {
       overflow: visible !important;
@@ -215,9 +252,21 @@ export function buildPrintExportStylesheet(config: PrintExportConfig): string {
       border: none !important;
       background: transparent !important;
       padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
     .print-export .print-data-table {
       border: none !important;
+      width: auto !important;
+      max-width: none !important;
+    }
+    .print-export .print-column-chunk {
+      break-before: page;
+      page-break-before: always;
+    }
+    .print-export .print-column-chunk:first-child {
+      break-before: auto;
+      page-break-before: auto;
     }
     .print-export .print-data-table thead {
       display: table-header-group;

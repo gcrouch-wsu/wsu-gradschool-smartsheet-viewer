@@ -1,19 +1,18 @@
-import { AdminBreadcrumbs } from "@/components/admin/AdminBreadcrumbs";
 import { AdminUsersManager } from "@/components/admin/AdminUsersManager";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getManagedAdminStorageMode, listAdminAccounts } from "@/lib/admin-users";
 
 export default async function AdminUsersPage() {
-  const principal = await requireAdminPageAccess("/admin/users", { ownerOnly: true });
+  const principal = await requireAdminPageAccess("/admin/users");
   const accounts = await listAdminAccounts();
 
   return (
-    <>
-      <AdminBreadcrumbs
-        items={[
-          { href: "/admin", label: "Dashboard" },
-          { href: null, label: "Admins" },
-        ]}
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Admin builder"
+        title="Admins"
+        description="Bootstrap owner plus managed admins who can run sources, views, and forms. Everyone signs in at /sign-in."
       />
       <AdminUsersManager
         bootstrapUser={accounts.bootstrap}
@@ -21,6 +20,6 @@ export default async function AdminUsersPage() {
         ownerLabel={principal.displayName ?? principal.username}
         storageMode={getManagedAdminStorageMode()}
       />
-    </>
+    </div>
   );
 }

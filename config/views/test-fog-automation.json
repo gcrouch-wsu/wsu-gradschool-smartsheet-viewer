@@ -1,0 +1,208 @@
+{
+  "id": "test-fog-automation",
+  "slug": "test-fog-automation",
+  "sourceId": "test-fog-automation",
+  "label": "Test_FOG_Automation",
+  "layout": "table",
+  "public": true,
+  "tabOrder": 1,
+  "filters": [],
+  "defaultSort": [],
+  "fixedLayout": false,
+  "fields": [
+    {
+      "key": "nominated_faculty_member_nfm_name",
+      "label": "Nominated Faculty Member (NFM) Name",
+      "source": {
+        "columnId": 7959289377623940,
+        "columnTitle": "Nominated Faculty Member (NFM) Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "pdf_title",
+      "label": "PDF Title",
+      "source": {
+        "columnId": 8240764354334596,
+        "columnTitle": "PDF Title",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "signature_authority_email",
+      "label": "Signature Authority Email",
+      "source": {
+        "columnId": 2611264820121476,
+        "columnTitle": "Signature Authority Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "signature_authority_name",
+      "label": "Signature Authority Name",
+      "source": {
+        "columnId": 4863064633806724,
+        "columnTitle": "Signature Authority Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "academic_coordinator_email",
+      "label": "Academic Coordinator Email",
+      "source": {
+        "columnId": 359465006436228,
+        "columnTitle": "Academic Coordinator Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "academic_coordinator_name",
+      "label": "Academic Coordinator Name",
+      "source": {
+        "columnId": 8522239331045252,
+        "columnTitle": "Academic Coordinator Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "grad_program",
+      "label": "Grad Program",
+      "source": {
+        "columnId": 4018639703674756,
+        "columnTitle": "Grad Program",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "fgs_new_renewal",
+      "label": "FGS New/Renewal",
+      "source": {
+        "columnId": 6270439517360004,
+        "columnTitle": "FGS New/Renewal",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "fgs_category_requested",
+      "label": "FGS Category Requested",
+      "source": {
+        "columnId": 1766839889989508,
+        "columnTitle": "FGS Category Requested",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "nfm_academic_appointment",
+      "label": "NFM Academic Appointment",
+      "source": {
+        "columnId": 7396339424202628,
+        "columnTitle": "NFM Academic Appointment",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "nfm_highest_degree",
+      "label": "NFM Highest Degree",
+      "source": {
+        "columnId": 2892739796832132,
+        "columnTitle": "NFM Highest Degree",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "nfm_wsu_email",
+      "label": "NFM WSU Email",
+      "source": {
+        "columnId": 5144539610517380,
+        "columnTitle": "NFM WSU Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "nfm_id",
+      "label": "NFM ID",
+      "source": {
+        "columnId": 640939983146884,
+        "columnTitle": "NFM ID",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "form_creation_date",
+      "label": "Form Creation Date",
+      "source": {
+        "columnId": 1367900778958724,
+        "columnTitle": "Form Creation Date",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    }
+  ]
+}

@@ -50,6 +50,8 @@ export interface SourceRoleGroupConfig {
   };
 }
 
+export type FormProvenance = "template" | "scratch" | "imported" | "sample";
+
 export interface SourceConfig {
   id: string;
   label: string;
@@ -65,6 +67,20 @@ export interface SourceConfig {
     includeColumnOptions?: boolean;
     level?: number;
   };
+  /**
+   * When false, sheet is views-only. Omit/true = available in Forms for sheet sources.
+   * Ignored for reports (forms never use reports).
+   */
+  formsEnabled?: boolean;
+  /** Public path segment for `/f/[slug]` (sheets only). */
+  formSlug?: string;
+  /** When true, anonymous users may load/submit via the public form URL. */
+  formPublic?: boolean;
+  formPublishedAt?: string;
+  /** How this sheet entered the Forms workspace. */
+  formProvenance?: FormProvenance;
+  /** ISO timestamp when first registered for Forms (maps to FormEntry.createdAt). */
+  formRegisteredAt?: string;
 }
 
 export interface FieldSourceSelector {

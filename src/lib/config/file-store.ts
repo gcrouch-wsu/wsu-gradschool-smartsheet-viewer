@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { PublicPageSummary, SourceConfig, ViewConfig } from "@/lib/config/types";
 import { normalizePublishedSlug } from "@/lib/slug-normalize";
@@ -46,13 +46,28 @@ async function readConfigDir<T>(folderName: "sources" | "views", parser: (value:
     .map((entry) => entry.name)
     .sort();
 
-  return Promise.all(
-    files.map(async (fileName) => {
+  const results: Array<T | null> = await Promise.all(
+    files.map(async (fileName): Promise<T | null> => {
       const filePath = path.join(folderPath, fileName);
-      const raw = await readFile(filePath, "utf8");
-      return parser(JSON.parse(stripBom(raw)) as unknown, fileName);
-    })
+      try {
+        const raw = await readFile(filePath, "utf8");
+        const trimmed = stripBom(raw).trim();
+        if (!trimmed) {
+          console.warn(`[config] Skipping empty ${folderName} file: ${fileName}`);
+          return null;
+        }
+        return parser(JSON.parse(trimmed) as unknown, fileName);
+      } catch (error) {
+        console.warn(
+          `[config] Skipping invalid ${folderName} file ${fileName}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        return null;
+      }
+    }),
   );
+  return results.filter((item): item is T => item != null);
 }
 
 function parseSourceConfig(value: unknown, fileName: string): SourceConfig {
@@ -73,7 +88,16 @@ function parseViewConfig(value: unknown, fileName: string, knownSourceIds: strin
 
 async function writePrettyJson(folderName: "sources" | "views", id: string, value: unknown) {
   await ensureConfigDir(folderName);
-  await writeFile(configFilePath(folderName, id), `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  const target = configFilePath(folderName, id);
+  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  await writeFile(temp, payload, "utf8");
+  try {
+    await rename(temp, target);
+  } catch {
+    await unlink(target).catch(() => undefined);
+    await rename(temp, target);
+  }
 }
 
 async function deleteConfigFile(folderName: "sources" | "views", id: string) {

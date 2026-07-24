@@ -19,6 +19,7 @@ Staff manage data in Smartsheet as they always have - no changes to their workfl
 - **Public accessibility**: Skip link, search **live regions**, landmark/nav labels, table **captions** / **scope**, **dialog** focus trap and return focus from **Edit**, **tab**/**tabpanel** patterns on public views.
 - **Header branding (admin)**: In **Setup** > **Page header & branding**, optional PNG/JPEG logo (at most 256KB, **alt text** required for save) plus optional **two text lines** beside the logo (organization + unit), with a vertical rule - stored in view config. Shown at the top of the public header when visible.
 - **Instruction pages**: `/instructions/contributor` (opens from a link on public views when enabled; no login to read) and `/instructions/admin` (linked from the admin nav as **Setup guide**) - static, accessible guides that deploy with the app.
+- **Public Smartsheet forms** (`/forms`): create from template/scratch, edit fields and allowed email domains in the Builder, then **Publish** from Manage to share `/f/[slug]`. Anonymous submits write rows to Smartsheet (independent of which form is “Active” for admin testing). Optional Cloudflare Turnstile via `FORMS_TURNSTILE_*` env vars. **Approvals:** this app does not send approval emails. Put a Contact (or Email) field on the form for the approver; configure Smartsheet **Automation → Request an approval** to send to **contacts in that column**. Prefer cloning a template that already has those rules (pick the template sheet when creating the form). From-scratch sheets need automations added later in Smartsheet. Status values should use **Approved** / **Declined** so the Grid stays in sync. Grid Approve/Decline is a staff override on the same columns.
 
 ## Getting Started
 
@@ -117,7 +118,8 @@ Set these in the Railway service (and any preview/staging environment you use):
 | `SMARTSHEET_API_BASE_URL` | Optional Smartsheet API base URL override. Use only Smartsheet’s official API bases, for example `https://api.smartsheet.com/2.0` (US) or `https://api.smartsheet.eu/2.0` (EU); other hosts are rejected. |
 | `SMARTSHEETS_VIEW_PUBLIC_BASE_URL` | Optional explicit external origin for `{{PUBLIC_URL}}` links in custom headers; useful behind unusual proxies or load balancers |
 | `SMARTSHEETS_VIEW_TRUST_PROXY_HEADERS` | Optional override for login rate-limit IP detection and forwarded host/proto trust. Railway / Vercel proxy headers are trusted automatically; set to `true` or `false` explicitly on unusual proxy setups |
-| `SMARTSHEETS_VIEW_DATABASE_INSECURE_SSL` | Optional. Set to `true` only if Postgres TLS verification fails in production and you accept relaxed certificate verification after a security review. Prefer fixing `DATABASE_URL` or provider certificates. |
+| `ALLOWED_DOMAINS` | Default allowed email domains for forms (comma-separated; defaults to `wsu.edu`). Per-form overrides in Form Builder. |
+| `FORMS_TURNSTILE_SITE_KEY` / `FORMS_TURNSTILE_SECRET` | Optional Cloudflare Turnstile for public `/f/[slug]` submits. When secret is set, captcha is required. |
 
 Without **`DATABASE_URL`** on Railway or any other environment with non-durable local files, sources and views cannot be persisted reliably, and managed admin users / contributor accounts will not work as intended.
 

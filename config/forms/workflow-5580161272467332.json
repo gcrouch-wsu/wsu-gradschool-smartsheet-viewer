@@ -1,0 +1,23 @@
+{
+  "approvalStages": [
+    "Director Status",
+    "Signature Authority Status",
+    "Academic Coordinator Status"
+  ],
+  "overallColumn": "Overall Stage",
+  "approvedValues": [
+    "Approved",
+    "Signed",
+    "Complete",
+    "Starred",
+    "Yes"
+  ],
+  "declinedValues": [
+    "Declined",
+    "Rejected",
+    "Denied"
+  ],
+  "excludeFromForm": [
+    "Status"
+  ]
+}

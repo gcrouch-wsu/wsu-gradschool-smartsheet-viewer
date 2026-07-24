@@ -99,6 +99,15 @@ export const HEADER_TOP_BORDER_WIDTH_OPTIONS: { value: string; label: string }[]
 ];
 
 export const LAYOUT_OPTIONS: LayoutType[] = ["table", "cards", "list", "tabbed", "stacked", "accordion", "list_detail"];
+
+/** Human-readable label for a layout id (e.g. list_detail → List Detail). Safe for server and client. */
+export function formatLayoutLabel(layout: LayoutType) {
+  return layout
+    .split("_")
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+}
+
 export const RENDER_TYPE_OPTIONS: RenderType[] = [
   "text",
   "multiline_text",

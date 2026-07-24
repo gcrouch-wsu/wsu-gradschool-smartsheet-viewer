@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { useToast } from "@/components/admin/Toast";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useToast } from "@/components/ui/Toast";
+import { DataTable } from "@/components/ui/Table";
 import {
   countDelimitedRoleAttributes,
   detectNumberedRoleGroupsFromColumns,
@@ -13,6 +14,252 @@ import {
 import type { SmartsheetSchemaSummary } from "@/lib/smartsheet";
 import type { FieldSourceSelector, SmartsheetColumn, SourceConfig, SourceRoleGroupConfig } from "@/lib/config/types";
 import { slugify } from "@/lib/utils";
+
+type CatalogItem = { id: number; name: string };
+
+function SmartsheetResourcePicker({
+  sourceType,
+  connectionKey,
+  apiBaseUrl,
+  smartsheetId,
+  onSelect,
+}: {
+  sourceType: SourceConfig["sourceType"];
+  connectionKey?: string;
+  apiBaseUrl?: string;
+  smartsheetId: number;
+  onSelect: (item: CatalogItem) => void;
+}) {
+  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualId, setManualId] = useState(smartsheetId > 0 ? String(smartsheetId) : "");
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const selected = useMemo(
+    () => items.find((item) => item.id === smartsheetId) ?? null,
+    [items, smartsheetId],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (item) => item.name.toLowerCase().includes(q) || String(item.id).includes(q),
+    );
+  }, [items, query]);
+
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ type: sourceType });
+      if (connectionKey?.trim()) params.set("connectionKey", connectionKey.trim());
+      if (apiBaseUrl?.trim()) params.set("apiBaseUrl", apiBaseUrl.trim());
+      const response = await fetch(`/api/admin/smartsheet/catalog?${params}`, {
+        credentials: "include",
+      });
+      const text = await response.text();
+      let payload: { items?: CatalogItem[]; error?: string; message?: string } = {};
+      if (text) {
+        try {
+          payload = JSON.parse(text) as { items?: CatalogItem[]; error?: string; message?: string };
+        } catch {
+          throw new Error(
+            response.ok
+              ? `Could not load ${sourceType}s.`
+              : `Could not load ${sourceType}s (${response.status}). Sign in again if needed.`,
+          );
+        }
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || payload.message || `Could not load ${sourceType}s (${response.status}).`);
+      }
+      setItems(Array.isArray(payload.items) ? payload.items : []);
+    } catch (e: unknown) {
+      setItems([]);
+      setError(e instanceof Error ? e.message : `Could not load ${sourceType}s.`);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBaseUrl, connectionKey, sourceType]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadCatalog();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [loadCatalog]);
+
+  useEffect(() => {
+    setQuery("");
+    setOpen(false);
+    setManualMode(false);
+  }, [sourceType]);
+
+  useEffect(() => {
+    setManualId(smartsheetId > 0 ? String(smartsheetId) : "");
+  }, [smartsheetId]);
+
+  useEffect(() => {
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, []);
+
+  const displayValue = open
+    ? query
+    : selected
+      ? `${selected.name} (ID ${selected.id})`
+      : smartsheetId > 0
+        ? `ID ${smartsheetId}`
+        : "";
+
+  if (manualMode) {
+    return (
+      <div className="flex flex-col gap-2" ref={rootRef}>
+        <div className="flex h-6 items-center justify-between gap-2">
+          <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
+          <button
+            type="button"
+            className="shrink-0 whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
+            onClick={() => setManualMode(false)}
+          >
+            Use searchable list
+          </button>
+        </div>
+        <input
+          type="number"
+          value={manualId}
+          onChange={(event) => {
+            const next = event.target.value;
+            setManualId(next);
+            const id = Number(next);
+            if (Number.isFinite(id) && id > 0) {
+              onSelect({ id, name: selected?.name ?? "" });
+            }
+          }}
+          placeholder="From sheet/report URL"
+          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+        />
+        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
+          Numeric ID from the Smartsheet URL when the resource isn&apos;t in the list.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2" ref={rootRef}>
+      <div className="flex h-6 items-center justify-between gap-2">
+        <span className="truncate text-sm font-medium text-[color:var(--wsu-ink)]">
+          {sourceType === "report" ? "Smartsheet report" : "Smartsheet sheet"}
+        </span>
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            className="whitespace-nowrap text-xs font-medium text-[color:var(--wsu-muted)] hover:text-wsu-crimson hover:underline disabled:opacity-50"
+            onClick={() => void loadCatalog()}
+            disabled={loading}
+          >
+            {loading ? "Loading…" : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
+            onClick={() => {
+              setManualMode(true);
+              setOpen(false);
+            }}
+          >
+            Enter ID manually
+          </button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <input
+          role="combobox"
+          aria-expanded={open}
+          aria-controls="smartsheet-catalog-listbox"
+          aria-autocomplete="list"
+          value={displayValue}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+            if (selected) setQuery("");
+          }}
+          placeholder={loading ? `Loading ${sourceType}s…` : `Search ${sourceType}s by name or ID…`}
+          disabled={loading && items.length === 0}
+          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+        />
+
+        {open ? (
+          <ul
+            id="smartsheet-catalog-listbox"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[color:var(--wsu-border)] bg-white py-1 shadow-lg"
+          >
+            {filtered.length === 0 ? (
+              <li className="px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
+                {loading ? "Loading…" : error || `No matching ${sourceType}s.`}
+              </li>
+            ) : (
+              filtered.slice(0, 100).map((item) => {
+                const isActive = item.id === smartsheetId;
+                return (
+                  <li key={item.id} role="option" aria-selected={isActive}>
+                    <button
+                      type="button"
+                      className={[
+                        "flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-[color:var(--wsu-stone)]",
+                        isActive ? "bg-wsu-crimson/5 text-wsu-crimson" : "text-[color:var(--wsu-ink)]",
+                      ].join(" ")}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onSelect(item);
+                        setQuery("");
+                        setOpen(false);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
+                      <span className="shrink-0 text-xs text-[color:var(--wsu-muted)]">ID {item.id}</span>
+                    </button>
+                  </li>
+                );
+              })
+            )}
+            {filtered.length > 100 ? (
+              <li className="border-t border-[color:var(--wsu-border)] px-4 py-2 text-xs text-[color:var(--wsu-muted)]">
+                Showing first 100 matches — type to narrow the list.
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+      </div>
+
+      {error && !loading ? (
+        <p className="min-h-4 text-xs text-amber-800">{error}</p>
+      ) : (
+        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
+          {items.length
+            ? `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
+            : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function buildInitialState(source: SourceConfig | null, connectionKeys: string[]): SourceConfig {
   return (
@@ -598,28 +845,55 @@ export function SourceForm({
             />
             <p className="text-xs text-[color:var(--wsu-muted)]">Display name shown in the admin UI. Editable anytime.</p>
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Source type</span>
-            <select
-              value={form.sourceType}
-              onChange={(event) => update("sourceType", event.target.value as SourceConfig["sourceType"])}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
-            >
-              <option value="sheet">Sheet</option>
-              <option value="report">Report</option>
-            </select>
-          </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
-            <input
-              type="number"
-              value={form.smartsheetId || ""}
-              onChange={(event) => update("smartsheetId", Number(event.target.value) || 0)}
-              placeholder="From sheet/report URL"
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+          <div className="contents">
+            <div className="flex flex-col gap-2">
+              <div className="flex h-6 items-center">
+                <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Source type</span>
+              </div>
+              <select
+                value={form.sourceType}
+                onChange={(event) => {
+                  const sourceType = event.target.value as SourceConfig["sourceType"];
+                  setForm((current) => ({
+                    ...current,
+                    sourceType,
+                    // Clear selection when switching sheet ↔ report to avoid mismatched IDs.
+                    smartsheetId: 0,
+                  }));
+                  setSchema(null);
+                  setSchemaError("");
+                }}
+                className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+              >
+                <option value="sheet">Sheet</option>
+                <option value="report">Report</option>
+              </select>
+            </div>
+            <SmartsheetResourcePicker
+              sourceType={form.sourceType}
+              connectionKey={form.connectionKey}
+              apiBaseUrl={form.apiBaseUrl}
+              smartsheetId={form.smartsheetId}
+              onSelect={(item) => {
+                setForm((current) => {
+                  const canAutofillName = Boolean(item.name?.trim()) && !/^Smartsheet \d+$/i.test(item.name.trim());
+                  const nextLabel = current.label.trim() || (canAutofillName ? item.name.trim() : current.label);
+                  const nextId =
+                    isNew && !current.id.trim() && canAutofillName
+                      ? slugify(item.name) || current.id
+                      : current.id;
+                  return {
+                    ...current,
+                    smartsheetId: item.id,
+                    label: nextLabel,
+                    id: nextId,
+                  };
+                });
+                setSchema(null);
+                setSchemaError("");
+              }}
             />
-            <p className="text-xs text-[color:var(--wsu-muted)]">Numeric ID from the Smartsheet URL: app.smartsheet.com/sheets/XXXXXXXX or .../reports/XXXXXXXX</p>
-          </label>
+          </div>
           <label className="space-y-2 text-sm">
             <span className="font-medium text-[color:var(--wsu-ink)]">Connection key</span>
             <input
@@ -723,26 +997,34 @@ export function SourceForm({
               </p>
             )}
             <div className="overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white">
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-[color:var(--wsu-stone)]/70 text-[color:var(--wsu-muted)]">
-                    <tr>
-                      <th className="px-4 py-3">Title</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3">ID</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schema.columns.map((column) => (
-                      <tr key={column.id} className="border-t border-[color:var(--wsu-border)]/60">
-                        <td className="px-4 py-3 text-[color:var(--wsu-ink)]">{column.title}</td>
-                        <td className="px-4 py-3">{column.type}</td>
-                        <td className="px-4 py-3 font-mono text-xs">{column.id}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                columns={[
+                  {
+                    id: "title",
+                    header: "Title",
+                    headerClassName: "py-3",
+                    cell: (column) => column.title,
+                  },
+                  {
+                    id: "type",
+                    header: "Type",
+                    headerClassName: "py-3",
+                    cell: (column) => column.type,
+                  },
+                  {
+                    id: "id",
+                    header: "ID",
+                    headerClassName: "py-3",
+                    cellClassName: "font-mono text-xs",
+                    cell: (column) => column.id,
+                  },
+                ]}
+                data={schema.columns}
+                getRowKey={(column) => column.id}
+                plainRows
+                headerClassName="bg-[color:var(--wsu-stone)]/70"
+                rowClassName="border-t border-[color:var(--wsu-border)]/60"
+              />
             </div>
           </div>
         ) : (
@@ -893,93 +1175,117 @@ export function SourceForm({
 
                   {roleGroup.mode === "numbered_slots" ? (
                     <div className="mt-3 space-y-3">
-                      <div className="overflow-x-auto rounded-xl border border-[color:var(--wsu-border)]/70">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="bg-[color:var(--wsu-stone)]/30 text-[color:var(--wsu-muted)]">
-                            <tr>
-                              <th className="px-3 py-2 align-bottom">Slot ID</th>
-                              <th className="px-3 py-2 align-bottom">Name column</th>
-                              <th className="px-3 py-2 align-bottom">Email column</th>
-                              <th className="px-3 py-2 align-bottom">Phone column</th>
-                              <th className="px-3 py-2 align-bottom">Campus column</th>
-                              <th className="w-14 px-2 py-2 align-bottom" aria-label="Remove slot" />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(roleGroup.slots ?? []).map((slot, slotIndex) => (
-                              <tr
-                                key={`${roleGroup.id}-slot-row-${slotIndex}`}
-                                className="border-t border-[color:var(--wsu-border)]/60 text-[color:var(--wsu-ink)]"
+                      <DataTable
+                        className="text-xs"
+                        containerClassName="rounded-xl border border-[color:var(--wsu-border)]/70"
+                        columns={[
+                          {
+                            id: "slot",
+                            header: "Slot ID",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <input
+                                value={slot.slot}
+                                onChange={(e) => setNumberedSlotId(roleGroup.id, slotIndex, e.target.value)}
+                                className="w-[6.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 font-mono text-xs"
+                                aria-label={`Slot ${slotIndex + 1} ID for ${roleGroup.label}`}
+                              />
+                            ),
+                          },
+                          {
+                            id: "name",
+                            header: "Name column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-name-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.name}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Name column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "name", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "email",
+                            header: "Email column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-email-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.email}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Email column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "email", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "phone",
+                            header: "Phone column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-phone-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.phone}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Phone column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "phone", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "campus",
+                            header: "Campus column",
+                            headerClassName: "px-3 py-2 align-bottom",
+                            cellClassName: "px-3 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <RoleGroupColumnSelect
+                                htmlId={`${roleGroup.id}-campus-${slotIndex}`}
+                                columns={schemaColumns}
+                                value={slot.campus}
+                                schemaLoaded={schemaLoaded}
+                                accessibilityLabel={`Campus column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
+                                onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "campus", sel)}
+                              />
+                            ),
+                          },
+                          {
+                            id: "remove",
+                            header: <span className="sr-only">Remove slot</span>,
+                            headerClassName: "w-14 px-2 py-2 align-bottom",
+                            cellClassName: "px-2 py-2 align-top",
+                            cell: (slot, slotIndex) => (
+                              <button
+                                type="button"
+                                onClick={() => removeNumberedSlot(roleGroup.id, slotIndex)}
+                                disabled={(roleGroup.slots ?? []).length <= 1}
+                                title={
+                                  (roleGroup.slots ?? []).length <= 1
+                                    ? "Keep at least one slot in the table, or use Remove group above to delete this entire role."
+                                    : undefined
+                                }
+                                aria-label={`Remove slot ${slot.slot || String(slotIndex + 1)} from ${roleGroup.label}`}
+                                className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
                               >
-                                <td className="px-3 py-2 align-top">
-                                  <input
-                                    value={slot.slot}
-                                    onChange={(e) => setNumberedSlotId(roleGroup.id, slotIndex, e.target.value)}
-                                    className="w-[6.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 font-mono text-xs"
-                                    aria-label={`Slot ${slotIndex + 1} ID for ${roleGroup.label}`}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-name-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.name}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Name column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "name", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-email-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.email}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Email column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "email", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-phone-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.phone}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Phone column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "phone", sel)}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 align-top">
-                                  <RoleGroupColumnSelect
-                                    htmlId={`${roleGroup.id}-campus-${slotIndex}`}
-                                    columns={schemaColumns}
-                                    value={slot.campus}
-                                    schemaLoaded={schemaLoaded}
-                                    accessibilityLabel={`Campus column, slot ${slot.slot || String(slotIndex + 1)}, ${roleGroup.label}`}
-                                    onChange={(sel) => updateNumberedSlotAttr(roleGroup.id, slotIndex, "campus", sel)}
-                                  />
-                                </td>
-                                <td className="px-2 py-2 align-top">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeNumberedSlot(roleGroup.id, slotIndex)}
-                                    disabled={(roleGroup.slots ?? []).length <= 1}
-                                    title={
-                                      (roleGroup.slots ?? []).length <= 1
-                                        ? "Keep at least one slot in the table, or use Remove group above to delete this entire role."
-                                        : undefined
-                                    }
-                                    aria-label={`Remove slot ${slot.slot || String(slotIndex + 1)} from ${roleGroup.label}`}
-                                    className="rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40"
-                                  >
-                                    Remove
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                Remove
+                              </button>
+                            ),
+                          },
+                        ]}
+                        data={roleGroup.slots ?? []}
+                        getRowKey={(_slot, slotIndex) => `${roleGroup.id}-slot-row-${slotIndex}`}
+                        plainRows
+                        headerClassName="bg-[color:var(--wsu-stone)]/30"
+                        rowClassName="border-t border-[color:var(--wsu-border)]/60"
+                      />
                       {numberedSlotsHaveDuplicateIds(roleGroup.slots) ? (
                         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                           Two or more rows use the same slot ID. Use a distinct ID per row so contributors and saves align

@@ -45,6 +45,9 @@ coverage/
 # Generated admin auth fallback data
 config/admin-users/
 
+# Local audit log (file-store mode)
+config/audit/
+
 # Markdown: only selected docs are tracked in git
 *.md
 Admin_instructions.md

@@ -1,0 +1,15 @@
+{
+  "id": "test-ase-leave-request",
+  "label": "TEST - ASE Leave Request",
+  "sourceType": "sheet",
+  "smartsheetId": 8063380820545412,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "test-ase-leave-request",
+  "formPublic": false,
+  "formProvenance": "imported",
+  "formRegisteredAt": "2026-07-13T06:49:59.701Z"
+}

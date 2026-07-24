@@ -1,0 +1,585 @@
+{
+  "id": "test-sheet-grad-rou",
+  "slug": "test-sheet-grad-rou",
+  "sourceId": "test-graduate-leave-standard-rou",
+  "label": "Test Graduate LEave -standard routing sheet",
+  "description": "Test Graduate LEave -standard routing sheet",
+  "layout": "table",
+  "public": true,
+  "tabOrder": 1,
+  "filters": [],
+  "defaultSort": [],
+  "fixedLayout": false,
+  "fields": [
+    {
+      "key": "form_creation_date",
+      "label": "Form Creation Date",
+      "source": {
+        "columnId": 3465445743300484,
+        "columnTitle": "Form Creation Date",
+        "columnType": "DATE"
+      },
+      "transforms": [
+        {
+          "op": "format_date"
+        }
+      ],
+      "render": {
+        "type": "date"
+      }
+    },
+    {
+      "key": "student_name",
+      "label": "Student Name",
+      "source": {
+        "columnId": 7969045370670980,
+        "columnTitle": "Student Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "wsu_id",
+      "label": "WSU ID",
+      "source": {
+        "columnId": 650695976193924,
+        "columnTitle": "WSU ID",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "student_wsu_email",
+      "label": "Student WSU Email",
+      "source": {
+        "columnId": 5154295603564420,
+        "columnTitle": "Student WSU Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "student_phone",
+      "label": "Student Phone",
+      "source": {
+        "columnId": 2902495789879172,
+        "columnTitle": "Student Phone",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "student_approval",
+      "label": "Student Approval",
+      "source": {
+        "columnId": 7406095417249668,
+        "columnTitle": "Student Approval",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "student_approval_date",
+      "label": "Student Approval Date",
+      "source": {
+        "columnId": 1776595883036548,
+        "columnTitle": "Student Approval Date",
+        "columnType": "DATE"
+      },
+      "transforms": [
+        {
+          "op": "format_date"
+        }
+      ],
+      "render": {
+        "type": "date"
+      }
+    },
+    {
+      "key": "resend_student_approval",
+      "label": "RESEND Student Approval",
+      "source": {
+        "columnId": 6280195510407044,
+        "columnTitle": "RESEND Student Approval",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "d0",
+      "label": "D0",
+      "source": {
+        "columnId": 4028395696721796,
+        "columnTitle": "D0",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "ase_status",
+      "label": "ASE Status",
+      "source": {
+        "columnId": 8531995324092292,
+        "columnTitle": "ASE Status",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "is_y_n",
+      "label": "IS Y/N",
+      "source": {
+        "columnId": 369220999483268,
+        "columnTitle": "IS Y/N",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "visa",
+      "label": "VISA",
+      "source": {
+        "columnId": 4872820626853764,
+        "columnTitle": "VISA",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "degree",
+      "label": "Degree",
+      "source": {
+        "columnId": 2621020813168516,
+        "columnTitle": "Degree",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "program",
+      "label": "Program",
+      "source": {
+        "columnId": 7124620440539012,
+        "columnTitle": "Program",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "campus",
+      "label": "Campus",
+      "source": {
+        "columnId": 1495120906325892,
+        "columnTitle": "Campus",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "pos_status",
+      "label": "POS Status",
+      "source": {
+        "columnId": 5998720533696388,
+        "columnTitle": "POS Status",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "leave_start",
+      "label": "LEAVE START",
+      "source": {
+        "columnId": 3746920720011140,
+        "columnTitle": "LEAVE START",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "leave_end",
+      "label": "LEAVE END",
+      "source": {
+        "columnId": 8250520347381636,
+        "columnTitle": "LEAVE END",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "library",
+      "label": "LIBRARY",
+      "source": {
+        "columnId": 932170952904580,
+        "columnTitle": "LIBRARY",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "leave_reasons",
+      "label": "LEAVE REASONS",
+      "source": {
+        "columnId": 5435770580275076,
+        "columnTitle": "LEAVE REASONS",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "chkbox_01",
+      "label": "CHKBOX_01",
+      "source": {
+        "columnId": 3183970766589828,
+        "columnTitle": "CHKBOX_01",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_02",
+      "label": "CHKBOX_02",
+      "source": {
+        "columnId": 7687570393960324,
+        "columnTitle": "CHKBOX_02",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_03",
+      "label": "CHKBOX_03",
+      "source": {
+        "columnId": 2058070859747204,
+        "columnTitle": "CHKBOX_03",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_04",
+      "label": "CHKBOX_04",
+      "source": {
+        "columnId": 6561670487117700,
+        "columnTitle": "CHKBOX_04",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_05",
+      "label": "CHKBOX_05",
+      "source": {
+        "columnId": 4309870673432452,
+        "columnTitle": "CHKBOX_05",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_06",
+      "label": "CHKBOX_06",
+      "source": {
+        "columnId": 8813470300802948,
+        "columnTitle": "CHKBOX_06",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_07",
+      "label": "CHKBOX_07",
+      "source": {
+        "columnId": 228483511127940,
+        "columnTitle": "CHKBOX_07",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chkbox_08",
+      "label": "CHKBOX_08",
+      "source": {
+        "columnId": 4732083138498436,
+        "columnTitle": "CHKBOX_08",
+        "columnType": "CHECKBOX"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "other_reason",
+      "label": "OTHER REASON",
+      "source": {
+        "columnId": 2480283324813188,
+        "columnTitle": "OTHER REASON",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "d1",
+      "label": "D1",
+      "source": {
+        "columnId": 6983882952183684,
+        "columnTitle": "D1",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "chr_name",
+      "label": "CHR Name",
+      "source": {
+        "columnId": 1354383417970564,
+        "columnTitle": "CHR Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "chr_email",
+      "label": "CHR Email",
+      "source": {
+        "columnId": 5857983045341060,
+        "columnTitle": "CHR Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "chr_approval",
+      "label": "CHR Approval",
+      "source": {
+        "columnId": 3606183231655812,
+        "columnTitle": "CHR Approval",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "chr_approval_date",
+      "label": "CHR Approval Date",
+      "source": {
+        "columnId": 8109782859026308,
+        "columnTitle": "CHR Approval Date",
+        "columnType": "DATE"
+      },
+      "transforms": [
+        {
+          "op": "format_date"
+        }
+      ],
+      "render": {
+        "type": "date"
+      }
+    },
+    {
+      "key": "resend_chair_approval",
+      "label": "RESEND Chair Approval",
+      "source": {
+        "columnId": 791433464549252,
+        "columnTitle": "RESEND Chair Approval",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "d2",
+      "label": "D2",
+      "source": {
+        "columnId": 5295033091919748,
+        "columnTitle": "D2",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "approvals_ready",
+      "label": "Approvals Ready",
+      "source": {
+        "columnId": 3043233278234500,
+        "columnTitle": "Approvals Ready",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "final_pdf_create",
+      "label": "Final PDF Create",
+      "source": {
+        "columnId": 7546832905604996,
+        "columnTitle": "Final PDF Create",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "academic_coordinator_name",
+      "label": "Academic Coordinator Name",
+      "source": {
+        "columnId": 1917333371391876,
+        "columnTitle": "Academic Coordinator Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    },
+    {
+      "key": "academic_coordinator_email",
+      "label": "Academic Coordinator Email",
+      "source": {
+        "columnId": 6420932998762372,
+        "columnTitle": "Academic Coordinator Email",
+        "columnType": "CONTACT_LIST"
+      },
+      "transforms": [
+        {
+          "op": "contact_emails"
+        }
+      ],
+      "render": {
+        "type": "mailto"
+      }
+    },
+    {
+      "key": "resend_final_pdf",
+      "label": "RESEND Final PDF",
+      "source": {
+        "columnId": 4169133185077124,
+        "columnTitle": "RESEND Final PDF",
+        "columnType": "PICKLIST"
+      },
+      "transforms": [],
+      "render": {
+        "type": "badge"
+      }
+    },
+    {
+      "key": "file_name",
+      "label": "File Name",
+      "source": {
+        "columnId": 8672732812447620,
+        "columnTitle": "File Name",
+        "columnType": "TEXT_NUMBER"
+      },
+      "transforms": [],
+      "render": {
+        "type": "text"
+      }
+    }
+  ]
+}

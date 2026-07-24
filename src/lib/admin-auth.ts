@@ -306,11 +306,11 @@ export function normalizeAdminNextPath(value: string | null | undefined) {
     return "/admin";
   }
 
-  if (!value.startsWith("/admin")) {
+  if (!value.startsWith("/admin") && !value.startsWith("/forms")) {
     return "/admin";
   }
 
-  if (value === "/admin/sign-in") {
+  if (value === "/admin/sign-in" || value === "/forms/approver/sign-in") {
     return "/admin";
   }
 

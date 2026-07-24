@@ -21,7 +21,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdminApiAccess({ ownerOnly: true });
+  const auth = await requireAdminApiAccess();
   if (auth.response) {
     return auth.response;
   }
@@ -39,7 +39,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdminApiAccess({ ownerOnly: true });
+  const auth = await requireAdminApiAccess();
   if (auth.response) {
     return auth.response;
   }
@@ -66,7 +66,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireAdminApiAccess({ ownerOnly: true });
+  const auth = await requireAdminApiAccess();
   if (auth.response) {
     return auth.response;
   }
