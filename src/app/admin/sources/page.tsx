@@ -25,7 +25,7 @@ export default async function SourcesIndexPage({
   const page = resolveAdminTablePage(params.page, sources.length);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title="Sources"

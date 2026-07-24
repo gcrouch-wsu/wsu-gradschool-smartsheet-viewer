@@ -9,7 +9,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-[color:var(--wsu-muted)]" aria-label="Breadcrumb">
+    <nav className="mb-5 flex flex-wrap items-center gap-2 text-sm text-[color:var(--wsu-muted)]" aria-label="Breadcrumb">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (

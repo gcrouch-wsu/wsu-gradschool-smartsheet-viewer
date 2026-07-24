@@ -19,7 +19,7 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
   const formsEnabled = source?.sourceType === "sheet" && source.formsEnabled !== false;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title={source?.label ?? "New source"}
