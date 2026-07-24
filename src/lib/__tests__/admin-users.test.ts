@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -219,6 +219,9 @@ let tempDir = "";
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "smartsheets-view-admin-"));
   process.chdir(tempDir);
+  // runDatabaseMigrations reads ./migrations from cwd; stub a no-op SQL file for DB-mode tests.
+  await mkdir(path.join(tempDir, "migrations"), { recursive: true });
+  await writeFile(path.join(tempDir, "migrations", "001_platform_schema.sql"), "-- Platform schema\n", "utf8");
   resetMockDb();
   (globalThis as PgMockGlobal).__smartsheetsViewPgMockQuery = runMockQuery;
   delete (globalThis as { __smartsheetsViewAdminPool?: unknown }).__smartsheetsViewAdminPool;

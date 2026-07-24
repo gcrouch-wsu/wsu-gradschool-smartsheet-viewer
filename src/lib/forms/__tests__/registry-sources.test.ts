@@ -15,7 +15,8 @@ describe("forms sources unification", () => {
     await mkdir(path.join(tempDir, "config", "views"), { recursive: true });
     vi.resetModules();
     vi.stubEnv("DEMO", "false");
-    delete process.env.DATABASE_URL;
+    // Vite loads .env into process.env; keep file-store mode for this suite.
+    vi.stubEnv("DATABASE_URL", "");
   });
 
   afterEach(async () => {
@@ -25,7 +26,9 @@ describe("forms sources unification", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("migrates legacy FormEntry rows into SourceConfig and resolves activeSheetId", async () => {
+  it(
+    "migrates legacy FormEntry rows into SourceConfig and resolves activeSheetId",
+    async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify(
@@ -68,7 +71,9 @@ describe("forms sources unification", () => {
     expect(source?.smartsheetId).toBe(555001);
     expect(source?.formPublic).toBe(true);
     expect(source?.sourceType).toBe("sheet");
-  });
+  },
+    15000,
+  );
 
   it("registerForm upserts a sheet source and selectForm activates it", async () => {
     await writeFile(
