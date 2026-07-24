@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { resolveFormsHeaderLogo } from "@/lib/header-logo";
 
 export type FormBrandHeaderProps = {
@@ -9,6 +10,10 @@ export type FormBrandHeaderProps = {
   className?: string;
   /** Constrain width to match the form card. */
   maxWidthClassName?: string;
+  /** Optional controls aligned to the far right of the logo bar (e.g. Admin links). */
+  actions?: ReactNode;
+  /** Accessible name for the actions group when present. */
+  actionsLabel?: string;
 };
 
 /**
@@ -20,6 +25,8 @@ export function FormBrandHeader({
   logoAlt,
   className = "",
   maxWidthClassName = "max-w-7xl",
+  actions,
+  actionsLabel = "Admin",
 }: FormBrandHeaderProps) {
   const logo = resolveFormsHeaderLogo(logoDataUrl, logoAlt);
 
@@ -33,7 +40,11 @@ export function FormBrandHeader({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={`mx-auto flex w-full items-center px-4 py-3 sm:px-6 ${maxWidthClassName}`}>
+      <div
+        className={`mx-auto flex w-full items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 ${maxWidthClassName} ${
+          actions ? "justify-between" : ""
+        }`}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element -- default WSU CDN or per-form data/remote URL */}
         <img
           src={logo.src}
@@ -41,6 +52,11 @@ export function FormBrandHeader({
           className="h-10 w-auto max-w-[min(100%,20rem)] object-contain object-left sm:h-12 sm:max-w-[24rem]"
           decoding="async"
         />
+        {actions ? (
+          <nav aria-label={actionsLabel} className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {actions}
+          </nav>
+        ) : null}
       </div>
     </header>
   );
