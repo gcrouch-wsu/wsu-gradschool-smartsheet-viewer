@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
@@ -11,8 +12,9 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-10">
+    <main className="min-h-screen bg-[color:var(--wsu-stone,#f7f5f2)]">
+      <FormBrandHeader maxWidthClassName="max-w-6xl" />
+      <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
         <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] shadow-[0_16px_48px_rgba(35,31,32,0.06)]">
           <div className="flex flex-col gap-8 p-6 sm:p-8 lg:flex-row lg:items-stretch lg:gap-10 lg:p-10">
             <div className="min-w-0 flex-1 space-y-4">

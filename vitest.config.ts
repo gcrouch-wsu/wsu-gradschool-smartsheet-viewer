@@ -1,22 +1,18 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
-
-const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
     alias: {
-      "@": path.resolve(root, "./src"),
+      "@": path.resolve(__dirname, "./src"),
+      // CJS `pg` is not reliably mocked under pool: "vmForks"; route to a test double.
+      pg: path.resolve(__dirname, "./src/lib/__tests__/mocks/pg.ts"),
     },
   },
   test: {
     environment: "node",
-    pool: "forks",
-    // Vitest 4.1 + Vite 8 can fail suite collection if the Vite module runner
-    // never attaches a runner context (describe → runner.config throws).
-    experimental: {
-      viteModuleRunner: false,
-    },
+    // Vite 8's default module runner breaks suite collection on Windows with
+    // forks/threads ("Cannot read properties of undefined (reading 'config')").
+    pool: "vmForks",
   },
 });
