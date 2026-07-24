@@ -18,11 +18,12 @@
   --wsu-crimson: var(--crimson);
   --wsu-crimson-dark: var(--crimson-deep);
   --wsu-ink: var(--ink);
-  --wsu-stone: #f4f0f1;
-  --wsu-paper: var(--paper);
-  --wsu-border: var(--line-strong);
+  /* Public view canvas (kept distinct from Admin/Forms --paper so cards read clearly) */
+  --wsu-stone: #f4efe9;
+  --wsu-paper: #fffdfa;
+  --wsu-border: #d8cdc3;
   --wsu-muted: var(--sub);
-  --background: var(--paper);
+  --background: #f6f1eb;
   --foreground: var(--ink);
   --view-surface-muted-bg: var(--wsu-stone);
   --view-control-bg: #ffffff;
@@ -100,7 +101,9 @@
 }
 
 html {
-  background-color: var(--paper);
+  background:
+    radial-gradient(circle at top left, rgba(166, 15, 45, 0.1), transparent 36%),
+    linear-gradient(180deg, #f9f4ef 0%, #f2ebe3 100%);
 }
 
 body {
@@ -302,8 +305,13 @@ a {
 .view-header-panel {
   background-color: var(--view-header-panel-bg, var(--wsu-paper));
   border: 1px solid var(--view-header-panel-border, var(--wsu-border));
-  border-radius: var(--view-header-panel-radius, 1.25rem);
-  box-shadow: var(--view-header-panel-shadow, 0 8px 28px rgba(33, 27, 30, 0.05));
+  border-radius: var(--view-header-panel-radius, 2rem);
+  box-shadow: var(--view-header-panel-shadow, 0 24px 64px rgba(35, 31, 32, 0.07));
+}
+
+/* Public data cards — lift off the page canvas like main */
+.view-data-card {
+  box-shadow: var(--view-card-shadow, 0 16px 40px rgba(35, 31, 32, 0.06));
 }
 
 .view-header-meta {
