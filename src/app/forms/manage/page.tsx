@@ -341,6 +341,10 @@ function ManagePageContent() {
     }
   }
 
+  function viewSheet(id: string) {
+    router.push(`/forms/sheet?sheetId=${encodeURIComponent(id)}`);
+  }
+
   async function addExisting() {
     setAddMsg(null);
     const id = addId.trim();
@@ -519,6 +523,7 @@ function ManagePageContent() {
             onQueryChange={setQuery}
             onUseForm={useForm}
             onEdit={editForm}
+            onViewSheet={viewSheet}
             onPublish={publishForm}
             onUnpublish={unpublishForm}
             onDuplicate={openDuplicateModal}

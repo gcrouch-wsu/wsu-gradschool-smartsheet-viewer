@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconCheck, IconCopy, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
+import { IconCheck, IconCopy, IconEye, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
 import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 
 export interface FormEntryRow {
@@ -41,6 +41,7 @@ interface FormsTableProps {
   onQueryChange: (value: string) => void;
   onUseForm: (id: string) => void;
   onEdit: (id: string) => void;
+  onViewSheet: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -52,6 +53,7 @@ function FormRowActions({
   form,
   busy,
   onEdit,
+  onViewSheet,
   onPublish,
   onUnpublish,
   onDuplicate,
@@ -59,6 +61,7 @@ function FormRowActions({
   form: FormEntryRow;
   busy: boolean;
   onEdit: (id: string) => void;
+  onViewSheet: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -99,6 +102,16 @@ function FormRowActions({
 
   return (
     <div ref={rootRef} className="relative flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        className={iconBtnClass}
+        disabled={busy}
+        onClick={() => onViewSheet(form.id)}
+        aria-label={`View ${form.name} on Sheet tab`}
+        title="View on Sheet"
+      >
+        <IconEye className="h-3.5 w-3.5" />
+      </button>
       <button
         type="button"
         className={iconBtnClass}
@@ -193,6 +206,7 @@ export function FormsTable({
   onQueryChange,
   onUseForm,
   onEdit,
+  onViewSheet,
   onPublish,
   onUnpublish,
   onDuplicate,
@@ -297,6 +311,7 @@ export function FormsTable({
           form={form}
           busy={busyId === form.id}
           onEdit={onEdit}
+          onViewSheet={onViewSheet}
           onPublish={onPublish}
           onUnpublish={onUnpublish}
           onDuplicate={onDuplicate}
