@@ -21,8 +21,6 @@ export interface CreateFormModalProps {
   onNewNameChange: (value: string) => void;
   destinationFolderId: string;
   onDestinationFolderIdChange: (value: string) => void;
-  shareEmail: string;
-  onShareEmailChange: (value: string) => void;
   creating: boolean;
   onCreate: () => void;
   createMsg: { ok: boolean; text: string } | null;
@@ -41,8 +39,6 @@ export function CreateFormModal({
   onNewNameChange,
   destinationFolderId,
   onDestinationFolderIdChange,
-  shareEmail,
-  onShareEmailChange,
   creating,
   onCreate,
   createMsg,
@@ -189,33 +185,18 @@ export function CreateFormModal({
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="create-form-folderId" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Destination folder ID <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
-              </label>
-              <input
-                id="create-form-folderId"
-                type="text"
-                placeholder="Smartsheet folder ID"
-                value={destinationFolderId}
-                onChange={(e) => onDestinationFolderIdChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              />
-            </div>
-            <div>
-              <label htmlFor="create-form-shareEmail" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Share with email <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
-              </label>
-              <input
-                id="create-form-shareEmail"
-                type="email"
-                placeholder="approver@wsu.edu"
-                value={shareEmail}
-                onChange={(e) => onShareEmailChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              />
-            </div>
+          <div>
+            <label htmlFor="create-form-folderId" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+              Destination folder ID <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
+            </label>
+            <input
+              id="create-form-folderId"
+              type="text"
+              placeholder="Smartsheet folder ID"
+              value={destinationFolderId}
+              onChange={(e) => onDestinationFolderIdChange(e.target.value)}
+              className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+            />
           </div>
 
           {createMsg ? (
