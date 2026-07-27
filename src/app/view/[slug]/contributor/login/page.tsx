@@ -100,7 +100,11 @@ export default async function ContributorLoginPage({
                     </a>
                     .
                   </li>
-                  <li>Choose <strong className="text-[color:var(--wsu-ink)]">First-time access</strong> only the first time you set your contributor password.</li>
+                  <li>
+                    After you enter your email, the system checks whether this is your first time and either asks you to{" "}
+                    <strong className="text-[color:var(--wsu-ink)]">create a password</strong> or{" "}
+                    <strong className="text-[color:var(--wsu-ink)]">sign in</strong>.
+                  </li>
                 </ul>
                 <Link
                   href="/instructions/contributor"
