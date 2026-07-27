@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
+import { IconCheck, IconFile, IconRefresh, IconTrash } from "@/components/forms/icons";
 import type {
   TimelineItem,
   TrackerAttachment,
@@ -254,9 +254,11 @@ export function SubmissionCard({
                 type="button"
                 disabled={busy}
                 onClick={onDelete}
-                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                aria-label="Delete"
+                title="Delete"
+                className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white p-1.5 text-red-700 hover:bg-red-50 disabled:opacity-50"
               >
-                Delete
+                <IconTrash className="h-4 w-4" />
               </button>
             ) : null}
           </div>
