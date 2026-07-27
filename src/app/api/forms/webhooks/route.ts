@@ -1,3 +1,4 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
@@ -10,6 +11,7 @@ import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import { FORM_WEBHOOK_SECRET_ENV_VAR } from "@/lib/forms/webhook-auth";
 import { buildCallbackUrl, maskCallbackUrl } from "@/lib/forms/webhook-callback";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -146,6 +148,10 @@ export async function POST(request: Request) {
       webhookId,
       sheetId: targetSheetId,
       callbackUrl,
+    });
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.webhook.create", "webhook", webhookId != null ? String(webhookId) : undefined, {
+      sheetId: targetSheetId,
+      sheetName: registered.name,
     });
     const state = await getSyncState();
     return Response.json({

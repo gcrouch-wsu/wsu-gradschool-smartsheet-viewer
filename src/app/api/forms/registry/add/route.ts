@@ -1,7 +1,9 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +20,10 @@ export async function POST(request: Request) {
 
     const name = String((await ss.getSheet(id)).name ?? "Imported sheet");
     await registry.registerForm({ id, name, createdAt: new Date().toISOString(), source: "imported" }, true);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.registry.add", "form", id, {
+      name,
+      source: "imported",
+    });
     return Response.json({ ok: true, sheet: { id, name } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "";

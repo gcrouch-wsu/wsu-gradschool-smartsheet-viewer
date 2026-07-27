@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { auditFromPrincipal } from "@/lib/audit";
 import { deleteFormApproverAccount, resetFormApproverPassword } from "@/lib/forms/approver-users";
 import { requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export async function PATCH(
 
   try {
     await resetFormApproverPassword(id, password);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.approver.password_reset", "approver", id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Request failed.";
@@ -30,7 +33,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(  _request: Request,
+export async function DELETE(
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const access = await requireFormsAdminAccess();
@@ -40,6 +44,7 @@ export async function DELETE(  _request: Request,
 
   try {
     await deleteFormApproverAccount(id);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.approver.delete", "approver", id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Request failed.";

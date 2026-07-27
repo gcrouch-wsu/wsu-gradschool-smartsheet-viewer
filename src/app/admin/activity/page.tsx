@@ -42,7 +42,7 @@ export default async function AdminActivityPage({
       <PageHeader
         eyebrow="Admin builder"
         title="Activity"
-        description="Audit trail for source/view publishes, form registry changes, builder saves, and related actions."
+        description="Audit trail for form registry changes, builder saves, publish actions, resends, and related admin activity."
       />
 
       <ActivityFilters actorId={actorId} resourceType={resourceType} />

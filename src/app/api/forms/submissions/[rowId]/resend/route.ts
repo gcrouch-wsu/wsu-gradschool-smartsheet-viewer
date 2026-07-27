@@ -1,3 +1,4 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { findCurrentStage } from "@/lib/forms/submission-actions";
@@ -13,6 +14,7 @@ import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsApproverAccess } from "@/lib/forms/forms-api";
 import { resolveFormsSheetId, sheetIdFromRequestOrBody } from "@/lib/forms/sheet-access";
+import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,6 +146,15 @@ export async function POST(
     const recipientEmail = current
       ? findPendingContactEmail(colRefs, row.cells, current.name)
       : findPendingContactEmail(colRefs, row.cells, stageLabel);
+
+    const principal =
+      (await resolveAdminPrincipal()) ?? (await resolveApproverPrincipal(request));
+    await auditFromPrincipal(principal, "forms.submission.resend", "submission", String(rowIdNum), {
+      sheetId,
+      stage: stageLabel || null,
+      resendColumn: resendCol.title,
+      recipientEmail: recipientEmail || null,
+    });
 
     return Response.json({
       ok: true,

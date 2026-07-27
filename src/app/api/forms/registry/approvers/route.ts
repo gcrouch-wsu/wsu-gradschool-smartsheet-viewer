@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { auditFromPrincipal } from "@/lib/audit";
 import { createFormApproverAccount, listFormApprovers } from "@/lib/forms/approver-users";
 import { requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +34,9 @@ export async function POST(request: Request) {
 
   try {
     const approver = await createFormApproverAccount(email, password);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.approver.create", "approver", String(approver.id), {
+      email: approver.email,
+    });
     return NextResponse.json({ ok: true, approver });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Request failed.";
