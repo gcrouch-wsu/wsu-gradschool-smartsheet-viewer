@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { IconCheck, IconCopy, IconLayers } from "@/components/forms/icons";
+import { FormSheetPicker } from "@/components/forms/sheet/FormSheetPicker";
 
 interface SheetOption {
   id: number;
@@ -44,6 +45,11 @@ export function CreateFormModal({
   createMsg,
 }: CreateFormModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const templateOptions = useMemo(
+    () => sheets.map((sheet) => ({ id: String(sheet.id), name: sheet.name })),
+    [sheets],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -152,22 +158,19 @@ export function CreateFormModal({
 
           {mode === "template" ? (
             <div>
-              <label htmlFor="create-form-template" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Template sheet
-              </label>
-              <select
-                id="create-form-template"
-                value={templateId}
-                onChange={(e) => onTemplateIdChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              >
-                <option value="">Select a sheet…</option>
-                {sheets.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <FormSheetPicker
+                forms={templateOptions}
+                selectedSheetId={templateId}
+                onSheetChange={onTemplateIdChange}
+                label="Template sheet"
+                labelHtmlFor="create-form-template"
+                inputId="create-form-template"
+                listboxId="create-form-template-listbox"
+                placeholder="Search sheets by name or ID…"
+                emptyMessage="No matching sheets."
+                className="relative w-full"
+                disabled={creating}
+              />
               <p className="mt-2 text-xs text-[color:var(--wsu-muted)]">
                 Best for approval notifications: clone a sheet whose Smartsheet automations request approval from
                 contacts in the form’s Contact column. Rules copy when the API allows; you can still edit them in
