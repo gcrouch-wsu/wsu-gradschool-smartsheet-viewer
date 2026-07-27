@@ -183,8 +183,15 @@ export function CreateFormModal({
           ) : (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
               From scratch creates columns only — no Approval Request automations. After create, open the sheet in
-              Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or
-              use a template instead.
+              Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or{" "}
+              <button
+                type="button"
+                onClick={() => onModeChange("template")}
+                className="font-medium text-wsu-crimson underline underline-offset-2 hover:text-wsu-crimson-dark"
+              >
+                use a template instead
+              </button>
+              .
             </p>
           )}
 
