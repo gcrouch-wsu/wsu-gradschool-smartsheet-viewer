@@ -413,22 +413,6 @@ function ManagePageContent() {
     }
   }
 
-  async function shareActiveSheet(email: string): Promise<{ ok: boolean; text: string }> {
-    if (!activeId) return { ok: false, text: "No active form selected." };
-    try {
-      const r = await fetch(`/api/forms/platform/sheets/${activeId}/shares`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), accessLevel: "EDITOR" }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Share failed.");
-      return { ok: true, text: "Shared successfully." };
-    } catch (e: unknown) {
-      return { ok: false, text: e instanceof Error ? e.message : "Share failed." };
-    }
-  }
-
   async function loadWebhooks(opts?: { silent?: boolean }) {
     if (!opts?.silent) setWebhookRefreshing(true);
     try {
@@ -541,7 +525,6 @@ function ManagePageContent() {
             onPublish={publishForm}
             onUnpublish={unpublishForm}
             onDuplicate={openDuplicateModal}
-            onShareActiveSheet={shareActiveSheet}
             busyId={publishBusyId}
             loading={formsLoading}
           />
