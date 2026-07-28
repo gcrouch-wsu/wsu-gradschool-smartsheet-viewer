@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconCheck, IconCopy, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
+import { IconCheck, IconCopy, IconEye, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
 import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 
 export interface FormEntryRow {
@@ -41,45 +41,39 @@ interface FormsTableProps {
   onQueryChange: (value: string) => void;
   onUseForm: (id: string) => void;
   onEdit: (id: string) => void;
+  onViewSheet: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onShareActiveSheet: (email: string) => Promise<{ ok: boolean; text: string }>;
   busyId?: string | null;
   loading?: boolean;
 }
 
 function FormRowActions({
   form,
-  isActive,
   busy,
   onEdit,
+  onViewSheet,
   onPublish,
   onUnpublish,
   onDuplicate,
-  onShareActiveSheet,
 }: {
   form: FormEntryRow;
-  isActive: boolean;
   busy: boolean;
   onEdit: (id: string) => void;
+  onViewSheet: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDuplicate: (id: string) => void;
-  onShareActiveSheet: (email: string) => Promise<{ ok: boolean; text: string }>;
 }) {
   const isPublished = Boolean(form.public);
   const publicUrl = form.slug ? `/f/${form.slug}` : null;
   const [menuOpen, setMenuOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareBusy, setShareBusy] = useState(false);
-  const [shareMsg, setShareMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!menuOpen && !shareOpen) return;
+    if (!menuOpen) return;
     function onPointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
@@ -88,7 +82,6 @@ function FormRowActions({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setMenuOpen(false);
-        setShareOpen(false);
       }
     }
     document.addEventListener("mousedown", onPointerDown);
@@ -97,24 +90,7 @@ function FormRowActions({
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [menuOpen, shareOpen]);
-
-  async function handleShare() {
-    const email = shareEmail.trim();
-    if (!email || shareBusy) return;
-    setShareBusy(true);
-    setShareMsg(null);
-    try {
-      const result = await onShareActiveSheet(email);
-      setShareMsg(result);
-      if (result.ok) {
-        setShareEmail("");
-        setShareOpen(false);
-      }
-    } finally {
-      setShareBusy(false);
-    }
-  }
+  }, [menuOpen]);
 
   async function handleCopyUrl() {
     if (!publicUrl) return;
@@ -125,65 +101,70 @@ function FormRowActions({
   }
 
   return (
-    <div ref={rootRef} className="relative flex flex-col items-end gap-1.5">
-      <div className="flex items-center justify-end gap-1.5">
+    <div ref={rootRef} className="relative flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        className={iconBtnClass}
+        disabled={busy}
+        onClick={() => onViewSheet(form.id)}
+        aria-label={`View ${form.name} on Sheet tab`}
+        title="View on Sheet"
+      >
+        <IconEye className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        className={iconBtnClass}
+        disabled={busy}
+        onClick={() => onEdit(form.id)}
+        aria-label={`Edit ${form.name}`}
+        title="Edit in builder"
+      >
+        <IconPencil className="h-3.5 w-3.5" />
+      </button>
+      {isPublished && publicUrl ? (
         <button
           type="button"
           className={iconBtnClass}
           disabled={busy}
-          onClick={() => onEdit(form.id)}
-          aria-label={`Edit ${form.name}`}
-          title="Edit in builder"
+          onClick={() => void handleCopyUrl()}
+          aria-label={copied ? "URL copied" : `Copy public URL for ${form.name}`}
+          title={copied ? "Copied!" : "Copy URL"}
         >
-          <IconPencil className="h-3.5 w-3.5" />
+          <IconCopy className="h-3.5 w-3.5" />
         </button>
-        {isPublished && publicUrl ? (
-          <button
-            type="button"
-            className={iconBtnClass}
-            disabled={busy}
-            onClick={() => void handleCopyUrl()}
-            aria-label={copied ? "URL copied" : `Copy public URL for ${form.name}`}
-            title={copied ? "Copied!" : "Copy URL"}
+      ) : null}
+      <div className="relative">
+        <button
+          type="button"
+          className={iconBtnClass}
+          disabled={busy}
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label={`More actions for ${form.name}`}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title="More actions"
+        >
+          <IconMore className="h-3.5 w-3.5" />
+        </button>
+        {menuOpen ? (
+          <div
+            role="menu"
+            className="absolute right-0 z-20 mt-1 min-w-[9.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white py-1 shadow-md"
           >
-            <IconCopy className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
-        <div className="relative">
-          <button
-            type="button"
-            className={iconBtnClass}
-            disabled={busy}
-            onClick={() => {
-              setMenuOpen((open) => !open);
-              setShareMsg(null);
-            }}
-            aria-label={`More actions for ${form.name}`}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            title="More actions"
-          >
-            <IconMore className="h-3.5 w-3.5" />
-          </button>
-          {menuOpen ? (
-            <div
-              role="menu"
-              className="absolute right-0 z-20 mt-1 min-w-[9.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white py-1 shadow-md"
+            <button
+              type="button"
+              role="menuitem"
+              className={menuItemClass}
+              disabled={busy}
+              onClick={() => {
+                setMenuOpen(false);
+                onDuplicate(form.id);
+              }}
             >
-              {isActive ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={menuItemClass}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setShareOpen(true);
-                    setShareMsg(null);
-                  }}
-                >
-                  Share sheet
-                </button>
-              ) : null}
+              Duplicate
+            </button>
+            {isPublished ? (
               <button
                 type="button"
                 role="menuitem"
@@ -191,93 +172,28 @@ function FormRowActions({
                 disabled={busy}
                 onClick={() => {
                   setMenuOpen(false);
-                  onDuplicate(form.id);
+                  onUnpublish(form.id);
                 }}
               >
-                Duplicate
+                Unpublish
               </button>
-              {isPublished ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={menuItemClass}
-                  disabled={busy}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onUnpublish(form.id);
-                  }}
-                >
-                  Unpublish
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className={menuItemClass}
-                  disabled={busy}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onPublish(form.id);
-                  }}
-                >
-                  Publish
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {isActive && shareOpen ? (
-        <div className="flex w-full min-w-[14rem] max-w-xs flex-col gap-1.5 sm:items-end">
-          <div className="flex w-full flex-wrap gap-1.5 sm:justify-end">
-            <input
-              type="email"
-              value={shareEmail}
-              onChange={(e) => setShareEmail(e.target.value)}
-              placeholder="user@wsu.edu"
-              aria-label="Email to share active sheet with"
-              className="min-w-0 flex-1 rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void handleShare();
-                }
-              }}
-            />
-            <button
-              type="button"
-              disabled={shareBusy || !shareEmail.trim()}
-              onClick={() => void handleShare()}
-              className="rounded-lg bg-wsu-crimson px-2.5 py-1 text-xs font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
-            >
-              {shareBusy ? "Sharing…" : "Send"}
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-[color:var(--wsu-border)] px-2.5 py-1 text-xs font-medium text-[color:var(--wsu-muted)] hover:bg-white"
-              onClick={() => {
-                setShareOpen(false);
-                setShareMsg(null);
-              }}
-            >
-              Cancel
-            </button>
+            ) : (
+              <button
+                type="button"
+                role="menuitem"
+                className={menuItemClass}
+                disabled={busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onPublish(form.id);
+                }}
+              >
+                Publish
+              </button>
+            )}
           </div>
-          {shareMsg ? (
-            <p className={`text-[10px] ${shareMsg.ok ? "text-emerald-700" : "text-red-700"}`} role="status">
-              {shareMsg.text}
-            </p>
-          ) : (
-            <p className="text-[10px] text-[color:var(--wsu-muted)]">Grants EDITOR access on this sheet</p>
-          )}
-        </div>
-      ) : null}
-      {isActive && !shareOpen && shareMsg?.ok ? (
-        <p className="text-[10px] text-emerald-700" role="status">
-          {shareMsg.text}
-        </p>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -290,10 +206,10 @@ export function FormsTable({
   onQueryChange,
   onUseForm,
   onEdit,
+  onViewSheet,
   onPublish,
   onUnpublish,
   onDuplicate,
-  onShareActiveSheet,
   busyId,
   loading = false,
 }: FormsTableProps) {
@@ -393,13 +309,12 @@ export function FormsTable({
       cell: (form) => (
         <FormRowActions
           form={form}
-          isActive={String(form.id) === activeId}
           busy={busyId === form.id}
           onEdit={onEdit}
+          onViewSheet={onViewSheet}
           onPublish={onPublish}
           onUnpublish={onUnpublish}
           onDuplicate={onDuplicate}
-          onShareActiveSheet={onShareActiveSheet}
         />
       ),
     },

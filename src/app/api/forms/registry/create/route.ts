@@ -1,8 +1,10 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,10 +67,17 @@ export async function POST(request: Request) {
       }
     }
 
+    const source = mode === "template" ? "template" : "scratch";
     await registry.registerForm(
-      { id: String(sheet.id), name: sheet.name, createdAt: new Date().toISOString(), source: mode === "template" ? "template" : "scratch" },
+      { id: String(sheet.id), name: sheet.name, createdAt: new Date().toISOString(), source },
       true,
     );
+
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.registry.create", "form", String(sheet.id), {
+      name: sheet.name,
+      source,
+      mode: mode === "template" ? "template" : "scratch",
+    });
 
     return Response.json({ ok: true, sheet: { id: sheet.id, name: sheet.name }, note, demo: config.demo });
   } catch (e) {

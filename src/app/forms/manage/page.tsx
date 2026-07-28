@@ -93,7 +93,6 @@ function ManagePageContent() {
   const [templateId, setTemplateId] = useState("");
   const [newName, setNewName] = useState("");
   const [destinationFolderId, setDestinationFolderId] = useState("");
-  const [shareEmail, setShareEmail] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [rules, setRules] = useState<Rule[] | null>(null);
@@ -342,6 +341,10 @@ function ManagePageContent() {
     }
   }
 
+  function viewSheet(id: string) {
+    router.push(`/forms/sheet?sheetId=${encodeURIComponent(id)}`);
+  }
+
   async function addExisting() {
     setAddMsg(null);
     const id = addId.trim();
@@ -376,13 +379,11 @@ function ManagePageContent() {
           templateId,
           newName,
           destinationFolderId: destinationFolderId || undefined,
-          shareEmails: shareEmail ? [shareEmail] : [],
         }),
       });
       const d = await parseJson(r);
       if (!r.ok) throw new Error(String(d.error || d.message || "Create failed."));
       setNewName("");
-      setShareEmail("");
       const sheet = d.sheet as { name?: string } | undefined;
       setCreateMsg({ ok: true, text: `Created "${sheet?.name ?? "form"}" and set it active.${d.note ? " " + d.note : ""}` });
       await loadForms();
@@ -410,22 +411,6 @@ function ManagePageContent() {
       setFormsError(e instanceof Error ? e.message : "Could not load automations.");
     } finally {
       setAutoLoading(false);
-    }
-  }
-
-  async function shareActiveSheet(email: string): Promise<{ ok: boolean; text: string }> {
-    if (!activeId) return { ok: false, text: "No active form selected." };
-    try {
-      const r = await fetch(`/api/forms/platform/sheets/${activeId}/shares`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), accessLevel: "EDITOR" }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Share failed.");
-      return { ok: true, text: "Shared successfully." };
-    } catch (e: unknown) {
-      return { ok: false, text: e instanceof Error ? e.message : "Share failed." };
     }
   }
 
@@ -538,10 +523,10 @@ function ManagePageContent() {
             onQueryChange={setQuery}
             onUseForm={useForm}
             onEdit={editForm}
+            onViewSheet={viewSheet}
             onPublish={publishForm}
             onUnpublish={unpublishForm}
             onDuplicate={openDuplicateModal}
-            onShareActiveSheet={shareActiveSheet}
             busyId={publishBusyId}
             loading={formsLoading}
           />
@@ -596,8 +581,6 @@ function ManagePageContent() {
         onNewNameChange={setNewName}
         destinationFolderId={destinationFolderId}
         onDestinationFolderIdChange={setDestinationFolderId}
-        shareEmail={shareEmail}
-        onShareEmailChange={setShareEmail}
         creating={creating}
         onCreate={createForm}
         createMsg={createMsg}

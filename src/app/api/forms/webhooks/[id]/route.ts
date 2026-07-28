@@ -1,8 +1,10 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { clearWebhookRegistration } from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +31,9 @@ export async function PATCH(
 
   try {
     const result = await ss.updateWebhook(webhookId, body.enabled);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.webhook.update", "webhook", String(webhookId), {
+      enabled: body.enabled,
+    });
     return Response.json({
       ok: true,
       webhookId,
@@ -59,6 +64,7 @@ export async function DELETE(
   try {
     const result = await ss.deleteWebhook(webhookId);
     await clearWebhookRegistration(webhookId);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.webhook.delete", "webhook", String(webhookId));
     return Response.json({
       ok: true,
       webhookId,

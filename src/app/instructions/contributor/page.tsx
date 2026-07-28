@@ -97,6 +97,10 @@ export default function ContributorInstructionsPage() {
                   </a>
                   .
                 </li>
+                <li>
+                  You do not choose first-time access yourself — after you enter your email, the system checks whether you
+                  need to create a password or sign in.
+                </li>
               </ul>
             </section>
 
@@ -113,18 +117,18 @@ export default function ContributorInstructionsPage() {
 
             <section aria-labelledby="s-account">
               <h2 id="s-account" className="text-xl font-semibold text-[color:var(--wsu-ink)] sm:text-2xl">
-                First-time access
+                Get access
               </h2>
               <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
                 <li>Open the page link you were sent.</li>
                 <li>
                   Select <strong className="text-[color:var(--wsu-ink)]">Contributor sign in</strong>.
                 </li>
+                <li>Enter your WSU email address and continue.</li>
                 <li>
-                  Select <strong className="text-[color:var(--wsu-ink)]">First-time access</strong>.
+                  The page will either ask you to <strong className="text-[color:var(--wsu-ink)]">create a password</strong>{" "}
+                  (first time) or <strong className="text-[color:var(--wsu-ink)]">sign in</strong> (if you already set one).
                 </li>
-                <li>Enter your WSU email address.</li>
-                <li>Create your contributor password.</li>
                 <li>Submit the form.</li>
               </ol>
               <p className="mt-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
@@ -144,19 +148,6 @@ export default function ContributorInstructionsPage() {
                   </li>
                 </ul>
               </div>
-            </section>
-
-            <section aria-labelledby="s-signin">
-              <h2 id="s-signin" className="text-xl font-semibold text-[color:var(--wsu-ink)] sm:text-2xl">
-                Sign in later
-              </h2>
-              <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
-                <li>Open the same page.</li>
-                <li>
-                  Select <strong className="text-[color:var(--wsu-ink)]">Sign in</strong>.
-                </li>
-                <li>Enter your WSU email address and contributor password.</li>
-              </ol>
               <p className="mt-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
                 If you see a message about{" "}
                 <strong className="text-[color:var(--wsu-ink)]">too many sign-in attempts</strong>, wait about fifteen

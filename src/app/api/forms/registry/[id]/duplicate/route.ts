@@ -1,7 +1,9 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { config } from "@/lib/forms/config";
 import { duplicateForm } from "@/lib/forms/duplicate-form";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +27,11 @@ export async function POST(
 
   try {
     const result = await duplicateForm(id, { newName, destinationFolderId, makeActive: true });
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.duplicate", "form", result.form.id, {
+      sourceFormId: id,
+      name: result.form.name,
+      copied: result.copied,
+    });
     return Response.json(
       {
         ok: true,

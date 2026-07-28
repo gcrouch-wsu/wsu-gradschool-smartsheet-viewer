@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { IconCheck, IconCopy, IconLayers } from "@/components/forms/icons";
+import { FormSheetPicker } from "@/components/forms/sheet/FormSheetPicker";
 
 interface SheetOption {
   id: number;
@@ -21,8 +22,6 @@ export interface CreateFormModalProps {
   onNewNameChange: (value: string) => void;
   destinationFolderId: string;
   onDestinationFolderIdChange: (value: string) => void;
-  shareEmail: string;
-  onShareEmailChange: (value: string) => void;
   creating: boolean;
   onCreate: () => void;
   createMsg: { ok: boolean; text: string } | null;
@@ -41,13 +40,16 @@ export function CreateFormModal({
   onNewNameChange,
   destinationFolderId,
   onDestinationFolderIdChange,
-  shareEmail,
-  onShareEmailChange,
   creating,
   onCreate,
   createMsg,
 }: CreateFormModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const templateOptions = useMemo(
+    () => sheets.map((sheet) => ({ id: String(sheet.id), name: sheet.name })),
+    [sheets],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -156,22 +158,19 @@ export function CreateFormModal({
 
           {mode === "template" ? (
             <div>
-              <label htmlFor="create-form-template" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Template sheet
-              </label>
-              <select
-                id="create-form-template"
-                value={templateId}
-                onChange={(e) => onTemplateIdChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              >
-                <option value="">Select a sheet…</option>
-                {sheets.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <FormSheetPicker
+                forms={templateOptions}
+                selectedSheetId={templateId}
+                onSheetChange={onTemplateIdChange}
+                label="Template sheet"
+                labelHtmlFor="create-form-template"
+                inputId="create-form-template"
+                listboxId="create-form-template-listbox"
+                placeholder="Search sheets by name or ID…"
+                emptyMessage="No matching sheets."
+                className="relative w-full"
+                disabled={creating}
+              />
               <p className="mt-2 text-xs text-[color:var(--wsu-muted)]">
                 Best for approval notifications: clone a sheet whose Smartsheet automations request approval from
                 contacts in the form’s Contact column. Rules copy when the API allows; you can still edit them in
@@ -184,38 +183,30 @@ export function CreateFormModal({
           ) : (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
               From scratch creates columns only — no Approval Request automations. After create, open the sheet in
-              Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or
-              use a template instead.
+              Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or{" "}
+              <button
+                type="button"
+                onClick={() => onModeChange("template")}
+                className="font-medium text-wsu-crimson underline underline-offset-2 hover:text-wsu-crimson-dark"
+              >
+                use a template instead
+              </button>
+              .
             </p>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="create-form-folderId" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Destination folder ID <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
-              </label>
-              <input
-                id="create-form-folderId"
-                type="text"
-                placeholder="Smartsheet folder ID"
-                value={destinationFolderId}
-                onChange={(e) => onDestinationFolderIdChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              />
-            </div>
-            <div>
-              <label htmlFor="create-form-shareEmail" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-                Share with email <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
-              </label>
-              <input
-                id="create-form-shareEmail"
-                type="email"
-                placeholder="approver@wsu.edu"
-                value={shareEmail}
-                onChange={(e) => onShareEmailChange(e.target.value)}
-                className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-              />
-            </div>
+          <div>
+            <label htmlFor="create-form-folderId" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
+              Destination folder ID <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
+            </label>
+            <input
+              id="create-form-folderId"
+              type="text"
+              placeholder="Smartsheet folder ID"
+              value={destinationFolderId}
+              onChange={(e) => onDestinationFolderIdChange(e.target.value)}
+              className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+            />
           </div>
 
           {createMsg ? (

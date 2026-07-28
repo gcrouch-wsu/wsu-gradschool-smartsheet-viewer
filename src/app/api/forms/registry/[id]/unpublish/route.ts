@@ -1,6 +1,8 @@
+import { auditFromPrincipal } from "@/lib/audit";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import * as registry from "@/lib/forms/registry";
+import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +19,10 @@ export async function POST(
 
   try {
     const form = await registry.unpublishForm(id);
+    await auditFromPrincipal(await resolveAdminPrincipal(), "forms.unpublish", "form", form.id, {
+      slug: form.slug,
+      public: false,
+    });
     return Response.json({ ok: true, form });
   } catch (e) {
     return formsAuthErrorResponse(e);
