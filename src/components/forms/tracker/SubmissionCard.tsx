@@ -324,7 +324,7 @@ export function SubmissionCard({
                   ))}
                 </ul>
               )}
-              {approver ? (
+              {staff ? (
                 <div className="mt-3 flex gap-2">
                   <input
                     type="text"
