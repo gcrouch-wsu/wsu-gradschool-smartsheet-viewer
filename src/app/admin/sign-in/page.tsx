@@ -20,7 +20,10 @@ export default async function AdminSignInPage({
   const configurationError = getAdminConfigurationError();
   const auth = await getCurrentAdminAuthResult();
 
-  if (auth.ok) {
+  if (auth.ok && auth.principal) {
+    if (auth.principal.role === "coordinator") {
+      redirect("/forms/sheet");
+    }
     redirect(nextPath);
   }
 

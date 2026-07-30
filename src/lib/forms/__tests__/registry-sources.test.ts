@@ -25,7 +25,8 @@ describe("forms sources unification", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("migrates legacy FormEntry rows into SourceConfig and resolves activeSheetId", async () => {
+  // File-mode registry + dynamic imports are slow under Windows vmForks load.
+  it("migrates legacy FormEntry rows into SourceConfig and resolves activeSheetId", { timeout: 15_000 }, async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify(
@@ -70,7 +71,7 @@ describe("forms sources unification", () => {
     expect(source?.sourceType).toBe("sheet");
   });
 
-  it("registerForm upserts a sheet source and selectForm activates it", async () => {
+  it("registerForm upserts a sheet source and selectForm activates it", { timeout: 15_000 }, async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify({ activeSheetId: "", forms: [], migratedToSourcesAt: "2026-01-01T00:00:00.000Z" }, null, 2)}\n`,

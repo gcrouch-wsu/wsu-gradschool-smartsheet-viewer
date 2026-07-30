@@ -14,6 +14,7 @@ interface MockDbUser {
   updated_at: string;
   is_active: boolean;
   reset_nonce: string | null;
+  role: string;
 }
 
 const {
@@ -102,6 +103,7 @@ const {
         updated_at: String(params[6]),
         is_active: Boolean(params[7]),
         reset_nonce: params[8] == null ? null : String(params[8]),
+        role: params[9] == null ? "admin" : String(params[9]),
       };
       const existingById = mockDbUsers.findIndex((entry) => entry.id === record.id);
       const existingByUsername = mockDbUsers.findIndex((entry) => entry.username === record.username);
@@ -173,6 +175,7 @@ const {
       user.updated_at = String(params[5]);
       user.is_active = Boolean(params[6]);
       user.reset_nonce = params[7] == null ? null : String(params[7]);
+      user.role = params[8] == null ? user.role ?? "admin" : String(params[8]);
       return { rows: [], rowCount: 1 };
     }
 
@@ -603,5 +606,43 @@ describe("managed admin users", () => {
     await expect(users.authenticateAdminCredentials("pending@example.com", "Admin!234")).resolves.toMatchObject({
       ok: true,
     });
+  });
+
+  it("persists coordinator role and returns it on the principal", async () => {
+    const users = await import("@/lib/admin-users");
+
+    const created = await users.saveManagedAdminUser({
+      username: "coord@example.com",
+      role: "coordinator",
+      isActive: true,
+    });
+    expect(created.role).toBe("coordinator");
+    expect(users.isFullAdminRole(created.role)).toBe(false);
+
+    await users.claimAdminPassword("coord@example.com", "Admin!234");
+    const login = await users.authenticateAdminCredentials("coord@example.com", "Admin!234");
+    expect(login.principal).toMatchObject({ role: "coordinator", username: "coord@example.com" });
+  });
+
+  it("can change a managed user role between admin and coordinator", async () => {
+    const users = await import("@/lib/admin-users");
+
+    const created = await users.saveManagedAdminUser({
+      username: "switch@example.com",
+      role: "admin",
+      password: "Admin!234",
+      isActive: true,
+    });
+    expect(created.role).toBe("admin");
+
+    const updated = await users.saveManagedAdminUser(
+      {
+        username: "switch@example.com",
+        role: "coordinator",
+        isActive: true,
+      },
+      { id: created.id },
+    );
+    expect(updated.role).toBe("coordinator");
   });
 });

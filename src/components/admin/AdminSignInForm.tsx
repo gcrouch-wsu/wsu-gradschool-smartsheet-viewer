@@ -163,14 +163,20 @@ export function AdminSignInForm({ nextPath, disabled = false }: AdminSignInFormP
         body: JSON.stringify({ username, password }),
       });
 
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        role?: string;
+      } | null;
+
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
         setError(payload?.message ?? "Unable to sign in.");
         return;
       }
 
+      const destination = payload?.role === "coordinator" ? "/forms/sheet" : nextPath;
+
       startTransition(() => {
-        router.replace(nextPath);
+        router.replace(destination);
         router.refresh();
       });
     } catch {

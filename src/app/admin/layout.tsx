@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { getCurrentAdminAuthResult } from "@/lib/admin-users";
@@ -13,6 +14,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!principal) {
     return <>{children}</>;
+  }
+
+  if (principal.role === "coordinator") {
+    redirect("/forms/sheet");
   }
 
   const principalLabel = principal.displayName ?? principal.username;

@@ -18,7 +18,9 @@ const PUBLIC_ADMIN_PATHS = new Set([
   "/api/admin/verify-session",
 ]);
 
-async function adminPrincipalOk(request: NextRequest): Promise<{ ok: boolean; status: number; message: string }> {
+async function adminPrincipalOk(
+  request: NextRequest,
+): Promise<{ ok: boolean; status: number; message: string; role?: string }> {
   const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
     const result = await authorizeAdminSession(null);
@@ -37,7 +39,14 @@ async function adminPrincipalOk(request: NextRequest): Promise<{ ok: boolean; st
       signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) {
-      return { ok: true, status: 200, message: "" };
+      let role: string | undefined;
+      try {
+        const body = (await res.json()) as { role?: string };
+        if (typeof body.role === "string") role = body.role;
+      } catch {
+        /* ignore */
+      }
+      return { ok: true, status: 200, message: "", role };
     }
     let message = "Authentication required.";
     try {
@@ -64,8 +73,7 @@ export async function middleware(request: NextRequest) {
   const isAdminApiRequest = pathname === "/api/admin" || pathname.startsWith("/api/admin/");
   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.has(pathname);
 
-  // Sign-in page performs full principal resolution on the server.
-  if (pathname === "/admin/sign-in") {
+  if (pathname === "/admin/sign-in" || pathname === "/admin/reset-password") {
     return NextResponse.next();
   }
 
@@ -75,6 +83,12 @@ export async function middleware(request: NextRequest) {
 
   const auth = await adminPrincipalOk(request);
   if (auth.ok) {
+    if (auth.role === "coordinator" && !isAdminApiRequest) {
+      return NextResponse.redirect(new URL("/forms/sheet", request.url));
+    }
+    if (auth.role === "coordinator" && isAdminApiRequest) {
+      return NextResponse.json({ message: "Full admin access is required." }, { status: 403 });
+    }
     return NextResponse.next();
   }
 

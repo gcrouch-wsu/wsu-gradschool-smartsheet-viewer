@@ -10,6 +10,10 @@ export async function requireAdminPageAccess(nextPath: string, options?: { owner
     redirect(`/admin/sign-in?next=${encodeURIComponent(normalizedNextPath)}`);
   }
 
+  if (result.principal.role === "coordinator") {
+    redirect("/forms/sheet");
+  }
+
   if (options?.ownerOnly && result.principal.role !== "owner") {
     redirect("/admin");
   }

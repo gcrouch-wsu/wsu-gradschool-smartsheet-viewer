@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconCheck, IconFile, IconRefresh, IconTrash } from "@/components/forms/icons";
+import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
 import type {
   TimelineItem,
   TrackerAttachment,
@@ -10,12 +10,8 @@ import type {
   TrackerSubmission,
 } from "@/components/forms/tracker/types";
 
-function canApprove(roles: string[]) {
-  return roles.includes("admin") || roles.includes("approver");
-}
-
-function isAdmin(roles: string[]) {
-  return roles.includes("admin");
+function canStaffForms(roles: string[]) {
+  return roles.includes("admin") || roles.includes("approver") || roles.includes("coordinator");
 }
 
 function shortStageName(title: string) {
@@ -116,9 +112,6 @@ export interface SubmissionCardProps {
   commentText: string;
   onToggleTimeline: () => void;
   onLoadExtras: () => void;
-  onApprove: () => void;
-  onDecline: () => void;
-  onDelete: () => void;
   onResend?: () => void;
   canResend?: boolean;
   resendHint?: string | null;
@@ -138,9 +131,6 @@ export function SubmissionCard({
   commentText,
   onToggleTimeline,
   onLoadExtras,
-  onApprove,
-  onDecline,
-  onDelete,
   onResend,
   canResend,
   resendHint,
@@ -149,11 +139,9 @@ export function SubmissionCard({
   className,
 }: SubmissionCardProps) {
   const [extrasOpen, setExtrasOpen] = useState(false);
-  const approver = canApprove(roles);
-  const admin = isAdmin(roles);
+  const staff = canStaffForms(roles);
   const busy = actionBusy === submission.rowId;
-  const showActions = approver && submission.approvalStatus?.state === "current";
-  const showResend = showActions && Boolean(canResend && onResend);
+  const showResend = staff && Boolean(canResend && onResend);
   const state = submission.approvalStatus?.state ?? "not-started";
 
   const meta = [
@@ -202,68 +190,26 @@ export function SubmissionCard({
         </p>
       </div>
 
-      {(showActions || admin) && (
+      {showResend ? (
         <div className="space-y-2 px-5 pt-4">
-          {showActions ? (
-            <p className="text-xs text-[color:var(--wsu-muted)]">
-              Primary path: Smartsheet emails the approver address from this submission. Approve / Decline here
-              is a staff override on the same status columns.
-              {showResend
-                ? " Resend pulses the matching RESEND checkbox so the sheet automation notifies the person pending at this stage again."
-                : ""}
-            </p>
-          ) : null}
-          {showResend && resendHint ? (
-            <p className="text-xs text-amber-900">Will notify: {resendHint}</p>
-          ) : null}
+          <p className="text-xs text-[color:var(--wsu-muted)]">
+            Approvals happen in Smartsheet. Resend pulses the matching RESEND helper so sheet automation notifies the
+            pending contact again.
+          </p>
+          {resendHint ? <p className="text-xs text-amber-900">Will notify: {resendHint}</p> : null}
           <div className="flex flex-wrap gap-2">
-            {showActions ? (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={onApprove}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-wsu-crimson px-3 py-1.5 text-sm font-medium text-white hover:bg-wsu-crimson/90 disabled:opacity-50"
-                >
-                  <IconCheck className="h-4 w-4" />
-                  Approve
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={onDecline}
-                  className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
-                >
-                  Decline
-                </button>
-                {showResend ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={onResend}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
-                  >
-                    <IconRefresh className="h-4 w-4" />
-                    Resend notification
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-            {admin ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onDelete}
-                aria-label="Delete"
-                title="Delete"
-                className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white p-1.5 text-red-700 hover:bg-red-50 disabled:opacity-50"
-              >
-                <IconTrash className="h-4 w-4" />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onResend}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+            >
+              <IconRefresh className="h-4 w-4" />
+              Resend notification
+            </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {submission.stages.length > 0 ? (
         <div className="mt-5 overflow-x-auto px-5 pb-2">
@@ -378,7 +324,7 @@ export function SubmissionCard({
                   ))}
                 </ul>
               )}
-              {approver ? (
+              {staff ? (
                 <div className="mt-3 flex gap-2">
                   <input
                     type="text"

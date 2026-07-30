@@ -18,5 +18,5 @@ export async function GET() {
       { status: result.status ?? 401 },
     );
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, role: result.principal.role });
 }

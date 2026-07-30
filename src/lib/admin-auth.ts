@@ -9,8 +9,9 @@ export const ADMIN_PASSWORD_POLICY_MESSAGE =
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export type AdminRole = "owner" | "admin";
+export type AdminRole = "owner" | "admin" | "coordinator";
 export type AdminUserSource = "env" | "managed";
+export type ManagedAdminRole = "admin" | "coordinator";
 
 export interface AdminAuthorizationResult {
   ok: boolean;
@@ -238,7 +239,8 @@ export async function readAdminSessionToken(sessionToken: string | undefined | n
 
   try {
     const decoded = JSON.parse(decodeBase64Url(payload)) as Partial<AdminSessionPayload>;
-    const hasValidRole = decoded.role === "owner" || decoded.role === "admin";
+    const hasValidRole =
+      decoded.role === "owner" || decoded.role === "admin" || decoded.role === "coordinator";
     const hasValidSource = decoded.source === "env" || decoded.source === "managed";
 
     if (

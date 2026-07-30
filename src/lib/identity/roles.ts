@@ -9,6 +9,7 @@ export type PlatformRole =
   | "admin"
   | "forms_admin"
   | "approver"
+  | "coordinator"
   | "contributor"
   | "viewer_public";
 
@@ -17,13 +18,20 @@ const ROLE_CAPABILITIES: Record<PlatformRole, PrincipalCapability[]> = {
   admin: ["admin.manage", "forms.admin", "forms.approver", "contributor.edit", "viewer"],
   forms_admin: ["forms.admin", "forms.approver", "viewer"],
   approver: ["forms.approver", "viewer"],
+  coordinator: ["forms.coordinator", "forms.approver", "viewer"],
   contributor: ["contributor.edit"],
   viewer_public: ["viewer"],
 };
 
 export function rolesFromPrincipal(principal: Principal): PlatformRole[] {
   if (principal.kind === "admin") {
-    return principal.role === "owner" ? ["owner", "admin", "forms_admin", "approver"] : ["admin", "forms_admin", "approver"];
+    if (principal.role === "owner") {
+      return ["owner", "admin", "forms_admin", "approver"];
+    }
+    if (principal.role === "coordinator") {
+      return ["coordinator", "approver"];
+    }
+    return ["admin", "forms_admin", "approver"];
   }
   if (principal.kind === "form_approver") {
     return ["approver"];

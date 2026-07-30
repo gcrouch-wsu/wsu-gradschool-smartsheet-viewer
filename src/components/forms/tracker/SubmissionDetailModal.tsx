@@ -32,7 +32,7 @@ interface SubmissionDetailModalProps {
   sheetId?: string | null;
   open: boolean;
   onClose: () => void;
-  /** Called after approve/decline/delete so the parent (e.g. grid) can refresh. */
+  /** Called after resend so the parent (e.g. grid) can refresh. */
   onChanged?: () => void;
 }
 
@@ -143,34 +143,6 @@ export function SubmissionDetailModal({
     }
   }
 
-  async function patchRow(action: "approve" | "decline") {
-    if (rowId == null) return;
-    setActionBusy(rowId);
-    setError("");
-    try {
-      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}`, sheetId), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, ...(sheetId ? { sheetId } : {}) }),
-      });
-      const d = await parseApiJson(r);
-      if (!r.ok) {
-        throw new Error(
-          (typeof d.error === "string" && d.error) ||
-            (typeof d.message === "string" && d.message) ||
-            "Update failed.",
-        );
-      }
-      setTimeline("hidden");
-      await loadSubmission(rowId);
-      onChanged?.();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Update failed.");
-    } finally {
-      setActionBusy(null);
-    }
-  }
-
   async function resendNotification() {
     if (rowId == null) return;
     setActionBusy(rowId);
@@ -196,30 +168,6 @@ export function SubmissionDetailModal({
       onChanged?.();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Resend failed.");
-    } finally {
-      setActionBusy(null);
-    }
-  }
-
-  async function deleteRow() {
-    if (rowId == null) return;
-    if (!confirm("Delete this submission permanently?")) return;
-    setActionBusy(rowId);
-    setError("");
-    try {
-      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}`, sheetId), { method: "DELETE" });
-      const d = await parseApiJson(r);
-      if (!r.ok) {
-        throw new Error(
-          (typeof d.error === "string" && d.error) ||
-            (typeof d.message === "string" && d.message) ||
-            "Delete failed.",
-        );
-      }
-      onChanged?.();
-      onClose();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Delete failed.");
     } finally {
       setActionBusy(null);
     }
@@ -280,10 +228,7 @@ export function SubmissionDetailModal({
               canResend={canResend}
               resendHint={resendHint}
               onCommentChange={setCommentText}
-              onApprove={() => void patchRow("approve")}
-              onDecline={() => void patchRow("decline")}
               onResend={() => void resendNotification()}
-              onDelete={() => void deleteRow()}
               onToggleTimeline={() => void toggleTimeline()}
               onLoadExtras={loadExtras}
               onPostComment={() => void postComment()}

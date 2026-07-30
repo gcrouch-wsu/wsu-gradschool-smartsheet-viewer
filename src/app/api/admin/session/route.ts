@@ -52,7 +52,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json({
+    ok: true,
+    role: authorization.principal.role,
+  });
   response.cookies.set({
     ...getAdminSessionCookieSettings(),
     name: ADMIN_SESSION_COOKIE_NAME,

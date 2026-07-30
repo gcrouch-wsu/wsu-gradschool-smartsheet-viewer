@@ -10,6 +10,7 @@ export type PrincipalCapability =
   | "admin.owner"
   | "forms.admin"
   | "forms.approver"
+  | "forms.coordinator"
   | "contributor.edit"
   | "viewer";
 
@@ -19,7 +20,7 @@ export interface Principal {
   identifier: string;
   displayName: string;
   email?: string;
-  role?: "owner" | "admin";
+  role?: "owner" | "admin" | "coordinator";
   source?: "env" | "managed";
   capabilities: PrincipalCapability[];
   session: {

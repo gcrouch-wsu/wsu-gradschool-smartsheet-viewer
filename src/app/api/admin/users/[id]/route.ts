@@ -4,16 +4,19 @@ import {
   AdminUserActionError,
   deleteManagedAdminUser,
   getManagedAdminUserById,
+  isManagedAdminRole,
   saveManagedAdminUser,
+  type ManagedAdminUserInput,
 } from "@/lib/admin-users";
 
-function toUserInput(body: unknown) {
+function toUserInput(body: unknown): ManagedAdminUserInput {
   const record = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   return {
     username: typeof record.username === "string" ? record.username : "",
     displayName: typeof record.displayName === "string" ? record.displayName : undefined,
     password: typeof record.password === "string" ? record.password : undefined,
     isActive: typeof record.isActive === "boolean" ? record.isActive : true,
+    role: typeof record.role === "string" && isManagedAdminRole(record.role) ? record.role : undefined,
   };
 }
 

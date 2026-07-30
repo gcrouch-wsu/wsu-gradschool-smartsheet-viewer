@@ -1,12 +1,12 @@
 import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
-import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
+import { formsAuthErrorResponse, requireFormsApproverAccess } from "@/lib/forms/forms-api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const access = await requireFormsAdminAccess();
+export async function GET(request: Request) {
+  const access = await requireFormsApproverAccess(request);
   if ("response" in access) return access.response;
 
   try {

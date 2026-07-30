@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
 );
 
 ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_nonce TEXT;
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'admin';
 
 CREATE TABLE IF NOT EXISTS admin_login_attempts (
   ip TEXT NOT NULL,

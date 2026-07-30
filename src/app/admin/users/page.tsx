@@ -11,8 +11,8 @@ export default async function AdminUsersPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
-        title="Admins"
-        description="Bootstrap owner plus managed admins who can run sources, views, and forms. Everyone signs in at /sign-in."
+        title="Users"
+        description="Invite Admins and Coordinators. Everyone signs in at /admin/sign-in. Coordinators only access the forms sheet and can resend notifications."
       />
       <AdminUsersManager
         bootstrapUser={accounts.bootstrap}
