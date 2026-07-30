@@ -18,6 +18,7 @@ interface UserFormState {
   displayName: string;
   password: string;
   isActive: boolean;
+  role: "admin" | "coordinator";
 }
 
 interface ResetLinkState {
@@ -39,6 +40,7 @@ function emptyForm(): UserFormState {
     displayName: "",
     password: "",
     isActive: true,
+    role: "admin",
   };
 }
 
@@ -141,6 +143,7 @@ export function AdminUsersManager({
       displayName: user.displayName ?? "",
       password: "",
       isActive: user.isActive,
+      role: user.role === "coordinator" ? "coordinator" : "admin",
     });
     setShowPassword(false);
     setError(null);
@@ -166,6 +169,7 @@ export function AdminUsersManager({
         body: JSON.stringify({
           username: form.username,
           displayName: form.displayName,
+          role: form.role,
           ...(editingUserId && form.password ? { password: form.password } : {}),
           isActive: form.isActive,
         }),
@@ -295,7 +299,7 @@ export function AdminUsersManager({
           </span>
         </div>
         <Button type="button" variant="primary" onClick={openCreate}>
-          Add admin
+          Add user
         </Button>
       </div>
 
@@ -307,33 +311,36 @@ export function AdminUsersManager({
             A
           </div>
           <h3 className="mt-3 text-sm font-medium text-ink">
-            {query.trim() ? "No admins match your search" : "No managed admins yet"}
+            {query.trim() ? "No users match your search" : "No managed users yet"}
           </h3>
           <p className="mx-auto mt-1 max-w-[34ch] text-[13px] text-sub">
             {query.trim()
               ? "Try a different name or email."
-              : "Add an admin by email. They will create their own password on first sign-in."}
+              : "Add an Admin or Coordinator by email. They create their password on first sign-in."}
           </p>
           {!query.trim() ? (
             <div className="mt-4">
               <Button type="button" variant="primary" onClick={openCreate}>
-                Add admin
+                Add user
               </Button>
             </div>
           ) : null}
         </div>
       ) : (
-        <TableShell headers={["Admin", "Email", "Status", "Updated", "Actions"]} columns={5} endAlignLastHeader>
+        <TableShell headers={["User", "Email", "Role", "Status", "Updated", "Actions"]} columns={6} endAlignLastHeader>
           <div className="divide-y divide-line">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-5 sm:items-center"
+                className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-6 sm:items-center"
               >
                 <div className="min-w-0 sm:col-span-1">
                   <p className="truncate text-sm font-medium text-ink">{user.displayName ?? user.username}</p>
                 </div>
                 <p className="truncate text-xs text-sub sm:text-sm">{user.username}</p>
+                <p className="text-xs font-medium capitalize text-ink sm:text-sm">
+                  {user.role === "coordinator" ? "Coordinator" : "Admin"}
+                </p>
                 <div>
                   <StatusPill active={user.isActive} hasPassword={user.hasPassword} />
                 </div>
@@ -359,7 +366,7 @@ export function AdminUsersManager({
                   </Button>
                 </div>
                 {resetLink?.userId === user.id ? (
-                  <div className="col-span-2 space-y-2 rounded-lg border border-line bg-[#fdfbfc] px-3 py-3 sm:col-span-5">
+                  <div className="col-span-2 space-y-2 rounded-lg border border-line bg-[#fdfbfc] px-3 py-3 sm:col-span-6">
                     <p className="text-xs text-sub">
                       Single-use link, expires in 24 hours. Copy and send it to the admin out of band.
                     </p>
@@ -387,14 +394,14 @@ export function AdminUsersManager({
         onClose={() => {
           if (!isPending) closeModal();
         }}
-        title={editingUserId ? "Edit admin" : "Add admin"}
+        title={editingUserId ? "Edit user" : "Add user"}
         size="md"
       >
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
           <p className="text-sm text-sub">
             {editingUserId
-              ? "Update display name, optional password, or active status. Prefer Generate reset link so the admin sets their own password."
-              : "Add an email only. The admin creates their password on first sign-in, or you can send a reset link."}
+              ? "Update display name, role, optional password, or active status."
+              : "Add an email and choose Admin or Coordinator. They create their password on first sign-in."}
           </p>
 
           <label className="block space-y-1.5">
@@ -410,6 +417,21 @@ export function AdminUsersManager({
               autoComplete="username"
             />
             <span className="text-xs text-sub">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</span>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-ink">Role</span>
+            <select
+              value={form.role}
+              onChange={(event) =>
+                handleInputChange("role", event.target.value === "coordinator" ? "coordinator" : "admin")
+              }
+              disabled={isPending}
+              className={inputClass}
+            >
+              <option value="admin">Admin — full workspace access</option>
+              <option value="coordinator">Coordinator — forms sheet and resend only</option>
+            </select>
           </label>
 
           <label className="block space-y-1.5">
@@ -467,7 +489,7 @@ export function AdminUsersManager({
               Cancel
             </Button>
             <Button type="submit" variant="primary" disabled={isPending}>
-              {isPending ? "Saving…" : editingUserId ? "Save changes" : "Add admin"}
+              {isPending ? "Saving…" : editingUserId ? "Save changes" : "Add user"}
             </Button>
           </div>
         </form>

@@ -27,13 +27,10 @@ export function adminPrincipalToPrincipal(
   admin: AdminPrincipal,
   session?: { issuedAt: number; expiresAt: number; version?: string },
 ): Principal {
-  const capabilities: PrincipalCapability[] = [
-    "admin.manage",
-    "forms.admin",
-    "forms.approver",
-    "contributor.edit",
-    "viewer",
-  ];
+  const capabilities: PrincipalCapability[] =
+    admin.role === "coordinator"
+      ? ["forms.coordinator", "forms.approver", "viewer"]
+      : ["admin.manage", "forms.admin", "forms.approver", "contributor.edit", "viewer"];
   if (admin.role === "owner") {
     capabilities.push("admin.owner");
   }

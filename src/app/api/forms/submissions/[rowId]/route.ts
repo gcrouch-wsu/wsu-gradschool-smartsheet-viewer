@@ -1,20 +1,13 @@
 import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { buildSubmissions } from "@/lib/forms/tracker";
-import {
-  findCurrentStage,
-  validateWorkflowValue,
-  approvedValue,
-  declinedValue,
-} from "@/lib/forms/submission-actions";
+import { validateWorkflowValue } from "@/lib/forms/submission-actions";
 import { findPendingContactEmail, findResendColumnForStage } from "@/lib/forms/resend";
-import { resolveWorkflow } from "@/lib/forms/workflow";
 import { rateLimit } from "@/lib/forms/rate-limit";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import {
   formsAuthErrorResponse,
   requireFormsAccess,
-  requireFormsAdminAccess,
   requireFormsApproverAccess,
 } from "@/lib/forms/forms-api";
 import {
@@ -105,19 +98,21 @@ export async function PATCH(
     return Response.json({ error: "action must be approve, decline, or set." }, { status: 400 });
   }
 
+  if (action === "approve" || action === "decline") {
+    return Response.json(
+      {
+        error:
+          "In-app Approve and Decline have been removed. Complete approvals in Smartsheet; use Resend to notify the pending contact.",
+      },
+      { status: 410 },
+    );
+  }
+
   try {
     const sheet = await ss.getSheet(sheetId);
-    const wf = await resolveWorkflow(sheet);
     const rowIdNum = Number(rowId);
-    let targetColumn = columnTitle;
-    let value = customValue;
-
-    if (action === "approve" || action === "decline") {
-      const current = await findCurrentStage(sheet, rowIdNum);
-      if (!current) return Response.json({ error: "No actionable stage for this submission." }, { status: 409 });
-      targetColumn = current.name;
-      value = action === "approve" ? await approvedValue(sheet) : await declinedValue(sheet);
-    }
+    const targetColumn = columnTitle;
+    const value = customValue;
 
     const err = await validateWorkflowValue(sheet, targetColumn, value);
     if (err) return Response.json({ error: err }, { status: 422 });
@@ -127,21 +122,6 @@ export async function PATCH(
     if (!col) return Response.json({ error: "Column not found." }, { status: 422 });
     const cells: { columnId: number; value: string }[] = [{ columnId: col.id, value }];
 
-    if (action === "decline" && wf.overallColumn) {
-      const overallCol = columns.find((c) => String(c.title).toLowerCase() === wf.overallColumn.toLowerCase());
-      if (overallCol) cells.push({ columnId: overallCol.id, value: await declinedValue(sheet) });
-    }
-
-    if (action === "approve") {
-      const stages = wf.approvalStages;
-      const idx = stages.findIndex((s) => s.toLowerCase() === targetColumn.toLowerCase());
-      const allApproved = idx === stages.length - 1;
-      if (allApproved && wf.overallColumn) {
-        const overallCol = columns.find((c) => String(c.title).toLowerCase() === wf.overallColumn.toLowerCase());
-        if (overallCol) cells.push({ columnId: overallCol.id, value: "Complete" });
-      }
-    }
-
     await ss.updateRows(sheetId, [{ id: rowIdNum, cells }]);
     return Response.json({ ok: true, sheetId, columnTitle: targetColumn, value, demo: config.demo });
   } catch (e) {
@@ -149,26 +129,9 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ rowId: string }> },
-) {
-  const access = await requireFormsAdminAccess();
-  if ("response" in access) return access.response;
-
-  const { rowId } = await params;
-  await ensureBootstrapped();
-
-  const resolved = await resolveFormsSheetId(sheetIdFromRequest(request));
-  if (!resolved.ok) {
-    return Response.json({ error: resolved.error }, { status: resolved.status });
-  }
-  const sheetId = resolved.sheetId;
-
-  try {
-    await ss.deleteRows(sheetId, [rowId]);
-    return Response.json({ ok: true, sheetId, rowId, demo: config.demo });
-  } catch (e) {
-    return formsAuthErrorResponse(e);
-  }
+export async function DELETE() {
+  return Response.json(
+    { error: "Deleting submissions from the app is not supported." },
+    { status: 410 },
+  );
 }

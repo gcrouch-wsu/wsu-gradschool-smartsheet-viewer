@@ -13,6 +13,7 @@ interface FormsSessionInfo {
   roles: string[];
   isAdmin: boolean;
   isApprover: boolean;
+  isCoordinator?: boolean;
 }
 
 function initialsFromSession(session: FormsSessionInfo | null): string {
@@ -56,7 +57,9 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
-    return session.isAdmin ? "Admin" : "Approver";
+    if (session.isAdmin) return "Admin";
+    if (session.isCoordinator) return "Coordinator";
+    return "Approver";
   }, [session]);
 
   function runSearch(e: React.FormEvent) {
@@ -69,13 +72,12 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   async function handleSignOut() {
     setSigningOut(true);
     try {
-      if (session?.isAdmin) {
+      if (session?.isAdmin || session?.isCoordinator) {
         await fetch("/api/admin/session", { method: "DELETE" });
-        router.replace("/admin/sign-in");
       } else {
         await fetch("/api/forms/approver/session", { method: "DELETE" });
-        router.replace("/forms/approver/sign-in");
       }
+      router.replace("/admin/sign-in?next=/forms/sheet");
       router.refresh();
     } finally {
       setSigningOut(false);

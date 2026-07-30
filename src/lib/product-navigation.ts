@@ -29,6 +29,6 @@ export function productNav(isAdmin: boolean): ProductNavItem[] {
     { href: "/admin/contributors", label: "Contributors", icon: "contributors" },
     { href: "/admin/activity", label: "Activity", icon: "activity" },
     { href: "/forms/manage", label: "Forms", icon: "forms" },
-    { href: "/admin/users", label: "Admins", icon: "admins" },
+    { href: "/admin/users", label: "Users", icon: "admins" },
   ];
 }

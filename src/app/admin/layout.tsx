@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { getCurrentAdminAuthResult } from "@/lib/admin-users";
@@ -13,6 +14,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!principal) {
     return <>{children}</>;
+  }
+
+  if (principal.role === "coordinator") {
+    redirect("/forms/sheet");
   }
 
   const principalLabel = principal.displayName ?? principal.username;
@@ -31,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="min-w-0">
             <span className="block truncate text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
             <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">
-              {principal.role === "owner" ? "Owner" : "Admin"}
+              {principal.role === "owner" ? "Owner" : principal.role === "coordinator" ? "Coordinator" : "Admin"}
             </span>
           </span>
         </div>

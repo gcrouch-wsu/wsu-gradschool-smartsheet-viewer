@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { config as formsConfig } from "@/lib/forms/config";
+import { isFullAdminRole } from "@/lib/admin-users";
 import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 
-export type FormsRole = "admin" | "approver" | "viewer";
+export type FormsRole = "admin" | "approver" | "viewer" | "coordinator";
 
 export interface FormsSessionUser {
   email: string;
@@ -11,12 +12,14 @@ export interface FormsSessionUser {
   roles: FormsRole[];
   isAdmin: boolean;
   isApprover: boolean;
+  isCoordinator: boolean;
 }
 
 export interface FormsAccessResult {
   user: FormsSessionUser;
   isAdmin: boolean;
   isApprover: boolean;
+  isCoordinator: boolean;
 }
 
 export interface FormsAccessError {
@@ -26,12 +29,23 @@ export interface FormsAccessError {
 export async function getFormsSessionUserFromRequest(request?: Request): Promise<FormsSessionUser | null> {
   const admin = await resolveAdminPrincipal();
   if (admin) {
+    if (admin.role === "coordinator") {
+      return {
+        email: admin.email ?? admin.identifier,
+        name: admin.displayName,
+        roles: ["coordinator", "approver", "viewer"],
+        isAdmin: false,
+        isApprover: true,
+        isCoordinator: true,
+      };
+    }
     return {
-      email: admin.identifier,
+      email: admin.email ?? admin.identifier,
       name: admin.displayName,
       roles: ["admin", "approver", "viewer"],
       isAdmin: true,
       isApprover: true,
+      isCoordinator: false,
     };
   }
 
@@ -43,6 +57,7 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
       roles: ["approver", "viewer"],
       isAdmin: false,
       isApprover: true,
+      isCoordinator: false,
     };
   }
 
@@ -57,6 +72,7 @@ export async function getFormsSessionPayload() {
     roles: user?.roles ?? [],
     isAdmin: user?.isAdmin ?? false,
     isApprover: user?.isApprover ?? false,
+    isCoordinator: user?.isCoordinator ?? false,
   };
 }
 
@@ -73,7 +89,12 @@ export async function requireFormsAccess(request?: Request): Promise<FormsAccess
   if (!user) {
     return { response: unauthorizedResponse() };
   }
-  return { user, isAdmin: user.isAdmin, isApprover: user.isApprover };
+  return {
+    user,
+    isAdmin: user.isAdmin,
+    isApprover: user.isApprover,
+    isCoordinator: user.isCoordinator,
+  };
 }
 
 export async function requireFormsAdminAccess(): Promise<FormsAccessResult | FormsAccessError> {
@@ -82,6 +103,9 @@ export async function requireFormsAdminAccess(): Promise<FormsAccessResult | For
     return { response: auth.response };
   }
   const principal = auth.principal!;
+  if (!isFullAdminRole(principal.role)) {
+    return { response: forbiddenResponse("Full admin access is required.") };
+  }
   return {
     user: {
       email: principal.username,
@@ -89,9 +113,11 @@ export async function requireFormsAdminAccess(): Promise<FormsAccessResult | For
       roles: ["admin", "approver", "viewer"],
       isAdmin: true,
       isApprover: true,
+      isCoordinator: false,
     },
     isAdmin: true,
     isApprover: true,
+    isCoordinator: false,
   };
 }
 

@@ -12,11 +12,24 @@ import {
   ADMIN_USERNAME_ENV_VAR,
   type AdminRole,
   type AdminUserSource,
+  type ManagedAdminRole,
   createAdminSessionToken,
   getAdminConfigurationError,
   readAdminSessionToken,
   validateAdminPassword,
 } from "@/lib/admin-auth";
+
+export function isFullAdminRole(role: AdminRole): boolean {
+  return role === "owner" || role === "admin";
+}
+
+export function isManagedAdminRole(value: string): value is ManagedAdminRole {
+  return value === "admin" || value === "coordinator";
+}
+
+function normalizeManagedRole(value: unknown, fallback: ManagedAdminRole = "admin"): ManagedAdminRole {
+  return typeof value === "string" && isManagedAdminRole(value) ? value : fallback;
+}
 
 const ADMIN_USERS_DIR = path.join(process.cwd(), "config", "admin-users");
 const DATABASE_URL_ENV_VAR = "DATABASE_URL";
@@ -117,6 +130,7 @@ interface ManagedAdminUserRecord {
   updatedAt: string;
   isActive: boolean;
   resetNonce?: string | null;
+  role: ManagedAdminRole;
 }
 
 interface ManagedAdminUserDbRow {
@@ -129,6 +143,7 @@ interface ManagedAdminUserDbRow {
   updated_at: string | Date;
   is_active: boolean;
   reset_nonce?: string | null;
+  role?: string | null;
 }
 
 export interface ManagedAdminUserSummary {
@@ -139,7 +154,7 @@ export interface ManagedAdminUserSummary {
   updatedAt: string;
   isActive: boolean;
   hasPassword: boolean;
-  role: "admin";
+  role: ManagedAdminRole;
   source: "managed";
 }
 
@@ -175,6 +190,7 @@ export interface ManagedAdminUserInput {
   displayName?: string;
   password?: string;
   isActive?: boolean;
+  role?: ManagedAdminRole;
 }
 
 export class AdminAuthenticationError extends Error {
@@ -300,6 +316,7 @@ function toManagedRecordFromDatabaseRow(row: ManagedAdminUserDbRow): ManagedAdmi
     updatedAt: toIsoTimestamp(row.updated_at),
     isActive: Boolean(row.is_active),
     resetNonce: row.reset_nonce ?? null,
+    role: normalizeManagedRole(row.role),
   };
 }
 
@@ -326,6 +343,7 @@ function validateManagedRecord(value: unknown, fileName: string): ManagedAdminUs
   const isActive = record.isActive === undefined ? true : Boolean(record.isActive);
   const id = typeof record.id === "string" ? record.id.trim() : "";
   const resetNonce = typeof record.resetNonce === "string" ? record.resetNonce : null;
+  const role = normalizeManagedRole(record.role);
 
   if (!id) {
     throw new Error(`Invalid admin user record in ${fileName}: id is required.`);
@@ -350,6 +368,7 @@ function validateManagedRecord(value: unknown, fileName: string): ManagedAdminUs
     updatedAt,
     isActive,
     resetNonce,
+    role,
   };
 }
 
@@ -478,8 +497,9 @@ async function migrateFileManagedAdminsToDatabaseIfNeeded() {
             password_salt,
             created_at,
             updated_at,
-            is_active
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            is_active,
+            role
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           ON CONFLICT (id) DO NOTHING
         `,
         [
@@ -491,6 +511,7 @@ async function migrateFileManagedAdminsToDatabaseIfNeeded() {
           record.createdAt,
           record.updatedAt,
           record.isActive,
+          record.role,
         ],
       );
     } catch (error) {
@@ -505,7 +526,7 @@ async function migrateFileManagedAdminsToDatabaseIfNeeded() {
 async function listManagedAdminUserRecordsFromDatabase() {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce, role
     FROM admin_users
     ORDER BY COALESCE(display_name, username), username
   `);
@@ -515,7 +536,7 @@ async function listManagedAdminUserRecordsFromDatabase() {
 async function getManagedAdminUserRecordByIdFromDatabase(id: string) {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce, role
     FROM admin_users
     WHERE id = $1
   `, [id]);
@@ -525,7 +546,7 @@ async function getManagedAdminUserRecordByIdFromDatabase(id: string) {
 async function getManagedAdminUserRecordByUsernameFromDatabase(username: string) {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce, role
     FROM admin_users
     WHERE username = $1
   `, [normalizeUsername(username)]);
@@ -559,7 +580,7 @@ function toManagedSummary(record: ManagedAdminUserRecord): ManagedAdminUserSumma
     updatedAt: record.updatedAt,
     isActive: record.isActive,
     hasPassword: hasPassword(record),
-    role: "admin",
+    role: record.role,
     source: "managed",
   };
 }
@@ -569,7 +590,7 @@ function toManagedPrincipal(record: ManagedAdminUserRecord): AdminPrincipal {
     id: record.id,
     username: record.username,
     displayName: record.displayName,
-    role: "admin",
+    role: record.role,
     source: "managed",
     version: record.updatedAt,
   };
@@ -683,6 +704,7 @@ function validateManagedAdminUserInput(
   const displayName = sanitizeDisplayName(input.displayName);
   const password = input.password ?? "";
   const isActive = input.isActive ?? true;
+  const role = normalizeManagedRole(input.role, "admin");
   const bootstrapUsername = normalizeUsername(process.env[ADMIN_USERNAME_ENV_VAR] ?? "");
 
   if (!username) {
@@ -713,6 +735,10 @@ function validateManagedAdminUserInput(
     }
   }
 
+  if (input.role !== undefined && !isManagedAdminRole(String(input.role))) {
+    errors.push('Role must be "admin" or "coordinator".');
+  }
+
   if (options.editingUserId && options.currentUserId === options.editingUserId && !isActive) {
     errors.push("You cannot deactivate the account you are currently using.");
   }
@@ -722,6 +748,7 @@ function validateManagedAdminUserInput(
     displayName,
     password,
     isActive,
+    role,
     errors,
   };
 }
@@ -744,7 +771,8 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
             password_salt = $5,
             updated_at = $6,
             is_active = $7,
-            reset_nonce = $8
+            reset_nonce = $8,
+            role = $9
         WHERE id = $1
       `,
       [
@@ -756,6 +784,7 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
         record.updatedAt,
         record.isActive,
         record.resetNonce ?? null,
+        record.role,
       ],
     );
     return;
@@ -772,8 +801,9 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
         created_at,
         updated_at,
         is_active,
-        reset_nonce
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        reset_nonce,
+        role
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     `,
     [
       record.id,
@@ -785,6 +815,7 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
       record.updatedAt,
       record.isActive,
       record.resetNonce ?? null,
+      record.role,
     ],
   );
 }
@@ -913,6 +944,14 @@ export async function requireAuthenticatedAdmin() {
   return result.principal;
 }
 
+export async function requireFullAdmin() {
+  const principal = await requireAuthenticatedAdmin();
+  if (!isFullAdminRole(principal.role)) {
+    throw new AdminAuthenticationError(403, "Full admin access is required.");
+  }
+  return principal;
+}
+
 export async function requireOwnerAdmin() {
   const principal = await requireAuthenticatedAdmin();
   if (principal.role !== "owner") {
@@ -972,6 +1011,7 @@ export async function saveManagedAdminUser(
         username: normalized.username,
         displayName: normalized.displayName,
         isActive: normalized.isActive,
+        role: normalized.role,
         updatedAt: now,
         passwordHash: passwordParts?.passwordHash ?? existing.passwordHash,
         passwordSalt: passwordParts?.passwordSalt ?? existing.passwordSalt,
@@ -984,6 +1024,7 @@ export async function saveManagedAdminUser(
         createdAt: now,
         updatedAt: now,
         isActive: normalized.isActive,
+        role: normalized.role,
         passwordHash: passwordParts?.passwordHash ?? "",
         passwordSalt: passwordParts?.passwordSalt ?? "",
         resetNonce: null,

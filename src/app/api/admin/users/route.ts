@@ -13,6 +13,10 @@ function toUserInput(body: unknown) {
     displayName: typeof record.displayName === "string" ? record.displayName : undefined,
     password: typeof record.password === "string" ? record.password : undefined,
     isActive: typeof record.isActive === "boolean" ? record.isActive : true,
+    role:
+      record.role === "admin" || record.role === "coordinator"
+        ? record.role
+        : undefined,
   };
 }
 
