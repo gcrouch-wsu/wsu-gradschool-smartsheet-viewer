@@ -20,6 +20,12 @@ interface UserFormState {
   isActive: boolean;
 }
 
+interface ResetLinkState {
+  userId: string;
+  url: string;
+  copied: boolean;
+}
+
 const USERNAME_PATTERN = "^[a-z0-9._@-]+$";
 const PASSWORD_HINT =
   "At least 8 characters, with one uppercase letter, one number, and one special character such as !, *, or _.";
@@ -57,14 +63,24 @@ function buildErrorMessage(payload: { message?: string; error?: string; errors?:
   return `${lead} ${payload.errors.join(" ")}`;
 }
 
-function StatusPill({ active }: { active: boolean }) {
+function StatusPill({ active, hasPassword }: { active: boolean; hasPassword: boolean }) {
+  if (!active) {
+    return (
+      <span className="inline-flex rounded-full bg-[#f4f0f1] px-2.5 py-1 text-[11px] font-medium text-sub">
+        Inactive
+      </span>
+    );
+  }
+  if (!hasPassword) {
+    return (
+      <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800">
+        Pending setup
+      </span>
+    );
+  }
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${
-        active ? "bg-[var(--crimson-soft)] text-crimson" : "bg-[#f4f0f1] text-sub"
-      }`}
-    >
-      {active ? "Active" : "Inactive"}
+    <span className="inline-flex rounded-full bg-[var(--crimson-soft)] px-2.5 py-1 text-[11px] font-medium text-crimson">
+      Active
     </span>
   );
 }
@@ -84,6 +100,8 @@ export function AdminUsersManager({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [resetLink, setResetLink] = useState<ResetLinkState | null>(null);
+  const [loadingResetId, setLoadingResetId] = useState<string | null>(null);
 
   const storageLabel = storageMode === "database" ? "Postgres" : "Local files";
   const storageDescription =
@@ -148,7 +166,7 @@ export function AdminUsersManager({
         body: JSON.stringify({
           username: form.username,
           displayName: form.displayName,
-          password: form.password,
+          ...(editingUserId && form.password ? { password: form.password } : {}),
           isActive: form.isActive,
         }),
       });
@@ -169,7 +187,7 @@ export function AdminUsersManager({
 
       const savedUser = payload.user;
       setUsers((current) => sortUsers([...current.filter((user) => user.id !== savedUser.id), savedUser]));
-      toast.addToast(editingUserId ? "Admin updated." : "Admin created.", "success");
+      toast.addToast(editingUserId ? "Admin updated." : "Admin added.", "success");
       closeModal();
     } catch {
       setError("Unable to save the admin user.");
@@ -199,11 +217,46 @@ export function AdminUsersManager({
 
       setUsers((current) => current.filter((entry) => entry.id !== user.id));
       if (editingUserId === user.id) closeModal();
+      if (resetLink?.userId === user.id) setResetLink(null);
       toast.addToast("Admin deleted.", "success");
     } catch {
       toast.addToast("Unable to delete the admin user.", "error");
     } finally {
       setIsPending(false);
+    }
+  }
+
+  async function handleGenerateResetLink(user: ManagedAdminUserSummary) {
+    setLoadingResetId(user.id);
+    try {
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(user.id)}/reset-token`, {
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as { token?: string; message?: string } | null;
+      if (!response.ok) {
+        toast.addToast(payload?.message ?? "Failed to generate reset link.", "error");
+        return;
+      }
+      const token = payload?.token ?? "";
+      const url = `${window.location.origin}/admin/reset-password?token=${encodeURIComponent(token)}`;
+      setResetLink({ userId: user.id, url, copied: false });
+      toast.addToast("Reset link generated.", "success");
+    } catch {
+      toast.addToast("Failed to generate reset link.", "error");
+    } finally {
+      setLoadingResetId(null);
+    }
+  }
+
+  async function handleCopy(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setResetLink((prev) => (prev ? { ...prev, copied: true } : prev));
+      setTimeout(() => {
+        setResetLink((prev) => (prev ? { ...prev, copied: false } : prev));
+      }, 2000);
+    } catch {
+      // fallback — select the text in the input
     }
   }
 
@@ -233,7 +286,7 @@ export function AdminUsersManager({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name or username…"
+              placeholder="Search by name or email…"
               className={inputClass}
             />
           </label>
@@ -242,7 +295,7 @@ export function AdminUsersManager({
           </span>
         </div>
         <Button type="button" variant="primary" onClick={openCreate}>
-          Create admin
+          Add admin
         </Button>
       </div>
 
@@ -258,19 +311,19 @@ export function AdminUsersManager({
           </h3>
           <p className="mx-auto mt-1 max-w-[34ch] text-[13px] text-sub">
             {query.trim()
-              ? "Try a different name or username."
-              : "Create a managed admin so day-to-day work doesn’t depend on the bootstrap owner."}
+              ? "Try a different name or email."
+              : "Add an admin by email. They will create their own password on first sign-in."}
           </p>
           {!query.trim() ? (
             <div className="mt-4">
               <Button type="button" variant="primary" onClick={openCreate}>
-                Create admin
+                Add admin
               </Button>
             </div>
           ) : null}
         </div>
       ) : (
-        <TableShell headers={["Admin", "Username", "Status", "Updated", "Actions"]} columns={5} endAlignLastHeader>
+        <TableShell headers={["Admin", "Email", "Status", "Updated", "Actions"]} columns={5} endAlignLastHeader>
           <div className="divide-y divide-line">
             {filteredUsers.map((user) => (
               <div
@@ -282,10 +335,17 @@ export function AdminUsersManager({
                 </div>
                 <p className="truncate text-xs text-sub sm:text-sm">{user.username}</p>
                 <div>
-                  <StatusPill active={user.isActive} />
+                  <StatusPill active={user.isActive} hasPassword={user.hasPassword} />
                 </div>
                 <p className="hidden text-xs text-sub sm:block">{formatTimestamp(user.updatedAt)}</p>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <Button
+                    type="button"
+                    onClick={() => void handleGenerateResetLink(user)}
+                    disabled={isPending || loadingResetId === user.id}
+                  >
+                    {loadingResetId === user.id ? "Generating…" : "Generate reset link"}
+                  </Button>
                   <Button type="button" onClick={() => openEdit(user)} disabled={isPending}>
                     Edit
                   </Button>
@@ -298,6 +358,24 @@ export function AdminUsersManager({
                     Delete
                   </Button>
                 </div>
+                {resetLink?.userId === user.id ? (
+                  <div className="col-span-2 space-y-2 rounded-lg border border-line bg-[#fdfbfc] px-3 py-3 sm:col-span-5">
+                    <p className="text-xs text-sub">
+                      Single-use link, expires in 24 hours. Copy and send it to the admin out of band.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        readOnly
+                        value={resetLink.url}
+                        className={`${inputClass} min-w-0 flex-1 font-mono text-xs`}
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                      <Button type="button" variant="primary" onClick={() => void handleCopy(resetLink.url)}>
+                        {resetLink.copied ? "Copied" : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -309,16 +387,18 @@ export function AdminUsersManager({
         onClose={() => {
           if (!isPending) closeModal();
         }}
-        title={editingUserId ? "Edit admin" : "Create admin"}
+        title={editingUserId ? "Edit admin" : "Add admin"}
         size="md"
       >
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
           <p className="text-sm text-sub">
-            Passwords are hashed before storage. Any signed-in admin can create and manage these accounts.
+            {editingUserId
+              ? "Update display name, optional password, or active status. Prefer Generate reset link so the admin sets their own password."
+              : "Add an email only. The admin creates their password on first sign-in, or you can send a reset link."}
           </p>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">Username</span>
+            <span className="text-sm font-medium text-ink">Email</span>
             <input
               type="text"
               required
@@ -327,6 +407,7 @@ export function AdminUsersManager({
               onChange={(event) => handleInputChange("username", event.target.value.toLowerCase())}
               disabled={Boolean(editingUserId) || isPending}
               className={inputClass}
+              autoComplete="username"
             />
             <span className="text-xs text-sub">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</span>
           </label>
@@ -342,32 +423,29 @@ export function AdminUsersManager({
             />
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">
-              {editingUserId ? "New password (optional)" : "Password"}
-            </span>
-            <div className="flex overflow-hidden rounded-lg border border-line bg-white focus-within:border-crimson focus-within:ring-1 focus-within:ring-crimson">
-              <input
-                type={showPassword ? "text" : "password"}
-                required={!editingUserId}
-                value={form.password}
-                onChange={(event) => handleInputChange("password", event.target.value)}
-                disabled={isPending}
-                className="w-full px-3 py-2.5 text-sm text-ink outline-none disabled:bg-[#faf7f8]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((value) => !value)}
-                disabled={isPending}
-                className="border-l border-line px-3 text-sm font-medium text-crimson transition hover:bg-[var(--crimson-soft)] disabled:opacity-50"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            <span className="text-xs text-sub">
-              {editingUserId ? `Leave blank to keep the current password. ${PASSWORD_HINT}` : PASSWORD_HINT}
-            </span>
-          </label>
+          {editingUserId ? (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-ink">New password (optional)</span>
+              <div className="flex overflow-hidden rounded-lg border border-line bg-white focus-within:border-crimson focus-within:ring-1 focus-within:ring-crimson">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(event) => handleInputChange("password", event.target.value)}
+                  disabled={isPending}
+                  className="w-full px-3 py-2.5 text-sm text-ink outline-none disabled:bg-[#faf7f8]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  disabled={isPending}
+                  className="border-l border-line px-3 text-sm font-medium text-crimson transition hover:bg-[var(--crimson-soft)] disabled:opacity-50"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <span className="text-xs text-sub">Leave blank to keep the current password. {PASSWORD_HINT}</span>
+            </label>
+          ) : null}
 
           <label className="flex items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
             <input
@@ -389,7 +467,7 @@ export function AdminUsersManager({
               Cancel
             </Button>
             <Button type="submit" variant="primary" disabled={isPending}>
-              {isPending ? "Saving…" : editingUserId ? "Save changes" : "Create admin"}
+              {isPending ? "Saving…" : editingUserId ? "Save changes" : "Add admin"}
             </Button>
           </div>
         </form>

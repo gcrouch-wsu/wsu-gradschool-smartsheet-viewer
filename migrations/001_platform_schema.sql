@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
   is_active BOOLEAN NOT NULL DEFAULT true
 );
 
+ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS reset_nonce TEXT;
+
 CREATE TABLE IF NOT EXISTS admin_login_attempts (
   ip TEXT NOT NULL,
   attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -116,6 +116,7 @@ interface ManagedAdminUserRecord {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  resetNonce?: string | null;
 }
 
 interface ManagedAdminUserDbRow {
@@ -127,6 +128,7 @@ interface ManagedAdminUserDbRow {
   created_at: string | Date;
   updated_at: string | Date;
   is_active: boolean;
+  reset_nonce?: string | null;
 }
 
 export interface ManagedAdminUserSummary {
@@ -136,8 +138,18 @@ export interface ManagedAdminUserSummary {
   createdAt: string;
   updatedAt: string;
   isActive: boolean;
+  hasPassword: boolean;
   role: "admin";
   source: "managed";
+}
+
+export type AdminAccessMode = "claim" | "sign_in";
+
+export interface AdminAccessStatusResult {
+  ok: boolean;
+  mode?: AdminAccessMode;
+  status?: number;
+  message?: string;
 }
 
 export interface AdminAccountSummary {
@@ -282,12 +294,17 @@ function toManagedRecordFromDatabaseRow(row: ManagedAdminUserDbRow): ManagedAdmi
     id: row.id,
     username: normalizeUsername(row.username),
     displayName: sanitizeDisplayName(row.display_name ?? undefined),
-    passwordHash: row.password_hash,
-    passwordSalt: row.password_salt,
+    passwordHash: row.password_hash ?? "",
+    passwordSalt: row.password_salt ?? "",
     createdAt: toIsoTimestamp(row.created_at),
     updatedAt: toIsoTimestamp(row.updated_at),
     isActive: Boolean(row.is_active),
+    resetNonce: row.reset_nonce ?? null,
   };
+}
+
+function hasPassword(record: Pick<ManagedAdminUserRecord, "passwordHash" | "passwordSalt">) {
+  return Boolean(record.passwordHash && record.passwordSalt);
 }
 
 async function ensureAdminUsersDir() {
@@ -308,6 +325,7 @@ function validateManagedRecord(value: unknown, fileName: string): ManagedAdminUs
   const updatedAt = typeof record.updatedAt === "string" ? record.updatedAt : "";
   const isActive = record.isActive === undefined ? true : Boolean(record.isActive);
   const id = typeof record.id === "string" ? record.id.trim() : "";
+  const resetNonce = typeof record.resetNonce === "string" ? record.resetNonce : null;
 
   if (!id) {
     throw new Error(`Invalid admin user record in ${fileName}: id is required.`);
@@ -315,8 +333,8 @@ function validateManagedRecord(value: unknown, fileName: string): ManagedAdminUs
   if (!username || !USERNAME_PATTERN.test(username)) {
     throw new Error(`Invalid admin user record in ${fileName}: username is invalid.`);
   }
-  if (!passwordHash || !passwordSalt) {
-    throw new Error(`Invalid admin user record in ${fileName}: passwordHash and passwordSalt are required.`);
+  if ((passwordHash && !passwordSalt) || (!passwordHash && passwordSalt)) {
+    throw new Error(`Invalid admin user record in ${fileName}: passwordHash and passwordSalt must both be set or both empty.`);
   }
   if (!createdAt || !updatedAt) {
     throw new Error(`Invalid admin user record in ${fileName}: createdAt and updatedAt are required.`);
@@ -331,6 +349,7 @@ function validateManagedRecord(value: unknown, fileName: string): ManagedAdminUs
     createdAt,
     updatedAt,
     isActive,
+    resetNonce,
   };
 }
 
@@ -486,7 +505,7 @@ async function migrateFileManagedAdminsToDatabaseIfNeeded() {
 async function listManagedAdminUserRecordsFromDatabase() {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
     FROM admin_users
     ORDER BY COALESCE(display_name, username), username
   `);
@@ -496,7 +515,7 @@ async function listManagedAdminUserRecordsFromDatabase() {
 async function getManagedAdminUserRecordByIdFromDatabase(id: string) {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
     FROM admin_users
     WHERE id = $1
   `, [id]);
@@ -506,7 +525,7 @@ async function getManagedAdminUserRecordByIdFromDatabase(id: string) {
 async function getManagedAdminUserRecordByUsernameFromDatabase(username: string) {
   await ensureManagedAdminsTable();
   const { rows } = await query<ManagedAdminUserDbRow>(`
-    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active
+    SELECT id, username, display_name, password_hash, password_salt, created_at, updated_at, is_active, reset_nonce
     FROM admin_users
     WHERE username = $1
   `, [normalizeUsername(username)]);
@@ -539,6 +558,7 @@ function toManagedSummary(record: ManagedAdminUserRecord): ManagedAdminUserSumma
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     isActive: record.isActive,
+    hasPassword: hasPassword(record),
     role: "admin",
     source: "managed",
   };
@@ -642,6 +662,9 @@ function hashPassword(password: string, saltBase64?: string) {
 }
 
 function verifyPassword(password: string, record: ManagedAdminUserRecord) {
+  if (!hasPassword(record)) {
+    return false;
+  }
   const derived = scryptSync(password, Buffer.from(record.passwordSalt, "base64"), 64);
   return timingSafeEqual(derived, Buffer.from(record.passwordHash, "base64"));
 }
@@ -720,7 +743,8 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
             password_hash = $4,
             password_salt = $5,
             updated_at = $6,
-            is_active = $7
+            is_active = $7,
+            reset_nonce = $8
         WHERE id = $1
       `,
       [
@@ -731,6 +755,7 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
         record.passwordSalt,
         record.updatedAt,
         record.isActive,
+        record.resetNonce ?? null,
       ],
     );
     return;
@@ -746,8 +771,9 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
         password_salt,
         created_at,
         updated_at,
-        is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        is_active,
+        reset_nonce
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     `,
     [
       record.id,
@@ -758,6 +784,7 @@ async function writeManagedAdminUserToDatabase(record: ManagedAdminUserRecord, i
       record.createdAt,
       record.updatedAt,
       record.isActive,
+      record.resetNonce ?? null,
     ],
   );
 }
@@ -796,7 +823,23 @@ export async function authenticateAdminCredentials(username: string, password: s
   }
 
   const user = await getManagedAdminUserRecordByUsername(normalizedUsername);
-  if (!user || !user.isActive || !verifyPassword(password, user)) {
+  if (!user || !user.isActive) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Invalid username or password.",
+    };
+  }
+
+  if (!hasPassword(user)) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Create a password for this admin account before signing in.",
+    };
+  }
+
+  if (!verifyPassword(password, user)) {
     return {
       ok: false,
       status: 401,
@@ -907,7 +950,7 @@ export async function saveManagedAdminUser(
   }
 
   const normalized = validateManagedAdminUserInput(input, {
-    requirePassword: !existing,
+    requirePassword: false,
     existingUsers,
     currentUserId: options?.currentUserId,
     editingUserId: existing?.id,
@@ -932,6 +975,7 @@ export async function saveManagedAdminUser(
         updatedAt: now,
         passwordHash: passwordParts?.passwordHash ?? existing.passwordHash,
         passwordSalt: passwordParts?.passwordSalt ?? existing.passwordSalt,
+        resetNonce: passwordParts ? null : existing.resetNonce,
       }
     : {
         id: buildAdminUserId(normalized.username, new Set(existingUsers.map((user) => user.id))),
@@ -942,6 +986,7 @@ export async function saveManagedAdminUser(
         isActive: normalized.isActive,
         passwordHash: passwordParts?.passwordHash ?? "",
         passwordSalt: passwordParts?.passwordSalt ?? "",
+        resetNonce: null,
       };
 
   const storageMode = getManagedAdminStorageMode();
@@ -1024,4 +1069,214 @@ export async function listAdminAccounts() {
     bootstrap,
     users,
   };
+}
+
+export async function getAdminAccessStatus(username: string): Promise<AdminAccessStatusResult> {
+  const configurationError = getAdminConfigurationError();
+  if (configurationError) {
+    return { ok: false, status: 503, message: configurationError };
+  }
+
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername) {
+    return { ok: false, status: 400, message: "Username is required." };
+  }
+
+  const bootstrap = getBootstrapCredentials();
+  if (bootstrap && normalizeUsername(bootstrap.username) === normalizedUsername) {
+    return { ok: true, mode: "sign_in" };
+  }
+
+  const user = await getManagedAdminUserRecordByUsername(normalizedUsername);
+  if (!user || !user.isActive) {
+    return { ok: false, status: 404, message: "That admin account was not found or is inactive." };
+  }
+
+  return { ok: true, mode: hasPassword(user) ? "sign_in" : "claim" };
+}
+
+export async function claimAdminPassword(username: string, password: string): Promise<AdminAuthResult> {
+  const configurationError = getAdminConfigurationError();
+  if (configurationError) {
+    return { ok: false, status: 503, message: configurationError };
+  }
+
+  const normalizedUsername = normalizeUsername(username);
+  if (!normalizedUsername || !password) {
+    return { ok: false, status: 400, message: "Username and password are required." };
+  }
+
+  const passwordError = validateAdminPassword(password);
+  if (passwordError) {
+    return { ok: false, status: 400, message: passwordError };
+  }
+
+  const user = await getManagedAdminUserRecordByUsername(normalizedUsername);
+  if (!user || !user.isActive) {
+    return { ok: false, status: 404, message: "That admin account was not found or is inactive." };
+  }
+
+  if (hasPassword(user)) {
+    return { ok: false, status: 409, message: "This admin account already has a password. Sign in instead." };
+  }
+
+  const passwordParts = hashPassword(password);
+  const now = new Date().toISOString();
+  const record: ManagedAdminUserRecord = {
+    ...user,
+    passwordHash: passwordParts.passwordHash,
+    passwordSalt: passwordParts.passwordSalt,
+    resetNonce: null,
+    updatedAt: now,
+  };
+
+  if (getManagedAdminStorageMode() === "database") {
+    await writeManagedAdminUserToDatabase(record, true);
+  } else {
+    await writeManagedAdminUser(record);
+  }
+
+  return { ok: true, principal: toManagedPrincipal(record) };
+}
+
+export const ADMIN_RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface AdminResetTokenPayload {
+  username: string;
+  nonce: string;
+  issuedAt: number;
+  expiresAt: number;
+}
+
+function getAdminHmacSecret() {
+  const configuredSecret = process.env[ADMIN_SESSION_SECRET_ENV_VAR]?.trim();
+  if (configuredSecret) {
+    return configuredSecret;
+  }
+
+  const bootstrap = getBootstrapCredentials();
+  const configurationError = getAdminConfigurationError();
+  if (!bootstrap || configurationError) {
+    return null;
+  }
+
+  return `smartsheets-view-admin-session:${bootstrap.username}:${bootstrap.password}`;
+}
+
+function signAdminPayload(payload: string) {
+  const secret = getAdminHmacSecret();
+  if (!secret) {
+    throw new Error(getAdminConfigurationError() ?? "Admin authentication is not configured.");
+  }
+  return createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+export async function createAdminResetToken(username: string): Promise<string> {
+  const configurationError = getAdminConfigurationError();
+  if (configurationError) {
+    throw new AdminUserActionError({ status: 503, message: configurationError });
+  }
+
+  const normalizedUsername = normalizeUsername(username);
+  const user = await getManagedAdminUserRecordByUsername(normalizedUsername);
+  if (!user) {
+    throw new AdminUserActionError({ status: 404, message: "Admin user was not found." });
+  }
+
+  const nonce = randomBytes(16).toString("hex");
+  const expiresAt = Date.now() + ADMIN_RESET_TOKEN_TTL_MS;
+  const record: ManagedAdminUserRecord = {
+    ...user,
+    resetNonce: nonce,
+  };
+
+  if (getManagedAdminStorageMode() === "database") {
+    await ensureManagedAdminsTable();
+    await query(`UPDATE admin_users SET reset_nonce = $1 WHERE id = $2`, [nonce, user.id]);
+  } else {
+    await writeManagedAdminUser(record);
+  }
+
+  const payload = Buffer.from(
+    JSON.stringify({
+      username: normalizedUsername,
+      nonce,
+      issuedAt: Date.now(),
+      expiresAt,
+    } satisfies AdminResetTokenPayload),
+  ).toString("base64url");
+  return `${payload}.${signAdminPayload(payload)}`;
+}
+
+export async function verifyAdminResetToken(token: string): Promise<string | null> {
+  if (getAdminConfigurationError()) {
+    return null;
+  }
+
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) {
+    return null;
+  }
+
+  let expectedSig: Buffer;
+  try {
+    expectedSig = Buffer.from(signAdminPayload(payload));
+  } catch {
+    return null;
+  }
+  const receivedSig = Buffer.from(signature);
+  if (expectedSig.length !== receivedSig.length || !timingSafeEqual(expectedSig, receivedSig)) {
+    return null;
+  }
+
+  let decoded: Partial<AdminResetTokenPayload>;
+  try {
+    decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Partial<AdminResetTokenPayload>;
+  } catch {
+    return null;
+  }
+
+  if (
+    typeof decoded.username !== "string" ||
+    typeof decoded.nonce !== "string" ||
+    typeof decoded.expiresAt !== "number" ||
+    decoded.expiresAt <= Date.now()
+  ) {
+    return null;
+  }
+
+  const user = await getManagedAdminUserRecordByUsername(decoded.username);
+  if (!user?.resetNonce || user.resetNonce !== decoded.nonce) {
+    return null;
+  }
+
+  return normalizeUsername(decoded.username);
+}
+
+export async function resetAdminPassword(username: string, newPassword: string): Promise<void> {
+  const passwordError = validateAdminPassword(newPassword);
+  if (passwordError) {
+    throw new Error(passwordError);
+  }
+
+  const user = await getManagedAdminUserRecordByUsername(username);
+  if (!user) {
+    throw new Error("Admin user was not found.");
+  }
+
+  const passwordParts = hashPassword(newPassword);
+  const now = new Date().toISOString();
+  const record: ManagedAdminUserRecord = {
+    ...user,
+    passwordHash: passwordParts.passwordHash,
+    passwordSalt: passwordParts.passwordSalt,
+    resetNonce: null,
+    updatedAt: now,
+  };
+
+  if (getManagedAdminStorageMode() === "database") {
+    await writeManagedAdminUserToDatabase(record, true);
+  } else {
+    await writeManagedAdminUser(record);
+  }
 }

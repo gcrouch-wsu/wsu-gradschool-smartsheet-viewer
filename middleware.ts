@@ -9,7 +9,11 @@ import { handleFormsMiddleware } from "@/lib/forms/forms-middleware";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/sign-in",
+  "/admin/reset-password",
   "/api/admin/session",
+  "/api/admin/access-status",
+  "/api/admin/claim",
+  "/api/admin/password-reset",
   "/api/admin/logout",
   "/api/admin/verify-session",
 ]);

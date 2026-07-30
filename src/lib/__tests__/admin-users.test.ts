@@ -13,6 +13,7 @@ interface MockDbUser {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  reset_nonce: string | null;
 }
 
 const {
@@ -100,6 +101,7 @@ const {
         created_at: String(params[5]),
         updated_at: String(params[6]),
         is_active: Boolean(params[7]),
+        reset_nonce: params[8] == null ? null : String(params[8]),
       };
       const existingById = mockDbUsers.findIndex((entry) => entry.id === record.id);
       const existingByUsername = mockDbUsers.findIndex((entry) => entry.username === record.username);
@@ -170,6 +172,16 @@ const {
       user.password_salt = String(params[4]);
       user.updated_at = String(params[5]);
       user.is_active = Boolean(params[6]);
+      user.reset_nonce = params[7] == null ? null : String(params[7]);
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (sql.startsWith("UPDATE admin_users SET reset_nonce = $1")) {
+      const user = mockDbUsers.find((entry) => entry.id === params[1]);
+      if (!user) {
+        return { rows: [], rowCount: 0 };
+      }
+      user.reset_nonce = params[0] == null ? null : String(params[0]);
       return { rows: [], rowCount: 1 };
     }
 
@@ -474,6 +486,122 @@ describe("managed admin users", () => {
       name: "AdminUserActionError",
       status: 400,
       errors: ['Username "race@example.com" is already in use.'],
+    });
+  });
+
+  it("creates an invited admin without a password and returns claim access status", async () => {
+    const users = await import("@/lib/admin-users");
+
+    const created = await users.saveManagedAdminUser({
+      username: "invite@example.com",
+      displayName: "Invitee",
+      isActive: true,
+    });
+
+    expect(created.hasPassword).toBe(false);
+    await expect(users.getAdminAccessStatus("invite@example.com")).resolves.toMatchObject({
+      ok: true,
+      mode: "claim",
+    });
+    await expect(users.authenticateAdminCredentials("invite@example.com", "Admin!234")).resolves.toMatchObject({
+      ok: false,
+      status: 401,
+    });
+  });
+
+  it("claims a password for an invited admin and then signs in", async () => {
+    const users = await import("@/lib/admin-users");
+
+    await users.saveManagedAdminUser({
+      username: "claim@example.com",
+      isActive: true,
+    });
+
+    const claimed = await users.claimAdminPassword("claim@example.com", "Admin!234");
+    expect(claimed.ok).toBe(true);
+    expect(claimed.principal).toMatchObject({ username: "claim@example.com", source: "managed" });
+
+    await expect(users.getAdminAccessStatus("claim@example.com")).resolves.toMatchObject({
+      ok: true,
+      mode: "sign_in",
+    });
+    await expect(users.authenticateAdminCredentials("claim@example.com", "Admin!234")).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(users.claimAdminPassword("claim@example.com", "Admin!999")).resolves.toMatchObject({
+      ok: false,
+      status: 409,
+    });
+  });
+
+  it("returns sign_in access status for bootstrap and passworded managed admins", async () => {
+    const users = await import("@/lib/admin-users");
+
+    await expect(users.getAdminAccessStatus("owner")).resolves.toMatchObject({ ok: true, mode: "sign_in" });
+
+    await users.saveManagedAdminUser({
+      username: "ready@example.com",
+      password: "Admin!234",
+      isActive: true,
+    });
+    await expect(users.getAdminAccessStatus("ready@example.com")).resolves.toMatchObject({
+      ok: true,
+      mode: "sign_in",
+    });
+    await expect(users.getAdminAccessStatus("missing@example.com")).resolves.toMatchObject({
+      ok: false,
+      status: 404,
+    });
+  });
+
+  it("generates a reset token that sets a new password and invalidates prior sessions", async () => {
+    const users = await import("@/lib/admin-users");
+
+    const created = await users.saveManagedAdminUser({
+      username: "reset@example.com",
+      password: "Admin!234",
+      isActive: true,
+    });
+    const login = await users.authenticateAdminCredentials("reset@example.com", "Admin!234");
+    const sessionToken = await users.createAdminSessionForPrincipal(login.principal!);
+
+    const token = await users.createAdminResetToken("reset@example.com");
+    expect(token.includes(".")).toBe(true);
+
+    const username = await users.verifyAdminResetToken(token);
+    expect(username).toBe("reset@example.com");
+
+    await users.resetAdminPassword("reset@example.com", "Admin!999");
+
+    expect(await users.verifyAdminResetToken(token)).toBeNull();
+    await expect(users.authenticateAdminCredentials("reset@example.com", "Admin!999")).resolves.toMatchObject({
+      ok: true,
+      principal: expect.objectContaining({ id: created.id }),
+    });
+    await expect(users.resolveAdminPrincipalFromSession(sessionToken)).resolves.toMatchObject({
+      ok: false,
+      status: 401,
+    });
+  });
+
+  it("allows reset token to set the first password for an invited admin", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://example:example@example.com:5432/smartsheets_view");
+    const users = await import("@/lib/admin-users");
+
+    const created = await users.saveManagedAdminUser({
+      username: "pending@example.com",
+      isActive: true,
+    });
+    expect(created.hasPassword).toBe(false);
+
+    const token = await users.createAdminResetToken("pending@example.com");
+    const username = await users.verifyAdminResetToken(token);
+    expect(username).toBe("pending@example.com");
+
+    await users.resetAdminPassword("pending@example.com", "Admin!234");
+    await expect(users.getManagedAdminUserById(created.id)).resolves.toMatchObject({ hasPassword: true });
+    await expect(users.authenticateAdminCredentials("pending@example.com", "Admin!234")).resolves.toMatchObject({
+      ok: true,
     });
   });
 });

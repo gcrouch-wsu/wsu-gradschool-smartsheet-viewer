@@ -119,6 +119,11 @@ export function contributorPasswordResetRateLimitKey(headers: Headers, resetToke
   return `pwreset:${bucket}:${t.length}`;
 }
 
+/** Same bucketing as contributor password reset (IP when trusted, else token hash). */
+export function adminPasswordResetRateLimitKey(headers: Headers, resetToken: string): string {
+  return contributorPasswordResetRateLimitKey(headers, resetToken);
+}
+
 export function getPublicOrigin(requestHeaders: Headers): string | null {
   const configured = getConfiguredPublicOrigin();
   if (configured) {

@@ -310,7 +310,7 @@ export function normalizeAdminNextPath(value: string | null | undefined) {
     return "/admin";
   }
 
-  if (value === "/admin/sign-in" || value === "/forms/approver/sign-in") {
+  if (value === "/admin/sign-in" || value === "/admin/reset-password" || value === "/forms/approver/sign-in") {
     return "/admin";
   }
 
