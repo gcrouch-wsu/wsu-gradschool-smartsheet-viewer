@@ -36,7 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="min-w-0">
             <span className="block truncate text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
             <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">
-              {principal.role === "owner" ? "Owner" : principal.role === "coordinator" ? "Coordinator" : "Admin"}
+              {principal.role === "owner" ? "Owner" : "Admin"}
             </span>
           </span>
         </div>
