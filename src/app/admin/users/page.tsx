@@ -4,7 +4,7 @@ import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getManagedAdminStorageMode, listAdminAccounts } from "@/lib/admin-users";
 
 export default async function AdminUsersPage() {
-  const principal = await requireAdminPageAccess("/admin/users");
+  const principal = await requireAdminPageAccess("/admin/users", { usersOnly: true });
   const accounts = await listAdminAccounts();
 
   return (
@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
       <PageHeader
         eyebrow="Admin builder"
         title="Users"
-        description="Invite Admins and Coordinators. Everyone signs in at /admin/sign-in. Coordinators only access the forms sheet and can resend notifications."
+        description="Invite Admins, Programs Team, and Coordinators. Everyone signs in at /admin/sign-in. Programs Team has full admin access except adding users. Coordinators only access the forms sheet and can resend notifications."
       />
       <AdminUsersManager
         bootstrapUser={accounts.bootstrap}

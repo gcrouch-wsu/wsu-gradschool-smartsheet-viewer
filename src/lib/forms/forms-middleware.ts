@@ -116,7 +116,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
   if (isFormsAdminPath(pathname)) {
     if (adminOk) {
       const role = await resolveAdminRole(request);
-      if (role === "owner" || role === "admin") {
+      if (role === "owner" || role === "admin" || role === "programs_team") {
         return NextResponse.next();
       }
       if (pathname.startsWith("/api/")) {

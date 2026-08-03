@@ -18,7 +18,7 @@ interface UserFormState {
   displayName: string;
   password: string;
   isActive: boolean;
-  role: "admin" | "coordinator";
+  role: "admin" | "coordinator" | "programs_team";
 }
 
 interface ResetLinkState {
@@ -63,6 +63,18 @@ function buildErrorMessage(payload: { message?: string; error?: string; errors?:
   const lead = payload?.message ?? payload?.error ?? "Request failed.";
   if (!payload?.errors?.length) return lead;
   return `${lead} ${payload.errors.join(" ")}`;
+}
+
+function roleLabel(role: string) {
+  if (role === "coordinator") return "Coordinator";
+  if (role === "programs_team") return "Programs Team";
+  return "Admin";
+}
+
+function normalizeFormRole(role: string): UserFormState["role"] {
+  if (role === "coordinator") return "coordinator";
+  if (role === "programs_team") return "programs_team";
+  return "admin";
 }
 
 function StatusPill({ active, hasPassword }: { active: boolean; hasPassword: boolean }) {
@@ -143,7 +155,7 @@ export function AdminUsersManager({
       displayName: user.displayName ?? "",
       password: "",
       isActive: user.isActive,
-      role: user.role === "coordinator" ? "coordinator" : "admin",
+      role: normalizeFormRole(user.role),
     });
     setShowPassword(false);
     setError(null);
@@ -316,7 +328,7 @@ export function AdminUsersManager({
           <p className="mx-auto mt-1 max-w-[34ch] text-[13px] text-sub">
             {query.trim()
               ? "Try a different name or email."
-              : "Add an Admin or Coordinator by email. They create their password on first sign-in."}
+              : "Add an Admin, Programs Team, or Coordinator by email. They create their password on first sign-in."}
           </p>
           {!query.trim() ? (
             <div className="mt-4">
@@ -339,7 +351,7 @@ export function AdminUsersManager({
                 </div>
                 <p className="truncate text-xs text-sub sm:text-sm">{user.username}</p>
                 <p className="text-xs font-medium capitalize text-ink sm:text-sm">
-                  {user.role === "coordinator" ? "Coordinator" : "Admin"}
+                  {roleLabel(user.role)}
                 </p>
                 <div>
                   <StatusPill active={user.isActive} hasPassword={user.hasPassword} />
@@ -424,12 +436,15 @@ export function AdminUsersManager({
             <select
               value={form.role}
               onChange={(event) =>
-                handleInputChange("role", event.target.value === "coordinator" ? "coordinator" : "admin")
+                handleInputChange("role", normalizeFormRole(event.target.value))
               }
               disabled={isPending}
               className={inputClass}
             >
-              <option value="admin">Admin — full workspace access</option>
+              <option value="admin">Admin — full workspace access including users</option>
+              <option value="programs_team">
+                Programs Team — full admin access except adding users; reviews contact reroutes
+              </option>
               <option value="coordinator">Coordinator — forms sheet and resend only</option>
             </select>
           </label>

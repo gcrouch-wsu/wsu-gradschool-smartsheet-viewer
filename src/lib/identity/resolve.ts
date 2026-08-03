@@ -34,6 +34,7 @@ export function adminPrincipalToPrincipal(
   if (admin.role === "owner") {
     capabilities.push("admin.owner");
   }
+  // Programs Team has full admin workspace access; user invite is gated separately.
   return {
     kind: "admin",
     id: admin.id,

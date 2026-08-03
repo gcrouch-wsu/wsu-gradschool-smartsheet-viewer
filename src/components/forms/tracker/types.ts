@@ -36,3 +36,23 @@ export interface TrackerDiscussion {
   id: number;
   comments?: { text: string; createdBy?: { name?: string }; createdAt?: string }[];
 }
+
+/** Approver contact reroute history for a submission. */
+export interface ContactChangeLogItem {
+  id: string;
+  stageTitle: string;
+  status: "pending" | "approved" | "rejected";
+  proposedName: string;
+  proposedEmail: string;
+  note?: string;
+  requestedBy: { name: string; email?: string };
+  requestedAt: string;
+  reviewedBy?: { name: string; email?: string };
+  reviewedAt?: string;
+  reviewNote?: string;
+  fields: Array<{
+    previousDisplay: string;
+    previousEmail: string;
+    previousName: string;
+  }>;
+}

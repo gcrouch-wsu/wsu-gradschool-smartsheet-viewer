@@ -23,6 +23,7 @@ const RLS_TABLES = [
   "form_approver_users",
   "form_approver_login_attempts",
   "form_rate_limit_buckets",
+  "form_contact_change_requests",
   "audit_events",
 ] as const;
 

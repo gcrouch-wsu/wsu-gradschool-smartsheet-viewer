@@ -216,9 +216,30 @@ export async function getRow(sheetId: string | number, rowId: string | number): 
 
 export async function updateRows(
   sheetId: string | number,
-  rows: { id: number; cells: { columnId: number; value: string | boolean }[] }[],
+  rows: {
+    id: number;
+    cells: Array<
+      | { columnId: number; value: string | boolean }
+      | { columnId: number; objectValue: unknown }
+    >;
+  }[],
 ): Promise<unknown> {
-  if (config.demo) return mock.mockUpdateRows(sheetId, rows);
+  if (config.demo) {
+    return mock.mockUpdateRows(
+      sheetId,
+      rows.map((row) => ({
+        id: row.id,
+        cells: row.cells.map((c) =>
+          "value" in c
+            ? c
+            : {
+                columnId: c.columnId,
+                value: JSON.stringify((c as { objectValue: unknown }).objectValue),
+              },
+        ),
+      })),
+    );
+  }
   return api(`/sheets/${sheetId}/rows`, { method: "PUT", body: JSON.stringify(rows) });
 }
 

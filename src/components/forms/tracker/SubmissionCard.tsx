@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
 import { AttachmentPreviewDialog } from "@/components/forms/tracker/AttachmentPreviewDialog";
 import type {
+  ContactChangeLogItem,
   TimelineItem,
   TrackerAttachment,
   TrackerDiscussion,
@@ -11,8 +12,24 @@ import type {
   TrackerSubmission,
 } from "@/components/forms/tracker/types";
 
+function contactChangeStatusClass(status: ContactChangeLogItem["status"]) {
+  if (status === "approved") return "bg-emerald-50 text-emerald-800 ring-emerald-200";
+  if (status === "rejected") return "bg-red-50 text-red-800 ring-red-200";
+  return "bg-amber-50 text-amber-900 ring-amber-200";
+}
+
+function contactChangePrevious(item: ContactChangeLogItem) {
+  return (
+    [item.fields.find((f) => f.previousName)?.previousName, item.fields.find((f) => f.previousEmail)?.previousEmail]
+      .filter(Boolean)
+      .join(" · ") ||
+    item.fields.map((f) => f.previousDisplay).filter(Boolean).join(" · ") ||
+    "—"
+  );
+}
+
 function canStaffForms(roles: string[]) {
-  return roles.includes("admin") || roles.includes("approver") || roles.includes("coordinator");
+  return roles.includes("admin") || roles.includes("approver") || roles.includes("coordinator") || roles.includes("programs_team");
 }
 
 function shortStageName(title: string) {
@@ -108,10 +125,12 @@ export interface SubmissionCardProps {
   roles: string[];
   actionBusy: number | null;
   timeline: TimelineItem[] | "loading" | "hidden" | undefined;
+  contactChanges?: ContactChangeLogItem[] | "loading" | "hidden" | undefined;
   attachments: TrackerAttachment[] | "loading" | undefined;
   discussions: TrackerDiscussion[] | "loading" | undefined;
   commentText: string;
   onToggleTimeline: () => void;
+  onToggleContactChanges?: () => void;
   onLoadExtras: () => void;
   onResend?: () => void;
   canResend?: boolean;
@@ -129,10 +148,12 @@ export function SubmissionCard({
   roles,
   actionBusy,
   timeline,
+  contactChanges,
   attachments,
   discussions,
   commentText,
   onToggleTimeline,
+  onToggleContactChanges,
   onLoadExtras,
   onResend,
   canResend,
@@ -252,6 +273,20 @@ export function SubmissionCard({
         >
           {timeline === "loading" ? "Loading timeline…" : Array.isArray(timeline) ? "Hide timeline" : "Show timeline"}
         </button>
+        {onToggleContactChanges ? (
+          <button
+            type="button"
+            onClick={onToggleContactChanges}
+            disabled={contactChanges === "loading"}
+            className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+          >
+            {contactChanges === "loading"
+              ? "Loading contact changes…"
+              : Array.isArray(contactChanges)
+                ? "Hide contact changes"
+                : "Show contact changes"}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={handleExtras}
@@ -284,6 +319,56 @@ export function SubmissionCard({
                   </div>
                 </li>
               ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
+      {Array.isArray(contactChanges) ? (
+        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">
+            Approver contact changes
+          </h3>
+          {contactChanges.length === 0 ? (
+            <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">No approver contact changes recorded.</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {contactChanges.map((item) => {
+                const from = contactChangePrevious(item);
+                const to = [item.proposedName, item.proposedEmail].filter(Boolean).join(" · ");
+                return (
+                  <li key={item.id} className="flex gap-3 text-sm">
+                    <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-wsu-crimson" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-[color:var(--wsu-ink)]">{shortStageName(item.stageTitle)}</p>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ring-1 ring-inset ${contactChangeStatusClass(item.status)}`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[color:var(--wsu-ink)]">
+                        <span className="text-[color:var(--wsu-muted)]">From</span> {from}
+                        <span className="text-[color:var(--wsu-muted)]"> → </span>
+                        {to}
+                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
+                        Requested by {item.requestedBy.name}
+                        {item.requestedAt ? ` · ${new Date(item.requestedAt).toLocaleString()}` : ""}
+                      </p>
+                      {item.note ? <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Note: {item.note}</p> : null}
+                      {item.reviewedBy ? (
+                        <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
+                          {item.status === "approved" ? "Approved" : item.status === "rejected" ? "Rejected" : "Reviewed"}{" "}
+                          by {item.reviewedBy.name}
+                          {item.reviewedAt ? ` · ${new Date(item.reviewedAt).toLocaleString()}` : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -13,6 +13,7 @@ interface FormsSessionInfo {
   isAdmin: boolean;
   isApprover: boolean;
   isCoordinator?: boolean;
+  isProgramsTeam?: boolean;
 }
 
 function initialsFromSession(session: FormsSessionInfo | null): string {
@@ -65,6 +66,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
+    if (session.isProgramsTeam) return "Programs Team";
     if (session.isAdmin) return "Admin";
     if (session.isCoordinator) return "Coordinator";
     return "Approver";
@@ -112,7 +114,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductShell
-      globalNav={productNav(showAdminNav)}
+      globalNav={productNav(showAdminNav, { canManageUsers: Boolean(session?.isAdmin) && !session?.isProgramsTeam })}
       title="Smartsheet Workspace"
       description="Submit forms, track approvals, and manage Smartsheet workflows."
       identity={

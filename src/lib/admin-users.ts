@@ -20,11 +20,25 @@ import {
 } from "@/lib/admin-auth";
 
 export function isFullAdminRole(role: AdminRole): boolean {
+  return role === "owner" || role === "admin" || role === "programs_team";
+}
+
+/** Owner and admin can invite/edit managed users; Programs Team cannot. */
+export function canManageUsers(role: AdminRole): boolean {
   return role === "owner" || role === "admin";
 }
 
 export function isManagedAdminRole(value: string): value is ManagedAdminRole {
-  return value === "admin" || value === "coordinator";
+  return value === "admin" || value === "coordinator" || value === "programs_team";
+}
+
+export function isProgramsTeamRole(role: AdminRole): boolean {
+  return role === "programs_team";
+}
+
+/** Programs Team (and full admins) can approve contact-change / reroute requests. */
+export function canReviewContactChanges(role: AdminRole): boolean {
+  return role === "owner" || role === "admin" || role === "programs_team";
 }
 
 function normalizeManagedRole(value: unknown, fallback: ManagedAdminRole = "admin"): ManagedAdminRole {
@@ -948,6 +962,14 @@ export async function requireFullAdmin() {
   const principal = await requireAuthenticatedAdmin();
   if (!isFullAdminRole(principal.role)) {
     throw new AdminAuthenticationError(403, "Full admin access is required.");
+  }
+  return principal;
+}
+
+export async function requireUserManagementAdmin() {
+  const principal = await requireAuthenticatedAdmin();
+  if (!canManageUsers(principal.role)) {
+    throw new AdminAuthenticationError(403, "Only owners and admins can manage users.");
   }
   return principal;
 }

@@ -1,0 +1,47 @@
+{
+  "requests": [
+    {
+      "sheetId": "2105083792674692",
+      "sheetName": "Test - Graduate Leave - Standard(rou)",
+      "rowId": 846871338024836,
+      "stageTitle": "CHR Approval",
+      "isCurrentStage": true,
+      "fields": [
+        {
+          "columnId": 5857983045341060,
+          "columnTitle": "CHR Email",
+          "columnType": "CONTACT_LIST",
+          "kind": "contact",
+          "previousDisplay": "Greg Crouch",
+          "previousEmail": "gcrouch@wsu.edu",
+          "previousName": "Greg Crouch"
+        },
+        {
+          "columnId": 1354383417970564,
+          "columnTitle": "CHR Name",
+          "columnType": "TEXT_NUMBER",
+          "kind": "name",
+          "previousDisplay": "Greg",
+          "previousEmail": "",
+          "previousName": "Greg"
+        }
+      ],
+      "proposedName": "Oluwabusola Adeleke",
+      "proposedEmail": "victoria.adeleke@wsu.edu",
+      "requestedBy": {
+        "id": "admin-at-gmail-com",
+        "name": "admin@gmail.com",
+        "email": "admin@gmail.com"
+      },
+      "id": "f101c1fd-ee65-47fd-a34c-df0d3e021913",
+      "status": "approved",
+      "requestedAt": "2026-08-03T19:28:18.478Z",
+      "reviewedBy": {
+        "id": "admin-at-gmail-com",
+        "name": "admin@gmail.com",
+        "email": "admin@gmail.com"
+      },
+      "reviewedAt": "2026-08-03T19:32:31.156Z"
+    }
+  ]
+}

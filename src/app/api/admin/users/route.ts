@@ -20,7 +20,7 @@ function toUserInput(body: unknown): ManagedAdminUserInput {
 }
 
 export async function GET() {
-  const auth = await requireAdminApiAccess();
+  const auth = await requireAdminApiAccess({ usersOnly: true });
   if (auth.response) {
     return auth.response;
   }
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAdminApiAccess();
+  const auth = await requireAdminApiAccess({ usersOnly: true });
   if (auth.response) {
     return auth.response;
   }
