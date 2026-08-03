@@ -21,6 +21,8 @@ interface RerouteApproverPanelProps {
   sheetId?: string | null;
   /** Only show when submission is in review / has editable stages. */
   enabled?: boolean;
+  /** When embedded in submission tabs, skip the collapsible chrome and load immediately. */
+  embedded?: boolean;
   onSubmitted?: () => void;
 }
 
@@ -52,8 +54,14 @@ function emailDomainError(email: string, allowedDomains: string[]): string | nul
   return null;
 }
 
-export function RerouteApproverPanel({ rowId, sheetId, enabled = true, onSubmitted }: RerouteApproverPanelProps) {
-  const [open, setOpen] = useState(false);
+export function RerouteApproverPanel({
+  rowId,
+  sheetId,
+  enabled = true,
+  embedded = false,
+  onSubmitted,
+}: RerouteApproverPanelProps) {
+  const [open, setOpen] = useState(embedded);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -86,7 +94,6 @@ export function RerouteApproverPanel({ rowId, sheetId, enabled = true, onSubmitt
       const current = list.find((s) => s.isCurrent) ?? list[0];
       if (current) {
         setStageTitle(current.name);
-        // Start blank when proposing a change so name/email must be entered deliberately.
         setProposedName(current.pendingProposedName || "");
         setProposedEmail(current.pendingProposedEmail || "");
       }
@@ -100,9 +107,9 @@ export function RerouteApproverPanel({ rowId, sheetId, enabled = true, onSubmitt
   }, [rowId, sheetId]);
 
   useEffect(() => {
-    if (!open || !enabled) return;
-    void load();
-  }, [open, enabled, load]);
+    if (!enabled) return;
+    if (embedded || open) void load();
+  }, [open, enabled, embedded, load]);
 
   function selectStage(name: string) {
     setStageTitle(name);
@@ -175,6 +182,131 @@ export function RerouteApproverPanel({ rowId, sheetId, enabled = true, onSubmitt
   const selected = stages.find((s) => s.name === stageTitle);
   const hasPending = Boolean(selected?.pendingRequestId);
   const domainHint = allowedDomains.length ? `Must use @${allowedDomains.join(", @")}` : null;
+  const showBody = embedded || open;
+
+  const body = (
+    <div className={embedded ? "space-y-3" : "space-y-3 border-t border-[color:var(--wsu-border)] px-4 py-3"}>
+      <p className="text-xs text-[color:var(--wsu-muted)]">
+        Update the name/email for a stage that has not been approved yet. Both new name and new email are required.
+        Changes go to Programs Team for review — the new approver is not notified until approved.
+      </p>
+
+      {loading ? <p className="text-sm text-[color:var(--wsu-muted)]">Loading contact fields…</p> : null}
+      {error ? <p className="text-sm text-red-800">{error}</p> : null}
+      {success ? <p className="text-sm text-emerald-800">{success}</p> : null}
+
+      {!loading && stages.length === 0 ? (
+        <p className="text-sm text-[color:var(--wsu-muted)]">
+          No editable approval stages on this submission (already complete or declined).
+        </p>
+      ) : null}
+
+      {!loading && stages.length > 0 ? (
+        <form onSubmit={(e) => void submit(e)} className="space-y-3">
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-[color:var(--wsu-ink)]">Approval stage</span>
+            <select
+              value={stageTitle}
+              onChange={(e) => selectStage(e.target.value)}
+              className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
+              disabled={busy}
+            >
+              {stages.map((s) => (
+                <option key={s.name} value={s.name}>
+                  {s.name}
+                  {s.isCurrent ? " (current)" : ""}
+                  {s.pendingRequestId ? " — pending review" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {selected?.contact.fields.length ? (
+            <p className="text-xs text-[color:var(--wsu-muted)]">
+              Current:{" "}
+              {[selected.contact.currentName, selected.contact.currentEmail].filter(Boolean).join(" · ") ||
+                selected.contact.fields.map((f) => f.currentDisplay).filter(Boolean).join(" · ") ||
+                "—"}
+            </p>
+          ) : (
+            <p className="text-xs text-amber-800">
+              No matching Name/Email columns found for this stage. Check column titles on the sheet.
+            </p>
+          )}
+
+          {hasPending ? (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              A reroute is already pending Programs Team review
+              {selected?.pendingProposedEmail
+                ? ` → ${[selected.pendingProposedName, selected.pendingProposedEmail].filter(Boolean).join(" · ")}`
+                : ""}
+              .
+            </p>
+          ) : (
+            <>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-[color:var(--wsu-ink)]">
+                  New name <span className="text-wsu-crimson">*</span>
+                </span>
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  value={proposedName}
+                  onChange={(e) => setProposedName(e.target.value)}
+                  className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
+                  disabled={busy}
+                  placeholder="Approver name"
+                  autoComplete="name"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-[color:var(--wsu-ink)]">
+                  New email <span className="text-wsu-crimson">*</span>
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={proposedEmail}
+                  onChange={(e) => setProposedEmail(e.target.value)}
+                  className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
+                  disabled={busy}
+                  placeholder={allowedDomains[0] ? `approver@${allowedDomains[0]}` : "approver@wsu.edu"}
+                  autoComplete="email"
+                />
+                {domainHint ? <span className="text-xs text-[color:var(--wsu-muted)]">{domainHint}</span> : null}
+                {proposedEmail.trim() && emailError ? (
+                  <span className="text-xs text-red-800">{emailError}</span>
+                ) : null}
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-[color:var(--wsu-ink)]">Note (optional)</span>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
+                  disabled={busy}
+                  placeholder="Why this reroute is needed"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={busy || !canSubmit}
+                className="inline-flex min-h-9 items-center justify-center rounded-full bg-wsu-crimson px-4 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+              >
+                {busy ? "Submitting…" : "Submit for Programs Team review"}
+              </button>
+            </>
+          )}
+        </form>
+      ) : null}
+    </div>
+  );
+
+  if (embedded) {
+    return <div>{showBody ? body : null}</div>;
+  }
 
   return (
     <div className="rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40">
@@ -186,126 +318,7 @@ export function RerouteApproverPanel({ rowId, sheetId, enabled = true, onSubmitt
         <span>Reroute approver contact</span>
         <span className="text-xs font-normal text-[color:var(--wsu-muted)]">{open ? "Hide" : "Show"}</span>
       </button>
-
-      {open ? (
-        <div className="space-y-3 border-t border-[color:var(--wsu-border)] px-4 py-3">
-          <p className="text-xs text-[color:var(--wsu-muted)]">
-            Update the name/email for a stage that has not been approved yet. Both new name and new email are
-            required. Changes go to Programs Team for review — the new approver is not notified until approved.
-          </p>
-
-          {loading ? <p className="text-sm text-[color:var(--wsu-muted)]">Loading contact fields…</p> : null}
-          {error ? <p className="text-sm text-red-800">{error}</p> : null}
-          {success ? <p className="text-sm text-emerald-800">{success}</p> : null}
-
-          {!loading && stages.length === 0 ? (
-            <p className="text-sm text-[color:var(--wsu-muted)]">
-              No editable approval stages on this submission (already complete or declined).
-            </p>
-          ) : null}
-
-          {!loading && stages.length > 0 ? (
-            <form onSubmit={(e) => void submit(e)} className="space-y-3">
-              <label className="block space-y-1">
-                <span className="text-xs font-medium text-[color:var(--wsu-ink)]">Approval stage</span>
-                <select
-                  value={stageTitle}
-                  onChange={(e) => selectStage(e.target.value)}
-                  className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
-                  disabled={busy}
-                >
-                  {stages.map((s) => (
-                    <option key={s.name} value={s.name}>
-                      {s.name}
-                      {s.isCurrent ? " (current)" : ""}
-                      {s.pendingRequestId ? " — pending review" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {selected?.contact.fields.length ? (
-                <p className="text-xs text-[color:var(--wsu-muted)]">
-                  Current:{" "}
-                  {[selected.contact.currentName, selected.contact.currentEmail].filter(Boolean).join(" · ") ||
-                    selected.contact.fields.map((f) => f.currentDisplay).filter(Boolean).join(" · ") ||
-                    "—"}
-                </p>
-              ) : (
-                <p className="text-xs text-amber-800">
-                  No matching Name/Email columns found for this stage. Check column titles on the sheet.
-                </p>
-              )}
-
-              {hasPending ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  A reroute is already pending Programs Team review
-                  {selected?.pendingProposedEmail
-                    ? ` → ${[selected.pendingProposedName, selected.pendingProposedEmail].filter(Boolean).join(" · ")}`
-                    : ""}
-                  .
-                </p>
-              ) : (
-                <>
-                  <label className="block space-y-1">
-                    <span className="text-xs font-medium text-[color:var(--wsu-ink)]">
-                      New name <span className="text-wsu-crimson">*</span>
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      minLength={2}
-                      value={proposedName}
-                      onChange={(e) => setProposedName(e.target.value)}
-                      className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
-                      disabled={busy}
-                      placeholder="Approver name"
-                      autoComplete="name"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs font-medium text-[color:var(--wsu-ink)]">
-                      New email <span className="text-wsu-crimson">*</span>
-                    </span>
-                    <input
-                      type="email"
-                      required
-                      value={proposedEmail}
-                      onChange={(e) => setProposedEmail(e.target.value)}
-                      className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
-                      disabled={busy}
-                      placeholder={allowedDomains[0] ? `approver@${allowedDomains[0]}` : "approver@wsu.edu"}
-                      autoComplete="email"
-                    />
-                    {domainHint ? <span className="text-xs text-[color:var(--wsu-muted)]">{domainHint}</span> : null}
-                    {proposedEmail.trim() && emailError ? (
-                      <span className="text-xs text-red-800">{emailError}</span>
-                    ) : null}
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs font-medium text-[color:var(--wsu-ink)]">Note (optional)</span>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={2}
-                      className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm"
-                      disabled={busy}
-                      placeholder="Why this reroute is needed"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={busy || !canSubmit}
-                    className="inline-flex min-h-9 items-center justify-center rounded-full bg-wsu-crimson px-4 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-                  >
-                    {busy ? "Submitting…" : "Submit for Programs Team review"}
-                  </button>
-                </>
-              )}
-            </form>
-          ) : null}
-        </div>
-      ) : null}
+      {showBody ? body : null}
     </div>
   );
 }

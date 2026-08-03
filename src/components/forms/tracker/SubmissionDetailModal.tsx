@@ -282,20 +282,23 @@ export function SubmissionDetailModal({
               onToggleContactChanges={canReroute ? () => void toggleContactChanges() : undefined}
               onLoadExtras={loadExtras}
               onPostComment={() => void postComment()}
+              reroutePanel={
+                canReroute &&
+                (submission.approvalStatus?.state === "current" ||
+                  submission.approvalStatus?.state === "not-started") ? (
+                  <RerouteApproverPanel
+                    embedded
+                    rowId={submission.rowId}
+                    sheetId={sheetId}
+                    onSubmitted={() => {
+                      onChanged?.();
+                      void refreshContactChangesIfOpen();
+                    }}
+                  />
+                ) : undefined
+              }
               className="border-0 shadow-none"
             />
-            {canReroute &&
-            (submission.approvalStatus?.state === "current" ||
-              submission.approvalStatus?.state === "not-started") ? (
-              <RerouteApproverPanel
-                rowId={submission.rowId}
-                sheetId={sheetId}
-                onSubmitted={() => {
-                  onChanged?.();
-                  void refreshContactChangesIfOpen();
-                }}
-              />
-            ) : null}
           </div>
         ) : null}
       </div>

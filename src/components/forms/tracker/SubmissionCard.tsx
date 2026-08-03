@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
 import { AttachmentPreviewDialog } from "@/components/forms/tracker/AttachmentPreviewDialog";
 import type {
@@ -11,6 +11,8 @@ import type {
   TrackerStep,
   TrackerSubmission,
 } from "@/components/forms/tracker/types";
+
+type DetailTab = "timeline" | "contact-changes" | "files" | "reroute";
 
 function contactChangeStatusClass(status: ContactChangeLogItem["status"]) {
   if (status === "approved") return "bg-emerald-50 text-emerald-800 ring-emerald-200";
@@ -29,7 +31,12 @@ function contactChangePrevious(item: ContactChangeLogItem) {
 }
 
 function canStaffForms(roles: string[]) {
-  return roles.includes("admin") || roles.includes("approver") || roles.includes("coordinator") || roles.includes("programs_team");
+  return (
+    roles.includes("admin") ||
+    roles.includes("approver") ||
+    roles.includes("coordinator") ||
+    roles.includes("programs_team")
+  );
 }
 
 function shortStageName(title: string) {
@@ -137,6 +144,8 @@ export interface SubmissionCardProps {
   resendHint?: string | null;
   onCommentChange: (text: string) => void;
   onPostComment: () => void;
+  /** Embedded reroute form shown as a tab beside Files & notes. */
+  reroutePanel?: ReactNode;
   /** When set, attachment links target this form sheet instead of the active sheet. */
   sheetId?: string | null;
   /** Extra classes on the root article (e.g. borderless inside a Modal). */
@@ -160,15 +169,18 @@ export function SubmissionCard({
   resendHint,
   onCommentChange,
   onPostComment,
+  reroutePanel,
   sheetId,
   className,
 }: SubmissionCardProps) {
-  const [extrasOpen, setExtrasOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<TrackerAttachment | null>(null);
   const staff = canStaffForms(roles);
   const busy = actionBusy === submission.rowId;
   const showResend = staff && Boolean(canResend && onResend);
   const state = submission.approvalStatus?.state ?? "not-started";
+  const showContactTab = Boolean(onToggleContactChanges);
+  const showRerouteTab = Boolean(reroutePanel);
 
   const meta = [
     submission.email,
@@ -177,9 +189,26 @@ export function SubmissionCard({
     .filter(Boolean)
     .join(" · ");
 
-  function handleExtras() {
-    setExtrasOpen(true);
-    onLoadExtras();
+  function selectTab(tab: DetailTab) {
+    if (activeTab === tab) {
+      setActiveTab(null);
+      return;
+    }
+    setActiveTab(tab);
+    if (tab === "timeline" && !Array.isArray(timeline) && timeline !== "loading") {
+      onToggleTimeline();
+    }
+    if (
+      tab === "contact-changes" &&
+      onToggleContactChanges &&
+      !Array.isArray(contactChanges) &&
+      contactChanges !== "loading"
+    ) {
+      onToggleContactChanges();
+    }
+    if (tab === "files") {
+      onLoadExtras();
+    }
   }
 
   const allComments = Array.isArray(discussions) ? discussions.flatMap((d) => d.comments ?? []) : [];
@@ -187,6 +216,14 @@ export function SubmissionCard({
   const statusLabel =
     submission.approvalStatus?.label ||
     (submission.stages.length === 0 ? "No approval stages configured" : "In review");
+
+  const tabClass = (tab: DetailTab) =>
+    [
+      "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition",
+      activeTab === tab
+        ? "bg-wsu-crimson text-white"
+        : "border border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]",
+    ].join(" ");
 
   return (
     <article
@@ -264,43 +301,60 @@ export function SubmissionCard({
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-3">
+      <div
+        role="tablist"
+        aria-label="Submission details"
+        className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-5 py-3"
+      >
         <button
           type="button"
-          onClick={onToggleTimeline}
-          disabled={timeline === "loading"}
-          className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+          role="tab"
+          aria-selected={activeTab === "timeline"}
+          className={tabClass("timeline")}
+          onClick={() => selectTab("timeline")}
         >
-          {timeline === "loading" ? "Loading timeline…" : Array.isArray(timeline) ? "Hide timeline" : "Show timeline"}
+          {timeline === "loading" ? "Loading…" : "Timeline"}
         </button>
-        {onToggleContactChanges ? (
+        {showContactTab ? (
           <button
             type="button"
-            onClick={onToggleContactChanges}
-            disabled={contactChanges === "loading"}
-            className="rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+            role="tab"
+            aria-selected={activeTab === "contact-changes"}
+            className={tabClass("contact-changes")}
+            onClick={() => selectTab("contact-changes")}
           >
-            {contactChanges === "loading"
-              ? "Loading contact changes…"
-              : Array.isArray(contactChanges)
-                ? "Hide contact changes"
-                : "Show contact changes"}
+            {contactChanges === "loading" ? "Loading…" : "Contact changes"}
           </button>
         ) : null}
         <button
           type="button"
-          onClick={handleExtras}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+          role="tab"
+          aria-selected={activeTab === "files"}
+          className={tabClass("files")}
+          onClick={() => selectTab("files")}
         >
           <IconFile className="h-3.5 w-3.5" />
           Files & notes
         </button>
+        {showRerouteTab ? (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "reroute"}
+            className={tabClass("reroute")}
+            onClick={() => selectTab("reroute")}
+          >
+            Reroute
+          </button>
+        ) : null}
       </div>
 
-      {Array.isArray(timeline) ? (
-        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4">
+      {activeTab === "timeline" ? (
+        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4" role="tabpanel">
           <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">Decision timeline</h3>
-          {timeline.length === 0 ? (
+          {timeline === "loading" ? (
+            <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Loading timeline…</p>
+          ) : !Array.isArray(timeline) || timeline.length === 0 ? (
             <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">No recorded decisions yet.</p>
           ) : (
             <ul className="mt-3 space-y-3">
@@ -324,12 +378,14 @@ export function SubmissionCard({
         </div>
       ) : null}
 
-      {Array.isArray(contactChanges) ? (
-        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4">
+      {activeTab === "contact-changes" && showContactTab ? (
+        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4" role="tabpanel">
           <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">
             Approver contact changes
           </h3>
-          {contactChanges.length === 0 ? (
+          {contactChanges === "loading" ? (
+            <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">Loading contact changes…</p>
+          ) : !Array.isArray(contactChanges) || contactChanges.length === 0 ? (
             <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">No approver contact changes recorded.</p>
           ) : (
             <ul className="mt-3 space-y-3">
@@ -374,8 +430,8 @@ export function SubmissionCard({
         </div>
       ) : null}
 
-      {extrasOpen ? (
-        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4">
+      {activeTab === "files" ? (
+        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4" role="tabpanel">
           {attachments === "loading" || discussions === "loading" ? (
             <p className="text-sm text-[color:var(--wsu-muted)]">Loading files & notes…</p>
           ) : null}
@@ -441,6 +497,12 @@ export function SubmissionCard({
               ) : null}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {activeTab === "reroute" && showRerouteTab ? (
+        <div className="border-t border-[color:var(--wsu-border)] px-5 py-4" role="tabpanel">
+          {reroutePanel}
         </div>
       ) : null}
 
