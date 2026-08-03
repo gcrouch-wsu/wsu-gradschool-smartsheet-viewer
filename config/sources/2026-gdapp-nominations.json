@@ -1,0 +1,15 @@
+{
+  "id": "2026-gdapp-nominations",
+  "label": "2026 GDAPP Nominations",
+  "sourceType": "sheet",
+  "smartsheetId": 7216688102592388,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "2026-gdapp-nominations",
+  "formPublic": false,
+  "formProvenance": "imported",
+  "formRegisteredAt": "2026-07-30T19:18:30.476Z"
+}
