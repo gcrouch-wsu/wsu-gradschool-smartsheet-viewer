@@ -227,6 +227,7 @@ export function SubmissionDetailModal({
               commentText={commentText}
               canResend={canResend}
               resendHint={resendHint}
+              sheetId={sheetId}
               onCommentChange={setCommentText}
               onResend={() => void resendNotification()}
               onToggleTimeline={() => void toggleTimeline()}

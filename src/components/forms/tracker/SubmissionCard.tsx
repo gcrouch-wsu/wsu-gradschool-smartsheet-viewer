@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconCheck, IconFile, IconRefresh } from "@/components/forms/icons";
+import { AttachmentPreviewDialog } from "@/components/forms/tracker/AttachmentPreviewDialog";
 import type {
   TimelineItem,
   TrackerAttachment,
@@ -117,6 +118,8 @@ export interface SubmissionCardProps {
   resendHint?: string | null;
   onCommentChange: (text: string) => void;
   onPostComment: () => void;
+  /** When set, attachment links target this form sheet instead of the active sheet. */
+  sheetId?: string | null;
   /** Extra classes on the root article (e.g. borderless inside a Modal). */
   className?: string;
 }
@@ -136,9 +139,11 @@ export function SubmissionCard({
   resendHint,
   onCommentChange,
   onPostComment,
+  sheetId,
   className,
 }: SubmissionCardProps) {
   const [extrasOpen, setExtrasOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<TrackerAttachment | null>(null);
   const staff = canStaffForms(roles);
   const busy = actionBusy === submission.rowId;
   const showResend = staff && Boolean(canResend && onResend);
@@ -297,7 +302,13 @@ export function SubmissionCard({
                 {attachments.map((a) => (
                   <li key={a.id} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
                     <IconFile className="h-4 w-4 shrink-0 text-[color:var(--wsu-muted)]" />
-                    {a.name}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAttachment(a)}
+                      className="min-w-0 truncate text-left text-[color:var(--wsu-crimson)] underline-offset-2 hover:underline"
+                    >
+                      {a.name}
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -347,6 +358,14 @@ export function SubmissionCard({
           ) : null}
         </div>
       ) : null}
+
+      <AttachmentPreviewDialog
+        open={previewAttachment != null}
+        onClose={() => setPreviewAttachment(null)}
+        attachment={previewAttachment}
+        rowId={submission.rowId}
+        sheetId={sheetId}
+      />
     </article>
   );
 }

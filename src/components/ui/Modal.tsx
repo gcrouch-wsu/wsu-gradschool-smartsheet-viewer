@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-type ModalSize = "md" | "lg";
+type ModalSize = "md" | "lg" | "xl";
 
 interface ModalProps {
   open: boolean;
@@ -14,11 +14,14 @@ interface ModalProps {
   size?: ModalSize;
   /** Extra classes on the dialog panel. */
   className?: string;
+  /** Overlay stacking class; raise when nesting above another modal. */
+  zClass?: string;
 }
 
 const SIZE_CLASS: Record<ModalSize, string> = {
   md: "max-w-lg",
   lg: "max-w-2xl",
+  xl: "max-w-4xl",
 };
 
 function cx(...parts: Array<string | false | null | undefined>) {
@@ -33,7 +36,15 @@ function CloseIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-export function Modal({ open, onClose, children, title, size = "md", className }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  children,
+  title,
+  size = "md",
+  className,
+  zClass = "z-[10000]",
+}: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -73,7 +84,7 @@ export function Modal({ open, onClose, children, title, size = "md", className }
     "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--wsu-border)] text-[color:var(--wsu-muted)] hover:bg-[color:var(--wsu-stone)] hover:text-[color:var(--wsu-ink)]";
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6">
+    <div className={cx("fixed inset-0 flex items-center justify-center p-4 sm:p-6", zClass)}>
       <button
         type="button"
         className="absolute inset-0 bg-[color:var(--wsu-ink)]/40"
