@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
+import { IconMore } from "@/components/forms/icons";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import type { AdminAccountSummary, ManagedAdminStorageMode, ManagedAdminUserSummary } from "@/lib/admin-users";
@@ -33,6 +34,12 @@ const PASSWORD_HINT =
 
 const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson";
+
+const iconBtnClass =
+  "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line-strong bg-white text-ink transition hover:border-mist hover:bg-[#faf7f8] disabled:cursor-not-allowed disabled:opacity-60";
+
+const menuItemClass =
+  "block w-full px-3 py-2 text-left text-xs font-medium text-ink hover:bg-[#faf7f8] disabled:opacity-50";
 
 function emptyForm(): UserFormState {
   return {
@@ -96,6 +103,106 @@ function StatusPill({ active, hasPassword }: { active: boolean; hasPassword: boo
     <span className="inline-flex rounded-full bg-[var(--crimson-soft)] px-2.5 py-1 text-[11px] font-medium text-crimson">
       Active
     </span>
+  );
+}
+
+function UserRowActions({
+  user,
+  busy,
+  generatingReset,
+  onGenerateResetLink,
+  onEdit,
+  onDelete,
+}: {
+  user: ManagedAdminUserSummary;
+  busy: boolean;
+  generatingReset: boolean;
+  onGenerateResetLink: (user: ManagedAdminUserSummary) => void;
+  onEdit: (user: ManagedAdminUserSummary) => void;
+  onDelete: (user: ManagedAdminUserSummary) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const label = user.displayName ?? user.username;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  return (
+    <div ref={rootRef} className="relative flex justify-start sm:justify-end">
+      <button
+        type="button"
+        className={iconBtnClass}
+        disabled={busy}
+        onClick={() => setMenuOpen((open) => !open)}
+        aria-label={`Actions for ${label}`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        title="Actions"
+      >
+        <IconMore className="h-4 w-4" />
+      </button>
+      {menuOpen ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 min-w-[11rem] rounded-lg border border-line bg-white py-1 shadow-md"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass}
+            disabled={busy || generatingReset}
+            onClick={() => {
+              setMenuOpen(false);
+              onGenerateResetLink(user);
+            }}
+          >
+            {generatingReset ? "Generating…" : "Generate reset link"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass}
+            disabled={busy}
+            onClick={() => {
+              setMenuOpen(false);
+              onEdit(user);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${menuItemClass} text-rose-700 hover:bg-rose-50`}
+            disabled={busy}
+            onClick={() => {
+              setMenuOpen(false);
+              onDelete(user);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -357,25 +464,15 @@ export function AdminUsersManager({
                   <StatusPill active={user.isActive} hasPassword={user.hasPassword} />
                 </div>
                 <p className="hidden text-xs text-sub sm:block">{formatTimestamp(user.updatedAt)}</p>
-                <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => void handleGenerateResetLink(user)}
-                    disabled={isPending || loadingResetId === user.id}
-                  >
-                    {loadingResetId === user.id ? "Generating…" : "Generate reset link"}
-                  </Button>
-                  <Button type="button" onClick={() => openEdit(user)} disabled={isPending}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void handleDelete(user)}
-                    disabled={isPending}
-                    className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
-                  >
-                    Delete
-                  </Button>
+                <div className="sm:justify-self-end">
+                  <UserRowActions
+                    user={user}
+                    busy={isPending}
+                    generatingReset={loadingResetId === user.id}
+                    onGenerateResetLink={(u) => void handleGenerateResetLink(u)}
+                    onEdit={openEdit}
+                    onDelete={(u) => void handleDelete(u)}
+                  />
                 </div>
                 {resetLink?.userId === user.id ? (
                   <div className="col-span-2 space-y-2 rounded-lg border border-line bg-[#fdfbfc] px-3 py-3 sm:col-span-6">
