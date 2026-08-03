@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE_NAME } from "@/lib/admin-auth";
-import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/approver-auth";
-import { hasAdminSessionToken, hasApproverSessionToken } from "@/lib/identity";
+import { ADMIN_SESSION_COOKIE_NAME, authorizeAdminSession } from "@/lib/admin-auth";
+import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/session-cookies";
 
 const FORMS_PUBLIC_PATHS = new Set([
   "/forms/approver/sign-in",
   "/api/forms/approver/session",
+  "/api/forms/session",
 ]);
 
 function isPublicFormPath(pathname: string) {
@@ -51,11 +51,14 @@ function normalizeFormsNextPath(pathname: string, search: string) {
 }
 
 async function hasAdminSession(request: NextRequest): Promise<boolean> {
-  return hasAdminSessionToken(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value);
+  // Edge-safe signature check only (full principal resolution stays in Node route handlers).
+  const result = await authorizeAdminSession(request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value ?? null);
+  return result.ok;
 }
 
-async function hasApproverSession(request: NextRequest): Promise<boolean> {
-  return hasApproverSessionToken(request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value);
+function hasApproverSession(request: NextRequest): boolean {
+  // Cookie presence for Edge; Node handlers still validate the token fully.
+  return Boolean(request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value?.trim());
 }
 
 async function resolveAdminRole(request: NextRequest): Promise<string | null> {
@@ -100,7 +103,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
   }
 
   const adminOk = await hasAdminSession(request);
-  const approverOk = await hasApproverSession(request);
+  const approverOk = hasApproverSession(request);
 
   // Sheet picker needs GET /api/forms/registry; coordinators share this with admins/approvers.
   if (isFormsRegistryListPath(pathname) && request.method === "GET") {
