@@ -3,6 +3,11 @@ import * as registry from "@/lib/forms/registry";
 import { loadFormFields, saveFormFields } from "@/lib/forms/store/field-config";
 import { loadConditionalRules, saveConditionalRules } from "@/lib/forms/store/conditional-rules";
 import { loadWorkflow, saveWorkflow } from "@/lib/forms/store/workflow-config";
+import {
+  loadPdfMapping,
+  loadPdfTemplateBytes,
+  savePdfMappingFull,
+} from "@/lib/forms/store/pdf-mapping";
 import type { FormEntry } from "@/lib/forms/registry";
 import type { FormFieldConfig } from "@/lib/forms/form-field-config";
 import type { ConditionalRule } from "@/lib/forms/types";
@@ -26,6 +31,7 @@ export type DuplicateFormResult = {
     fields: boolean;
     conditionalRules: boolean;
     workflow: boolean;
+    pdfMapping: boolean;
   };
 };
 
@@ -84,7 +90,7 @@ export async function duplicateForm(
     options?.makeActive !== false,
   );
 
-  const copied = { fields: false, conditionalRules: false, workflow: false };
+  const copied = { fields: false, conditionalRules: false, workflow: false, pdfMapping: false };
 
   const fields = await loadFormFields(sourceId);
   if (fields) {
@@ -107,6 +113,18 @@ export async function duplicateForm(
   if (workflow) {
     await saveWorkflow(deepClone(workflow) as Workflow, newId);
     copied.workflow = true;
+  }
+
+  const pdfMapping = await loadPdfMapping(sourceId);
+  if (pdfMapping) {
+    const template = pdfMapping.hasTemplate ? await loadPdfTemplateBytes(sourceId) : null;
+    await savePdfMappingFull(
+      newId,
+      deepClone(pdfMapping.config),
+      template,
+      pdfMapping.templateName,
+    );
+    copied.pdfMapping = true;
   }
 
   const form = (await registry.getFormById(newId)) ?? {

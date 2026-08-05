@@ -19,3 +19,17 @@ export {
   loadConditionalRules,
   saveConditionalRules,
 } from "@/lib/forms/store/conditional-rules";
+export {
+  loadPdfMapping,
+  loadPdfTemplateBytes,
+  savePdfMappingConfig,
+  savePdfTemplate,
+  savePdfMappingFull,
+  deletePdfMapping,
+} from "@/lib/forms/store/pdf-mapping";
+export type {
+  PdfMappingConfig,
+  PdfMappingRecord,
+  PdfFieldEntry,
+  PdfCustomItem,
+} from "@/lib/forms/pdf-mapping-types";

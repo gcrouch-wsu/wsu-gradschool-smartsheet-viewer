@@ -1,11 +1,20 @@
 import { resolveAllowedDomains, resolveAttachmentsEnabled } from "@/lib/forms/allowed-domains";
 import { config, loadConditionalLogic } from "@/lib/forms/config";
 import { expandColumnsWithCheckboxGroups, fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
+import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
+import {
+  applyPdfCustomization,
+  buildSubmissionPdf,
+  formatPdfCellValue,
+} from "@/lib/forms/pdf-mapping";
+import type { PdfFieldEntry } from "@/lib/forms/pdf-mapping-types";
 import { loadFormFields } from "@/lib/forms/store/field-config";
+import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { resolveFormsHeaderLogo } from "@/lib/header-logo";
 import { validateSubmission, type SubmissionCell } from "@/lib/forms/validation";
+import { richTextPlainText } from "@/lib/rendering";
 
 export interface FormSchemaPayload {
   sheetName: string;
@@ -161,5 +170,96 @@ export async function submitFormRows(
     }
   }
 
+  if (rowId) {
+    try {
+      await attachGeneratedPdfIfConfigured(
+        sheetId,
+        rowId,
+        values,
+        columns,
+        fieldConfig,
+        String(sheet.name ?? "Form"),
+      );
+    } catch (err) {
+      console.error("[submitFormRows] PDF generation failed", err);
+    }
+  }
+
   return { ok: true, message: "Submitted — thank you.", rowId: rowId ?? null };
+}
+
+async function attachGeneratedPdfIfConfigured(
+  sheetId: string,
+  rowId: number,
+  values: Record<string, string>,
+  columns: Array<{ id: number; title: string }>,
+  fieldConfig: Awaited<ReturnType<typeof loadFormFields>>,
+  sheetName: string,
+): Promise<void> {
+  const mapping = await loadPdfMapping(sheetId);
+  if (!mapping?.config.enabled) return;
+
+  const byTitle = new Map(columns.map((c) => [c.title.toLowerCase(), c]));
+  const fieldMeta = fieldMetaFromConfig(fieldConfig);
+  const entries: PdfFieldEntry[] = [];
+
+  const fields =
+    fieldConfig?.fields?.filter((f) => !f.hiddenOnForm) ??
+    columns.map((c) => ({
+      columnTitle: c.title,
+      order: 0,
+      itemKind: "field" as const,
+      label: undefined as string | undefined,
+      text: undefined as string | undefined,
+    }));
+
+  for (const item of fields) {
+    if (isLayoutFormItem(item)) {
+      const kind =
+        item.itemKind === "heading"
+          ? "heading"
+          : item.itemKind === "description"
+            ? "description"
+            : item.itemKind === "divider"
+              ? "divider"
+              : "field";
+      entries.push({
+        label: item.label || item.columnTitle,
+        columnTitle: item.columnTitle,
+        value: item.text || item.label || "",
+        kind,
+      });
+      continue;
+    }
+
+    const col = byTitle.get(item.columnTitle.toLowerCase());
+    if (!col) continue;
+    const meta = fieldMeta[item.columnTitle.toLowerCase()];
+    const label = meta?.label?.trim() || item.label?.trim() || item.columnTitle;
+    const raw = values[String(col.id)] ?? values[item.columnTitle] ?? "";
+    entries.push({
+      label,
+      columnTitle: item.columnTitle,
+      value: formatPdfCellValue(raw),
+      kind: "field",
+    });
+  }
+
+  const filtered = applyPdfCustomization(entries, mapping.config);
+  if (!filtered.some((e) => !e.kind || e.kind === "field")) return;
+
+  const formTitle = richTextPlainText(fieldConfig?.formTitle ?? "") || sheetName;
+  const formDescription = richTextPlainText(fieldConfig?.formDescription ?? "");
+
+  const pdfBytes = await buildSubmissionPdf({
+    formTitle,
+    formDescription,
+    sheetName,
+    entries: filtered,
+    config: mapping.config,
+    logoSrc: mapping.config.showLogo === false ? null : fieldConfig?.headerLogoDataUrl,
+  });
+  const fileName = mapping.config.outputFileName || "Final PDF.pdf";
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+  await ss.attachFile(sheetId, rowId, blob, fileName);
 }

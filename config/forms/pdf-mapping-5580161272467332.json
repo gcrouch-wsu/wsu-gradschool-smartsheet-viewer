@@ -1,0 +1,220 @@
+{
+  "config": {
+    "enabled": false,
+    "outputFileName": "Application for Graduate Student Leave Duplicate version.pdf",
+    "includeColumns": [
+      "Student Name",
+      "WSU ID",
+      "Student WSU Email",
+      "Student Phone",
+      "IS Y/N",
+      "VISA",
+      "Degree",
+      "Program",
+      "Campus",
+      "Academic Coordinator Name",
+      "Academic Coordinator Email",
+      "POS Status",
+      "CHR Name",
+      "CHR Email",
+      "OTHER REASON",
+      "ASE Status",
+      "LEAVE START",
+      "LEAVE END",
+      "LIBRARY",
+      "LEAVE REASONS"
+    ],
+    "fieldLabels": {
+      "IS Y/N": "Are you an Academic Student Employee (ASE)?",
+      "VISA": "Are you an international student?",
+      "Program": "Enter your academic program:",
+      "Campus": "Select your campus:",
+      "POS Status": "Do you have an approved Program of Study on file with the Graduate School?",
+      "CHR Name": "Advisor / Committee Chair Name:",
+      "CHR Email": "Advisor / Committee Chair Email:",
+      "LEAVE START": "Semester / Year you request to begin leave:",
+      "LEAVE END": "Semester / Year you request to return from leave:",
+      "LIBRARY": "Do you wish to retain access to the WSU Libraries while on leave?",
+      "LEAVE REASONS": "Provide the reason(s) for your graduate leave request. Please select all that apply."
+    },
+    "items": [
+      {
+        "id": "heading:__heading:b2738864:0",
+        "kind": "heading",
+        "text": "<p>Student Information</p>"
+      },
+      {
+        "id": "field:Student Name",
+        "kind": "field",
+        "columnTitle": "Student Name",
+        "included": true
+      },
+      {
+        "id": "field:WSU ID",
+        "kind": "field",
+        "columnTitle": "WSU ID",
+        "included": true
+      },
+      {
+        "id": "field:Student WSU Email",
+        "kind": "field",
+        "columnTitle": "Student WSU Email",
+        "included": true
+      },
+      {
+        "id": "field:Student Phone",
+        "kind": "field",
+        "columnTitle": "Student Phone",
+        "included": true
+      },
+      {
+        "id": "field:IS Y/N",
+        "kind": "field",
+        "columnTitle": "IS Y/N",
+        "label": "Are you an Academic Student Employee (ASE)?",
+        "included": true
+      },
+      {
+        "id": "field:VISA",
+        "kind": "field",
+        "columnTitle": "VISA",
+        "label": "Are you an international student?",
+        "included": true
+      },
+      {
+        "id": "divider:__divider:901de2d9:7",
+        "kind": "divider"
+      },
+      {
+        "id": "heading:__heading:0726f206:8",
+        "kind": "heading",
+        "text": "<h2>Graduate Leave Request Details</h2><p></p>"
+      },
+      {
+        "id": "description:__description:a473e7bd:9",
+        "kind": "description",
+        "text": "<p><span style=\"color: rgb(17, 17, 17); font-family: &quot;Inter var&quot;, Arial, Helvetica, sans-serif, &quot;Segoe UI Emoji&quot;, &quot;Segoe UI Symbol&quot;; font-size: 16px;\">Please answer the following questions regarding your graduate leave request.</span></p>"
+      },
+      {
+        "id": "field:Degree",
+        "kind": "field",
+        "columnTitle": "Degree",
+        "included": true
+      },
+      {
+        "id": "field:Program",
+        "kind": "field",
+        "columnTitle": "Program",
+        "label": "Enter your academic program:",
+        "included": true
+      },
+      {
+        "id": "field:Campus",
+        "kind": "field",
+        "columnTitle": "Campus",
+        "label": "Select your campus:",
+        "included": true
+      },
+      {
+        "id": "field:Academic Coordinator Name",
+        "kind": "field",
+        "columnTitle": "Academic Coordinator Name",
+        "included": true
+      },
+      {
+        "id": "field:Academic Coordinator Email",
+        "kind": "field",
+        "columnTitle": "Academic Coordinator Email",
+        "included": true
+      },
+      {
+        "id": "field:POS Status",
+        "kind": "field",
+        "columnTitle": "POS Status",
+        "label": "Do you have an approved Program of Study on file with the Graduate School?",
+        "included": true
+      },
+      {
+        "id": "field:CHR Name",
+        "kind": "field",
+        "columnTitle": "CHR Name",
+        "label": "Advisor / Committee Chair Name:",
+        "included": true
+      },
+      {
+        "id": "field:CHR Email",
+        "kind": "field",
+        "columnTitle": "CHR Email",
+        "label": "Advisor / Committee Chair Email:",
+        "included": true
+      },
+      {
+        "id": "field:OTHER REASON",
+        "kind": "field",
+        "columnTitle": "OTHER REASON",
+        "included": true
+      },
+      {
+        "id": "field:ASE Status",
+        "kind": "field",
+        "columnTitle": "ASE Status",
+        "included": true
+      },
+      {
+        "id": "divider:__divider:ebac18fc:20",
+        "kind": "divider"
+      },
+      {
+        "id": "heading:__heading:f6000cc2:21",
+        "kind": "heading",
+        "text": "<h2>Graduate Leave Request Details</h2><p></p>"
+      },
+      {
+        "id": "description:__description:c60b46ba:22",
+        "kind": "description",
+        "text": "<p><span style=\"color: rgb(17, 17, 17); font-family: &quot;Inter var&quot;, Arial, Helvetica, sans-serif, &quot;Segoe UI Emoji&quot;, &quot;Segoe UI Symbol&quot;; font-size: 16px;\">Please answer the following questions regarding your graduate leave request.</span></p>"
+      },
+      {
+        "id": "field:LEAVE START",
+        "kind": "field",
+        "columnTitle": "LEAVE START",
+        "label": "Semester / Year you request to begin leave:",
+        "included": true
+      },
+      {
+        "id": "field:LEAVE END",
+        "kind": "field",
+        "columnTitle": "LEAVE END",
+        "label": "Semester / Year you request to return from leave:",
+        "included": true
+      },
+      {
+        "id": "field:LIBRARY",
+        "kind": "field",
+        "columnTitle": "LIBRARY",
+        "label": "Do you wish to retain access to the WSU Libraries while on leave?",
+        "included": true
+      },
+      {
+        "id": "field:LEAVE REASONS",
+        "kind": "field",
+        "columnTitle": "LEAVE REASONS",
+        "label": "Provide the reason(s) for your graduate leave request. Please select all that apply.",
+        "included": true
+      }
+    ],
+    "title": "",
+    "description": "",
+    "showLogo": true,
+    "showCrimsonBar": false,
+    "showFooter": true,
+    "footerText": "Washington State University Graduate School",
+    "layout": "twoColumn",
+    "density": "comfortable",
+    "theme": "official",
+    "fieldStyle": "inline",
+    "bannerText": "DRAFT – DO NOT SUBMIT THIS VERSION TO THE GRADUATE SCHOOL",
+    "showDraftWatermark": true
+  },
+  "templateName": null
+}

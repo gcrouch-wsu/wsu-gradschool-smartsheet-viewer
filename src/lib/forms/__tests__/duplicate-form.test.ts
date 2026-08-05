@@ -9,6 +9,9 @@ const loadConditionalRules = vi.fn();
 const saveConditionalRules = vi.fn();
 const loadWorkflow = vi.fn();
 const saveWorkflow = vi.fn();
+const loadPdfMapping = vi.fn();
+const loadPdfTemplateBytes = vi.fn();
+const savePdfMappingFull = vi.fn();
 
 vi.mock("@/lib/forms/registry", () => ({
   getFormById: (...args: unknown[]) => getFormById(...args),
@@ -32,6 +35,12 @@ vi.mock("@/lib/forms/store/conditional-rules", () => ({
 vi.mock("@/lib/forms/store/workflow-config", () => ({
   loadWorkflow: (...args: unknown[]) => loadWorkflow(...args),
   saveWorkflow: (...args: unknown[]) => saveWorkflow(...args),
+}));
+
+vi.mock("@/lib/forms/store/pdf-mapping", () => ({
+  loadPdfMapping: (...args: unknown[]) => loadPdfMapping(...args),
+  loadPdfTemplateBytes: (...args: unknown[]) => loadPdfTemplateBytes(...args),
+  savePdfMappingFull: (...args: unknown[]) => savePdfMappingFull(...args),
 }));
 
 describe("duplicateForm", () => {
@@ -75,9 +84,20 @@ describe("duplicateForm", () => {
       declinedValues: ["Declined"],
       excludeFromForm: [],
     });
+    loadPdfMapping.mockResolvedValue({
+      config: {
+        enabled: true,
+        outputFileName: "Leave.pdf",
+        includeColumns: ["Full Name"],
+      },
+      templateName: null,
+      hasTemplate: false,
+    });
+    loadPdfTemplateBytes.mockResolvedValue(null);
     saveFormFields.mockResolvedValue(undefined);
     saveConditionalRules.mockResolvedValue(undefined);
     saveWorkflow.mockResolvedValue(undefined);
+    savePdfMappingFull.mockResolvedValue(undefined);
   });
 
   it("clones sheet and copies builder configs into an unpublished form", async () => {
@@ -111,8 +131,19 @@ describe("duplicateForm", () => {
       expect.objectContaining({ overallColumn: "Overall Stage" }),
       "222",
     );
+    expect(savePdfMappingFull).toHaveBeenCalledWith(
+      "222",
+      expect.objectContaining({ enabled: true, outputFileName: "Leave.pdf" }),
+      null,
+      null,
+    );
     expect(result.form.public).toBe(false);
-    expect(result.copied).toEqual({ fields: true, conditionalRules: true, workflow: true });
+    expect(result.copied).toEqual({
+      fields: true,
+      conditionalRules: true,
+      workflow: true,
+      pdfMapping: true,
+    });
   });
 
   it("returns 404-style error when source form is missing", async () => {
