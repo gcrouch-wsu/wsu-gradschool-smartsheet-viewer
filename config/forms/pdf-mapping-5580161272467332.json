@@ -35,7 +35,7 @@
       "LEAVE START": "Semester / Year you request to begin leave:",
       "LEAVE END": "Semester / Year you request to return from leave:",
       "LIBRARY": "Do you wish to retain access to the WSU Libraries while on leave?",
-      "LEAVE REASONS": "Provide the reason(s) for your graduate leave request. Please select all that apply."
+      "LEAVE REASONS": "Provide the reason(s) for your graduate leave request."
     },
     "items": [
       {
@@ -199,7 +199,7 @@
         "id": "field:LEAVE REASONS",
         "kind": "field",
         "columnTitle": "LEAVE REASONS",
-        "label": "Provide the reason(s) for your graduate leave request. Please select all that apply.",
+        "label": "Provide the reason(s) for your graduate leave request.",
         "included": true
       }
     ],

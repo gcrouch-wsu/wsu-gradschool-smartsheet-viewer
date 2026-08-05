@@ -1217,22 +1217,24 @@ export function FormBuilderView() {
           )}
         </div>
       ) : mode === "pdf" ? (
-        <PdfMappingEditor
-          sheetId={builder.state.sheetId}
-          fieldOptions={builder.state.fields
-            .filter((f) => !f.hiddenOnForm && isFieldFormItem(f))
-            .map((f) => ({ columnTitle: f.columnTitle, label: f.label }))}
-          layoutSeed={builder.state.fields
-            .filter((f) => !f.hiddenOnForm)
-            .map((f) => ({
-              columnTitle: f.columnTitle,
-              label: f.label,
-              itemKind: f.itemKind,
-              text: f.text,
-            }))}
-          formTitle={builder.state.formTitle || builder.state.sheetName}
-          formDescription={builder.state.formDescription}
-        />
+        <div className="min-h-0 flex-1">
+          <PdfMappingEditor
+            sheetId={builder.state.sheetId}
+            fieldOptions={builder.state.fields
+              .filter((f) => !f.hiddenOnForm && isFieldFormItem(f))
+              .map((f) => ({ columnTitle: f.columnTitle, label: f.label }))}
+            layoutSeed={builder.state.fields
+              .filter((f) => !f.hiddenOnForm)
+              .map((f) => ({
+                columnTitle: f.columnTitle,
+                label: f.label,
+                itemKind: f.itemKind,
+                text: f.text,
+              }))}
+            formTitle={builder.state.formTitle || builder.state.sheetName}
+            formDescription={builder.state.formDescription}
+          />
+        </div>
       ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">

@@ -329,6 +329,37 @@ function layoutRichHtml(
   return { lines, height };
 }
 
+function drawLaidLine(
+  page: PDFPage,
+  fonts: DrawFonts,
+  line: LaidLine,
+  x: number,
+  y: number,
+  color: ReturnType<typeof rgb>,
+  defaultBold = false,
+): void {
+  let drawX = x + line.indent;
+  if (line.bullet) {
+    page.drawText(line.bullet, { x, y, size: line.size, font: fonts.bold, color });
+    drawX = x + fonts.bold.widthOfTextAtSize(line.bullet, line.size);
+  }
+  for (const run of line.runs) {
+    if (!run.text) continue;
+    const font = pickFont(fonts, run, defaultBold);
+    page.drawText(run.text, { x: drawX, y, size: line.size, font, color });
+    const width = font.widthOfTextAtSize(run.text, line.size);
+    if (run.underline && run.text.trim()) {
+      page.drawLine({
+        start: { x: drawX, y: y - 1.5 },
+        end: { x: drawX + width, y: y - 1.5 },
+        thickness: 0.6,
+        color,
+      });
+    }
+    drawX += width;
+  }
+}
+
 function drawLaidOut(
   page: PDFPage,
   fonts: DrawFonts,
@@ -340,29 +371,29 @@ function drawLaidOut(
 ): number {
   let y = startY;
   for (const line of layout.lines) {
-    let drawX = x + line.indent;
-    if (line.bullet) {
-      page.drawText(line.bullet, { x, y, size: line.size, font: fonts.bold, color });
-      drawX = x + fonts.bold.widthOfTextAtSize(line.bullet, line.size);
-    }
-    for (const run of line.runs) {
-      if (!run.text) continue;
-      const font = pickFont(fonts, run, defaultBold);
-      page.drawText(run.text, { x: drawX, y, size: line.size, font, color });
-      const width = font.widthOfTextAtSize(run.text, line.size);
-      if (run.underline && run.text.trim()) {
-        page.drawLine({
-          start: { x: drawX, y: y - 1.5 },
-          end: { x: drawX + width, y: y - 1.5 },
-          thickness: 0.6,
-          color,
-        });
-      }
-      drawX += width;
-    }
+    drawLaidLine(page, fonts, line, x, y, color, defaultBold);
     y -= line.size + line.gapAfter;
   }
   return y;
+}
+
+function drawRichFlow(
+  ctx: DrawCtx,
+  html: string,
+  x: number,
+  maxWidth: number,
+  size: number,
+  color: ReturnType<typeof rgb>,
+  defaultBold = false,
+  options?: { uppercase?: boolean; trailing?: string; lineGap?: number; paragraphGap?: number },
+): void {
+  const layout = layoutRichHtml(html, ctxFonts(ctx), maxWidth, size, defaultBold, options);
+  for (const line of layout.lines) {
+    const step = line.size + line.gapAfter;
+    ensureSpace(ctx, step + 2);
+    drawLaidLine(ctx.page, ctxFonts(ctx), line, x, ctx.y, color, defaultBold);
+    ctx.y -= step;
+  }
 }
 
 type ThemeColors = {
@@ -421,8 +452,14 @@ function drawDraftWatermark(page: PDFPage, font: PDFFont): void {
   });
 }
 
+function pageTop(ctx: DrawCtx): number {
+  return PAGE_HEIGHT - MARGIN_TOP - (ctx.showBar ? 8 : 0);
+}
+
 function ensureSpace(ctx: DrawCtx, needed: number): void {
-  if (ctx.y - needed >= MARGIN_BOTTOM) return;
+  const maxBlock = pageTop(ctx) - MARGIN_BOTTOM;
+  const required = Math.min(Math.max(needed, 0), maxBlock);
+  if (ctx.y - required >= MARGIN_BOTTOM) return;
   ctx.page = ctx.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   if (ctx.watermark) drawDraftWatermark(ctx.page, ctx.fontBold);
   if (ctx.showBar) {
@@ -434,7 +471,7 @@ function ensureSpace(ctx: DrawCtx, needed: number): void {
       color: ctx.colors.accent,
     });
   }
-  ctx.y = PAGE_HEIGHT - MARGIN_TOP - (ctx.showBar ? 8 : 0);
+  ctx.y = pageTop(ctx);
 }
 
 async function embedLogo(doc: PDFDocument, logoSrc?: string | null): Promise<PDFImage | null> {
@@ -487,6 +524,34 @@ function fitsTwoColumn(ctx: DrawCtx, entry: PdfFieldEntry, colWidth: number): bo
   return ctx.fontBold.widthOfTextAtSize(label, labelSize) <= colWidth;
 }
 
+function estimateFieldHeight(ctx: DrawCtx, entry: PdfFieldEntry, width: number): number {
+  const { display, labelSize, valueSize, label, value } = fieldDisplayParts(ctx, entry);
+  if (display === "inline") {
+    const prefix = `${label}: `;
+    const prefixWidth = ctx.fontBold.widthOfTextAtSize(prefix, labelSize);
+    const lineGap = ctx.compact ? 12 : 13;
+    const pad = ctx.compact ? 4 : 6;
+    if (prefixWidth > width - 56) {
+      const labelLines = wrapLines(prefix, ctx.fontBold, labelSize, width);
+      const valueLines = wrapLines(value || " ", ctx.font, valueSize, width);
+      return (labelLines.length + Math.max(valueLines.length, 1)) * lineGap + pad;
+    }
+    const valueLines = wrapLines(value || " ", ctx.font, valueSize, Math.max(40, width - prefixWidth));
+    return Math.max(valueLines.length, 1) * lineGap + pad;
+  }
+  if (display === "underline") {
+    const valueLines = wrapLines(value || "", ctx.font, valueSize, width);
+    const labelLines = wrapLines(label, ctx.font, 7, width);
+    const lineGap = ctx.compact ? 14 : 16;
+    return Math.max(valueLines.length, 1) * lineGap + 12 + Math.max(labelLines.length, 1) * 10 + (ctx.compact ? 4 : 8);
+  }
+  const valueLines = wrapLines(value || "—", ctx.font, valueSize, width - 16);
+  const labelLines = wrapLines(label, ctx.fontBold, labelSize, width);
+  const lineGap = ctx.compact ? 12 : 14;
+  const boxHeight = Math.max(ctx.compact ? 22 : 28, valueLines.length * lineGap + (ctx.compact ? 10 : 14));
+  return labelLines.length * (labelSize + 2) + 4 + boxHeight + (ctx.compact ? 10 : 14);
+}
+
 function drawFieldBlock(
   ctx: DrawCtx,
   entry: PdfFieldEntry,
@@ -505,12 +570,13 @@ function drawFieldBlock(
     if (stackLabel) {
       const labelLines = wrapLines(prefix, ctx.fontBold, labelSize, width);
       const valueLines = wrapLines(value || " ", ctx.font, valueSize, width);
-      ensureSpace(ctx, (labelLines.length + valueLines.length) * lineGap + (ctx.compact ? 6 : 10));
       for (const line of labelLines) {
+        ensureSpace(ctx, lineGap + 2);
         ctx.page.drawText(line, { x, y: ctx.y, size: labelSize, font: ctx.fontBold, color: ctx.colors.ink });
         ctx.y -= lineGap;
       }
       for (const line of valueLines) {
+        ensureSpace(ctx, lineGap + 2);
         ctx.page.drawText(line, { x, y: ctx.y, size: valueSize, font: ctx.font, color: ctx.colors.ink });
         ctx.y -= lineGap;
       }
@@ -519,7 +585,7 @@ function drawFieldBlock(
     }
 
     const valueLines = wrapLines(value || " ", ctx.font, valueSize, Math.max(40, width - prefixWidth));
-    ensureSpace(ctx, Math.max(valueLines.length, 1) * lineGap + (ctx.compact ? 6 : 10));
+    ensureSpace(ctx, lineGap + 2);
     ctx.page.drawText(prefix, {
       x,
       y: ctx.y,
@@ -536,6 +602,7 @@ function drawFieldBlock(
     });
     ctx.y -= lineGap;
     for (const line of valueLines.slice(1)) {
+      ensureSpace(ctx, lineGap + 2);
       ctx.page.drawText(line, {
         x: x + prefixWidth,
         y: ctx.y,
@@ -552,9 +619,9 @@ function drawFieldBlock(
   if (display === "underline") {
     const valueLines = wrapLines(value || "", ctx.font, valueSize, width);
     const lineGap = ctx.compact ? 14 : 16;
-    ensureSpace(ctx, Math.max(valueLines.length, 1) * lineGap + 22);
     if (valueLines.length) {
       for (const line of valueLines) {
+        ensureSpace(ctx, lineGap + 14);
         ctx.page.drawText(line, {
           x,
           y: ctx.y,
@@ -565,6 +632,8 @@ function drawFieldBlock(
         ctx.y -= lineGap;
       }
       ctx.y += lineGap;
+    } else {
+      ensureSpace(ctx, lineGap + 14);
     }
     ctx.page.drawLine({
       start: { x, y: ctx.y - 3 },
@@ -575,6 +644,7 @@ function drawFieldBlock(
     ctx.y -= 12;
     const labelLines = wrapLines(label, ctx.font, 7, width);
     for (const line of labelLines) {
+      ensureSpace(ctx, 12);
       ctx.page.drawText(line, {
         x,
         y: ctx.y,
@@ -591,12 +661,12 @@ function drawFieldBlock(
   const valueLines = wrapLines(value || "—", ctx.font, valueSize, width - 16);
   const labelLines = wrapLines(label, ctx.fontBold, labelSize, width);
   const lineGap = ctx.compact ? 12 : 14;
-  const boxHeight = Math.max(ctx.compact ? 22 : 28, valueLines.length * lineGap + (ctx.compact ? 10 : 14));
-  const labelBlock = labelLines.length * (labelSize + 2);
-  const blockHeight = labelBlock + 6 + boxHeight + (ctx.compact ? 10 : 14);
+  const padTop = ctx.compact ? 8 : 10;
+  const padBottom = ctx.compact ? 10 : 14;
+  const minBox = ctx.compact ? 22 : 28;
 
-  ensureSpace(ctx, blockHeight);
   for (const line of labelLines) {
+    ensureSpace(ctx, labelSize + 8);
     ctx.page.drawText(line, {
       x,
       y: ctx.y,
@@ -608,28 +678,39 @@ function drawFieldBlock(
   }
   ctx.y -= 4;
 
-  ctx.page.drawRectangle({
-    x,
-    y: ctx.y - boxHeight + (ctx.compact ? 8 : 10),
-    width,
-    height: boxHeight,
-    color: ctx.colors.box,
-    borderColor: ctx.colors.border,
-    borderWidth: 1,
-  });
+  let idx = 0;
+  while (idx < valueLines.length) {
+    ensureSpace(ctx, minBox + padBottom + 4);
+    const availableForBox = ctx.y - MARGIN_BOTTOM - padBottom;
+    const usable = Math.max(minBox, availableForBox);
+    const maxLinesHere = Math.max(1, Math.floor((usable - 8) / lineGap));
+    const linesHere = Math.min(valueLines.length - idx, maxLinesHere);
+    const boxHeight = Math.min(Math.max(minBox, linesHere * lineGap + (ctx.compact ? 10 : 14)), usable);
 
-  let textY = ctx.y - 2;
-  for (const line of valueLines) {
-    ctx.page.drawText(line, {
-      x: x + 8,
-      y: textY - 4,
-      size: valueSize,
-      font: ctx.font,
-      color: ctx.colors.ink,
+    ctx.page.drawRectangle({
+      x,
+      y: ctx.y - boxHeight + padTop,
+      width,
+      height: boxHeight,
+      color: ctx.colors.box,
+      borderColor: ctx.colors.border,
+      borderWidth: 1,
     });
-    textY -= lineGap;
+
+    let textY = ctx.y - 2;
+    for (let k = 0; k < linesHere; k++) {
+      ctx.page.drawText(valueLines[idx + k]!, {
+        x: x + 8,
+        y: textY - 4,
+        size: valueSize,
+        font: ctx.font,
+        color: ctx.colors.ink,
+      });
+      textY -= lineGap;
+    }
+    ctx.y -= boxHeight + padBottom;
+    idx += linesHere;
   }
-  ctx.y -= boxHeight + (ctx.compact ? 10 : 14);
   return top - ctx.y;
 }
 
@@ -723,8 +804,8 @@ export async function buildSubmissionPdf(options: {
   if (banner) {
     const bannerSize = 9;
     const bannerLines = wrapLines(banner, fontBold, bannerSize, contentWidth());
-    ensureSpace(ctx, bannerLines.length * 12 + 8);
     for (const line of bannerLines) {
+      ensureSpace(ctx, 14);
       ctx.page.drawText(line, { x: MARGIN_X, y: ctx.y, size: bannerSize, font: fontBold, color: colors.ink });
       ctx.y -= 12;
     }
@@ -735,12 +816,10 @@ export async function buildSubmissionPdf(options: {
   if (descriptionHtml && stripHtml(descriptionHtml)) {
     ctx.y -= 4;
     const descSize = compact ? 9 : 10;
-    const descLayout = layoutRichHtml(descriptionHtml, ctxFonts(ctx), contentWidth(), descSize, false, {
+    drawRichFlow(ctx, descriptionHtml, MARGIN_X, contentWidth(), descSize, colors.ink, false, {
       lineGap: 4,
       paragraphGap: 6,
     });
-    ensureSpace(ctx, descLayout.height + 10);
-    ctx.y = drawLaidOut(ctx.page, ctxFonts(ctx), descLayout, MARGIN_X, ctx.y, colors.ink, false);
   }
 
   if (!official) {
@@ -787,15 +866,13 @@ export async function buildSubmissionPdf(options: {
       }
       const size = kind === "heading" ? (official ? 11 : compact ? 11 : 13) : compact ? 9 : 10;
       const color = kind === "heading" ? colors.ink : official ? colors.ink : colors.muted;
-      const layout = layoutRichHtml(html, ctxFonts(ctx), contentWidth(), size, kind === "heading", {
+      ctx.y -= 4;
+      drawRichFlow(ctx, html, MARGIN_X, contentWidth(), size, color, kind === "heading", {
         uppercase: official && kind === "heading",
         trailing: official && kind === "heading" ? ":" : undefined,
         lineGap: 5,
         paragraphGap: 6,
       });
-      ensureSpace(ctx, layout.height + 10);
-      ctx.y -= 4;
-      ctx.y = drawLaidOut(ctx.page, ctxFonts(ctx), layout, MARGIN_X, ctx.y, color, kind === "heading");
       ctx.y -= 4;
       i += 1;
       continue;
@@ -807,12 +884,30 @@ export async function buildSubmissionPdf(options: {
       const leftFits = fitsTwoColumn(ctx, entry, colWidth);
       const rightFits = nextIsField && next ? fitsTwoColumn(ctx, next, colWidth) : false;
       if (nextIsField && next && leftFits && rightFits) {
+        const pairHeight = Math.max(
+          estimateFieldHeight(ctx, entry, colWidth),
+          estimateFieldHeight(ctx, next, colWidth),
+        );
+        // Keep short pairs together. Tall boxed fields continue on this page
+        // instead of leaving a large empty region before the next page.
+        ensureSpace(ctx, pairHeight <= 72 ? pairHeight : 44);
+        const startPage = ctx.page;
         const startY = ctx.y;
         drawFieldBlock(ctx, entry, MARGIN_X, colWidth);
         const leftBottom = ctx.y;
+        const leftPage = ctx.page;
+        ctx.page = startPage;
         ctx.y = startY;
         drawFieldBlock(ctx, next, MARGIN_X + colWidth + gap, colWidth);
-        ctx.y = Math.min(leftBottom, ctx.y);
+        const pages = ctx.doc.getPages();
+        const leftIdx = pages.indexOf(leftPage);
+        const rightIdx = pages.indexOf(ctx.page);
+        if (leftIdx > rightIdx) {
+          ctx.page = leftPage;
+          ctx.y = leftBottom;
+        } else if (leftIdx === rightIdx) {
+          ctx.y = Math.min(leftBottom, ctx.y);
+        }
         i += 2;
         continue;
       }
@@ -833,13 +928,12 @@ export async function buildSubmissionPdf(options: {
           fy -= 11;
         }
       } else {
-        p.drawText(footerText, {
-          x: MARGIN_X,
-          y: 28,
-          size: 8,
-          font,
-          color: colors.muted,
-        });
+        const footerLines = wrapLines(footerText, font, 8, contentWidth());
+        let fy = 24 + (footerLines.length - 1) * 10;
+        for (const line of footerLines) {
+          p.drawText(line, { x: MARGIN_X, y: fy, size: 8, font, color: colors.muted });
+          fy -= 10;
+        }
       }
     }
   }

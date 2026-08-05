@@ -13,8 +13,6 @@ import * as registry from "@/lib/forms/registry";
 import { loadFormFields } from "@/lib/forms/store/field-config";
 import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
 import * as ss from "@/lib/forms/smartsheet-api";
-import { richTextPlainText } from "@/lib/rendering";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -89,8 +87,8 @@ async function generatePreviewPdf(sheetId: string, config: PdfMappingConfig) {
   }
 
   const filtered = applyPdfCustomization(entries, config);
-  const formTitle = richTextPlainText(fieldConfig?.formTitle ?? "") || String(sheet.name ?? "Form");
-  const formDescription = richTextPlainText(fieldConfig?.formDescription ?? "");
+  const formTitle = fieldConfig?.formTitle?.trim() || String(sheet.name ?? "Form");
+  const formDescription = fieldConfig?.formDescription ?? "";
 
   const pdfBytes = await buildSubmissionPdf({
     formTitle,
