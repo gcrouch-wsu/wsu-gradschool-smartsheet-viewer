@@ -40,7 +40,7 @@ export default function AdminInstructionsPage() {
               href="/admin"
               className={`${headerActionClass} border border-[var(--crimson-line)] bg-white text-crimson hover:bg-[var(--crimson-soft)]`}
             >
-              Open admin
+              Admin
             </Link>
             <Link
               href="/instructions/contributor"

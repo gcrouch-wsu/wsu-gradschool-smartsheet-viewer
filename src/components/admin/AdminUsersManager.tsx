@@ -509,8 +509,8 @@ export function AdminUsersManager({
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
           <p className="text-sm text-sub">
             {editingUserId
-              ? "Update display name, role, optional password, or active status."
-              : "Add an email and choose Admin or Coordinator. They create their password on first sign-in."}
+              ? "Update role, display name, optional password, or whether they can sign in."
+              : "Add an email and choose a role. They create their password on first sign-in."}
           </p>
 
           <label className="block space-y-1.5">
@@ -528,34 +528,74 @@ export function AdminUsersManager({
             <span className="text-xs text-sub">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</span>
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">Role</span>
-            <select
-              value={form.role}
-              onChange={(event) =>
-                handleInputChange("role", normalizeFormRole(event.target.value))
-              }
-              disabled={isPending}
-              className={inputClass}
-            >
-              <option value="admin">Admin — full workspace access including users</option>
-              <option value="programs_team">
-                Programs Team — full admin access except adding users; reviews contact reroutes
-              </option>
-              <option value="coordinator">Coordinator — forms sheet and resend only</option>
-            </select>
-          </label>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-ink">Role</legend>
+            <div className="space-y-2">
+              {(
+                [
+                  {
+                    value: "admin" as const,
+                    title: "Admin",
+                    description: "Full workspace access, including inviting users.",
+                  },
+                  {
+                    value: "programs_team" as const,
+                    title: "Programs Team",
+                    description: "Full admin access except adding users. Reviews contact reroutes.",
+                  },
+                  {
+                    value: "coordinator" as const,
+                    title: "Coordinator",
+                    description: "Forms sheet and resend notifications only.",
+                  },
+                ] as const
+              ).map((option) => {
+                const selected = form.role === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={[
+                      "flex cursor-pointer gap-3 rounded-lg border px-3 py-2.5 transition",
+                      selected
+                        ? "border-crimson bg-[var(--crimson-soft)]"
+                        : "border-line bg-white hover:border-mist",
+                      isPending ? "opacity-60" : "",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      name="admin-role"
+                      value={option.value}
+                      checked={selected}
+                      disabled={isPending}
+                      onChange={() => handleInputChange("role", option.value)}
+                      className="mt-1 h-4 w-4 border-line text-crimson focus:ring-crimson"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink">{option.title}</span>
+                      <span className="mt-0.5 block text-xs text-sub">{option.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">Display name</span>
-            <input
-              type="text"
-              value={form.displayName}
-              onChange={(event) => handleInputChange("displayName", event.target.value)}
-              disabled={isPending}
-              className={inputClass}
-            />
-          </label>
+          {editingUserId ? (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-ink">
+                Display name <span className="font-normal text-sub">(optional)</span>
+              </span>
+              <input
+                type="text"
+                value={form.displayName}
+                onChange={(event) => handleInputChange("displayName", event.target.value)}
+                disabled={isPending}
+                className={inputClass}
+                placeholder="Shown in the workspace instead of email"
+              />
+            </label>
+          ) : null}
 
           {editingUserId ? (
             <label className="block space-y-1.5">
@@ -581,16 +621,23 @@ export function AdminUsersManager({
             </label>
           ) : null}
 
-          <label className="flex items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => handleInputChange("isActive", event.target.checked)}
-              disabled={isPending}
-              className="h-4 w-4 rounded border-line text-crimson focus:ring-crimson"
-            />
-            Allow this admin to sign in
-          </label>
+          {editingUserId ? (
+            <label className="flex items-start gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => handleInputChange("isActive", event.target.checked)}
+                disabled={isPending}
+                className="mt-0.5 h-4 w-4 rounded border-line text-crimson focus:ring-crimson"
+              />
+              <span>
+                <span className="block font-medium">Allow this user to sign in</span>
+                <span className="mt-0.5 block text-xs text-sub">
+                  Uncheck to deactivate the account. They cannot sign in or set a password until re-enabled.
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           {error ? (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div>
