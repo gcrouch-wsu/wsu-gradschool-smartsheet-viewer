@@ -1,0 +1,343 @@
+{
+  "config": {
+    "enabled": false,
+    "outputFileName": "Exam Scheduling - Standard (ROUTING).pdf",
+    "includeColumns": [
+      "Student Name",
+      "WSU ID",
+      "Student WSU Email",
+      "Degree",
+      "Grad Program",
+      "Exam Type",
+      "EXTYPE_CODE",
+      "Exam Attempt",
+      "EXATT_CODE",
+      "Exam Date",
+      "EX_FINALCODE",
+      "Exam Time",
+      "Student Location",
+      "Thesis/Diss Title",
+      "WRIT_EXD",
+      "MIN_EXD",
+      "PRES_EXD",
+      "ORA Status",
+      "COCHR Y/N",
+      "CHR_NAME",
+      "COCHR_TAG1",
+      "CHR_LOC",
+      "CHR Email",
+      "MMBR1_NAME",
+      "COCHR_TAG2",
+      "MMBR1_LOC",
+      "MMBR1 Email",
+      "MMBR2_NAME",
+      "MMBR2_LOC",
+      "MMBR2 Email",
+      "MMBR3_NAME",
+      "MMBR3_LOC",
+      "MMBR3 Email",
+      "MMBR3 NoNeed",
+      "MMBR4_NAME",
+      "MMBR4_LOC",
+      "MMBR4 Email",
+      "MMBR4 NoNeed",
+      "MMBR5_NAME",
+      "MMBR5_LOC",
+      "MMBR5 Email",
+      "MMBR5 NoNeed",
+      "Academic Coordinator Name",
+      "Academic Coordinator Email",
+      "Denial Comment"
+    ],
+    "fieldLabels": {},
+    "items": [
+      {
+        "id": "field:Student Name",
+        "kind": "field",
+        "columnTitle": "Student Name",
+        "included": true
+      },
+      {
+        "id": "field:WSU ID",
+        "kind": "field",
+        "columnTitle": "WSU ID",
+        "included": true
+      },
+      {
+        "id": "field:Student WSU Email",
+        "kind": "field",
+        "columnTitle": "Student WSU Email",
+        "included": true
+      },
+      {
+        "id": "field:Degree",
+        "kind": "field",
+        "columnTitle": "Degree",
+        "included": true
+      },
+      {
+        "id": "field:Grad Program",
+        "kind": "field",
+        "columnTitle": "Grad Program",
+        "included": true
+      },
+      {
+        "id": "field:Exam Type",
+        "kind": "field",
+        "columnTitle": "Exam Type",
+        "included": true
+      },
+      {
+        "id": "field:EXTYPE_CODE",
+        "kind": "field",
+        "columnTitle": "EXTYPE_CODE",
+        "included": true
+      },
+      {
+        "id": "field:Exam Attempt",
+        "kind": "field",
+        "columnTitle": "Exam Attempt",
+        "included": true
+      },
+      {
+        "id": "field:EXATT_CODE",
+        "kind": "field",
+        "columnTitle": "EXATT_CODE",
+        "included": true
+      },
+      {
+        "id": "field:Exam Date",
+        "kind": "field",
+        "columnTitle": "Exam Date",
+        "included": true
+      },
+      {
+        "id": "field:EX_FINALCODE",
+        "kind": "field",
+        "columnTitle": "EX_FINALCODE",
+        "included": true
+      },
+      {
+        "id": "field:Exam Time",
+        "kind": "field",
+        "columnTitle": "Exam Time",
+        "included": true
+      },
+      {
+        "id": "field:Student Location",
+        "kind": "field",
+        "columnTitle": "Student Location",
+        "included": true
+      },
+      {
+        "id": "field:Thesis/Diss Title",
+        "kind": "field",
+        "columnTitle": "Thesis/Diss Title",
+        "included": true
+      },
+      {
+        "id": "field:WRIT_EXD",
+        "kind": "field",
+        "columnTitle": "WRIT_EXD",
+        "included": true
+      },
+      {
+        "id": "field:MIN_EXD",
+        "kind": "field",
+        "columnTitle": "MIN_EXD",
+        "included": true
+      },
+      {
+        "id": "field:PRES_EXD",
+        "kind": "field",
+        "columnTitle": "PRES_EXD",
+        "included": true
+      },
+      {
+        "id": "field:ORA Status",
+        "kind": "field",
+        "columnTitle": "ORA Status",
+        "included": true
+      },
+      {
+        "id": "field:COCHR Y/N",
+        "kind": "field",
+        "columnTitle": "COCHR Y/N",
+        "included": true
+      },
+      {
+        "id": "field:CHR_NAME",
+        "kind": "field",
+        "columnTitle": "CHR_NAME",
+        "included": true
+      },
+      {
+        "id": "field:COCHR_TAG1",
+        "kind": "field",
+        "columnTitle": "COCHR_TAG1",
+        "included": true
+      },
+      {
+        "id": "field:CHR_LOC",
+        "kind": "field",
+        "columnTitle": "CHR_LOC",
+        "included": true
+      },
+      {
+        "id": "field:CHR Email",
+        "kind": "field",
+        "columnTitle": "CHR Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR1_NAME",
+        "kind": "field",
+        "columnTitle": "MMBR1_NAME",
+        "included": true
+      },
+      {
+        "id": "field:COCHR_TAG2",
+        "kind": "field",
+        "columnTitle": "COCHR_TAG2",
+        "included": true
+      },
+      {
+        "id": "field:MMBR1_LOC",
+        "kind": "field",
+        "columnTitle": "MMBR1_LOC",
+        "included": true
+      },
+      {
+        "id": "field:MMBR1 Email",
+        "kind": "field",
+        "columnTitle": "MMBR1 Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR2_NAME",
+        "kind": "field",
+        "columnTitle": "MMBR2_NAME",
+        "included": true
+      },
+      {
+        "id": "field:MMBR2_LOC",
+        "kind": "field",
+        "columnTitle": "MMBR2_LOC",
+        "included": true
+      },
+      {
+        "id": "field:MMBR2 Email",
+        "kind": "field",
+        "columnTitle": "MMBR2 Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR3_NAME",
+        "kind": "field",
+        "columnTitle": "MMBR3_NAME",
+        "included": true
+      },
+      {
+        "id": "field:MMBR3_LOC",
+        "kind": "field",
+        "columnTitle": "MMBR3_LOC",
+        "included": true
+      },
+      {
+        "id": "field:MMBR3 Email",
+        "kind": "field",
+        "columnTitle": "MMBR3 Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR3 NoNeed",
+        "kind": "field",
+        "columnTitle": "MMBR3 NoNeed",
+        "included": true
+      },
+      {
+        "id": "field:MMBR4_NAME",
+        "kind": "field",
+        "columnTitle": "MMBR4_NAME",
+        "included": true
+      },
+      {
+        "id": "field:MMBR4_LOC",
+        "kind": "field",
+        "columnTitle": "MMBR4_LOC",
+        "included": true
+      },
+      {
+        "id": "field:MMBR4 Email",
+        "kind": "field",
+        "columnTitle": "MMBR4 Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR4 NoNeed",
+        "kind": "field",
+        "columnTitle": "MMBR4 NoNeed",
+        "included": true
+      },
+      {
+        "id": "field:MMBR5_NAME",
+        "kind": "field",
+        "columnTitle": "MMBR5_NAME",
+        "included": true
+      },
+      {
+        "id": "field:MMBR5_LOC",
+        "kind": "field",
+        "columnTitle": "MMBR5_LOC",
+        "included": true
+      },
+      {
+        "id": "field:MMBR5 Email",
+        "kind": "field",
+        "columnTitle": "MMBR5 Email",
+        "included": true
+      },
+      {
+        "id": "field:MMBR5 NoNeed",
+        "kind": "field",
+        "columnTitle": "MMBR5 NoNeed",
+        "included": true
+      },
+      {
+        "id": "divider:msgjji2bel04",
+        "kind": "divider"
+      },
+      {
+        "id": "field:Academic Coordinator Name",
+        "kind": "field",
+        "columnTitle": "Academic Coordinator Name",
+        "included": true
+      },
+      {
+        "id": "field:Academic Coordinator Email",
+        "kind": "field",
+        "columnTitle": "Academic Coordinator Email",
+        "included": true
+      },
+      {
+        "id": "field:Denial Comment",
+        "kind": "field",
+        "columnTitle": "Denial Comment",
+        "included": true
+      }
+    ],
+    "title": "",
+    "description": "",
+    "showLogo": true,
+    "showCrimsonBar": false,
+    "showFooter": true,
+    "footerText": "DRAFT – DO NOT SUBMIT THIS VERSION TO THE GRADUATE SCHOOL",
+    "layout": "twoColumn",
+    "density": "comfortable",
+    "theme": "official",
+    "fieldStyle": "inline",
+    "bannerText": "DRAFT – DO NOT SUBMIT THIS VERSION TO THE GRADUATE SCHOOL",
+    "showDraftWatermark": true
+  },
+  "templateName": null
+}

@@ -14,6 +14,7 @@ import {
   type BuilderFieldType,
   useFormBuilder,
 } from "@/components/forms/builder/useFormBuilder";
+import { PdfMappingEditor } from "@/components/forms/builder/PdfMappingEditor";
 import { richTextPlainText } from "@/lib/rendering";
 
 const inputClass =
@@ -25,7 +26,7 @@ const secondaryBtn =
 const primaryBtn =
   "rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson-dark disabled:opacity-60";
 
-type BuilderMode = "edit" | "preview";
+type BuilderMode = "edit" | "preview" | "pdf";
 type RailTab = "add" | "field";
 
 const FIELD_PALETTE: { type: BuilderFieldType; label: string; hint: string }[] = [
@@ -1042,21 +1043,22 @@ function ModeToggle({
   mode: BuilderMode;
   onChange: (mode: BuilderMode) => void;
 }) {
+  const labels: Record<BuilderMode, string> = { edit: "Edit", preview: "Preview", pdf: "PDF" };
   return (
     <div className="inline-flex rounded-lg border border-[color:var(--wsu-border)] bg-white p-0.5" role="group" aria-label="Builder mode">
-      {(["edit", "preview"] as const).map((value) => (
+      {(["edit", "preview", "pdf"] as const).map((value) => (
         <button
           key={value}
           type="button"
           onClick={() => onChange(value)}
           className={[
-            "rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors",
+            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             mode === value
               ? "bg-wsu-crimson text-white"
               : "text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]",
           ].join(" ")}
         >
-          {value}
+          {labels[value]}
         </button>
       ))}
     </div>
@@ -1187,9 +1189,11 @@ export function FormBuilderView() {
           <button type="button" className={secondaryBtn} onClick={() => void builder.load()} disabled={builder.saving}>
             Refresh
           </button>
-          <button type="button" className={primaryBtn} onClick={() => void builder.save()} disabled={builder.saving || !builder.dirty}>
-            {builder.saving ? "Saving…" : "Save layout"}
-          </button>
+          {mode !== "pdf" ? (
+            <button type="button" className={primaryBtn} onClick={() => void builder.save()} disabled={builder.saving || !builder.dirty}>
+              {builder.saving ? "Saving…" : "Save layout"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -1211,6 +1215,25 @@ export function FormBuilderView() {
           ) : (
             <p className="text-sm text-[color:var(--wsu-muted)]">Preview unavailable until the layout loads.</p>
           )}
+        </div>
+      ) : mode === "pdf" ? (
+        <div className="min-h-0 flex-1">
+          <PdfMappingEditor
+            sheetId={builder.state.sheetId}
+            fieldOptions={builder.state.fields
+              .filter((f) => !f.hiddenOnForm && isFieldFormItem(f))
+              .map((f) => ({ columnTitle: f.columnTitle, label: f.label }))}
+            layoutSeed={builder.state.fields
+              .filter((f) => !f.hiddenOnForm)
+              .map((f) => ({
+                columnTitle: f.columnTitle,
+                label: f.label,
+                itemKind: f.itemKind,
+                text: f.text,
+              }))}
+            formTitle={builder.state.formTitle || builder.state.sheetName}
+            formDescription={builder.state.formDescription}
+          />
         </div>
       ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">

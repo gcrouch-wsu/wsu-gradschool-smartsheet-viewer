@@ -48,6 +48,9 @@ config/admin-users/
 # Local audit log (file-store mode)
 config/audit/
 
+# Local fillable PDF templates (file-store mode)
+config/forms/pdf-templates/
+
 # Markdown: only selected docs are tracked in git
 *.md
 Admin_instructions.md

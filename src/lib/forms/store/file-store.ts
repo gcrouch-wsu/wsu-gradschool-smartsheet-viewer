@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FormFieldConfig } from "@/lib/forms/form-field-config";
+import type { PdfMappingConfig } from "@/lib/forms/pdf-mapping-types";
 import type { ConditionalRule } from "@/lib/forms/types";
 import type { Workflow } from "@/lib/forms/config";
 
@@ -8,6 +9,7 @@ export type { FormFieldConfig, FormFieldDefinition, FormFieldKindHint } from "@/
 export { normalizeFormFieldConfig } from "@/lib/forms/form-field-config";
 
 const FORMS_CONFIG_ROOT = path.join(process.cwd(), "config", "forms");
+const PDF_TEMPLATES_DIR = path.join(FORMS_CONFIG_ROOT, "pdf-templates");
 
 const REGISTRY_FILE = "registry.json";
 const WORKFLOW_FILE = "workflow.json";
@@ -182,6 +184,60 @@ export async function readConditionalRulesFile(sheetId?: string): Promise<Condit
 export async function writeConditionalRulesFile(rules: ConditionalRule[], sheetId?: string): Promise<void> {
   const fileName = sheetId ? perSheetFileName("conditional-logic", sheetId) : CONDITIONAL_LOGIC_FILE;
   await writeJsonFile(fileName, rules);
+}
+
+export type PdfMappingFileRecord = {
+  config: PdfMappingConfig;
+  templateName: string | null;
+};
+
+export async function readPdfMappingFile(sheetId: string): Promise<PdfMappingFileRecord | null> {
+  assertSafeSheetId(sheetId);
+  return readJsonFile<PdfMappingFileRecord | null>(perSheetFileName("pdf-mapping", sheetId), null);
+}
+
+export async function writePdfMappingFile(sheetId: string, record: PdfMappingFileRecord): Promise<void> {
+  assertSafeSheetId(sheetId);
+  await writeJsonFile(perSheetFileName("pdf-mapping", sheetId), record);
+}
+
+export async function deletePdfMappingFile(sheetId: string): Promise<void> {
+  assertSafeSheetId(sheetId);
+  const target = formsConfigPath(perSheetFileName("pdf-mapping", sheetId));
+  await unlink(target).catch(() => undefined);
+}
+
+function pdfTemplatePath(sheetId: string) {
+  assertSafeSheetId(sheetId);
+  return path.join(PDF_TEMPLATES_DIR, `${sheetId}.pdf`);
+}
+
+export async function readPdfTemplateFile(sheetId: string): Promise<Buffer | null> {
+  assertSafeSheetId(sheetId);
+  try {
+    return await readFile(pdfTemplatePath(sheetId));
+  } catch {
+    return null;
+  }
+}
+
+export async function writePdfTemplateFile(sheetId: string, bytes: Buffer): Promise<void> {
+  assertSafeSheetId(sheetId);
+  await mkdir(PDF_TEMPLATES_DIR, { recursive: true });
+  const target = pdfTemplatePath(sheetId);
+  const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile(temp, bytes);
+  try {
+    await rename(temp, target);
+  } catch {
+    await unlink(target).catch(() => undefined);
+    await rename(temp, target);
+  }
+}
+
+export async function deletePdfTemplateFile(sheetId: string): Promise<void> {
+  assertSafeSheetId(sheetId);
+  await unlink(pdfTemplatePath(sheetId)).catch(() => undefined);
 }
 
 export async function readWebhookState(sheetId = "default"): Promise<WebhookState> {

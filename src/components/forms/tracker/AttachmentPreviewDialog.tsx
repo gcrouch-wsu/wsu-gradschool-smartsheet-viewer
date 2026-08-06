@@ -106,6 +106,7 @@ export function AttachmentPreviewDialog({
 
         <div className="min-h-[50vh] rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40">
           {!attachment || !viewUrl ? null : kind === "image" ? (
+            // eslint-disable-next-line @next/next/no-img-element -- authenticated API attachment URL; next/image is not suitable
             <img src={viewUrl} alt={attachment.name} className="mx-auto max-h-[70vh] w-auto max-w-full object-contain p-3" />
           ) : kind === "pdf" ? (
             <iframe title={attachment.name} src={viewUrl} className="h-[70vh] w-full rounded-lg bg-white" />
