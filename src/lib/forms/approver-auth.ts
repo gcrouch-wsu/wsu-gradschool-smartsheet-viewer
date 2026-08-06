@@ -1,9 +1,10 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { validateAdminPassword } from "@/lib/admin-auth";
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
+import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/session-cookies";
 import { getTrustedClientIp } from "@/lib/request-ip";
 
-export const FORM_APPROVER_SESSION_COOKIE_NAME = "smartsheets_view_form_approver_session";
+export { FORM_APPROVER_SESSION_COOKIE_NAME };
 export const FORM_APPROVER_SESSION_SECRET_ENV_VAR = "FORM_APPROVER_SESSION_SECRET";
 export const FORM_APPROVER_SESSION_TTL_ENV_VAR = "FORM_APPROVER_SESSION_TTL_SECONDS";
 export const FORM_APPROVER_DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 4;

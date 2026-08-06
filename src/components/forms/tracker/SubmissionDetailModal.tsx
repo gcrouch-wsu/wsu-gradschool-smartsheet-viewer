@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { SubmissionCard } from "@/components/forms/tracker/SubmissionCard";
+import { RerouteApproverPanel } from "@/components/forms/tracker/RerouteApproverPanel";
 import type {
+  ContactChangeLogItem,
   TimelineItem,
   TrackerAttachment,
   TrackerDiscussion,
@@ -49,6 +51,7 @@ export function SubmissionDetailModal({
   const [error, setError] = useState("");
   const [actionBusy, setActionBusy] = useState<number | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[] | "loading" | "hidden">("hidden");
+  const [contactChanges, setContactChanges] = useState<ContactChangeLogItem[] | "loading" | "hidden">("hidden");
   const [attachments, setAttachments] = useState<TrackerAttachment[] | "loading" | undefined>(undefined);
   const [discussions, setDiscussions] = useState<TrackerDiscussion[] | "loading" | undefined>(undefined);
   const [commentText, setCommentText] = useState("");
@@ -95,6 +98,7 @@ export function SubmissionDetailModal({
   useEffect(() => {
     if (!open || rowId == null) return;
     setTimeline("hidden");
+    setContactChanges("hidden");
     setAttachments(undefined);
     setDiscussions(undefined);
     setCommentText("");
@@ -122,6 +126,43 @@ export function SubmissionDetailModal({
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not load timeline.");
       setTimeline("hidden");
+    }
+  }
+
+  async function toggleContactChanges() {
+    if (rowId == null) return;
+    if (Array.isArray(contactChanges)) {
+      setContactChanges("hidden");
+      return;
+    }
+    setContactChanges("loading");
+    try {
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}/contact-change`, sheetId));
+      const d = await parseApiJson(r);
+      if (!r.ok) {
+        throw new Error(
+          (typeof d.error === "string" && d.error) ||
+            (typeof d.message === "string" && d.message) ||
+            "Could not load contact changes.",
+        );
+      }
+      setContactChanges(Array.isArray(d.history) ? (d.history as ContactChangeLogItem[]) : []);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not load contact changes.");
+      setContactChanges("hidden");
+    }
+  }
+
+  async function refreshContactChangesIfOpen() {
+    if (rowId == null || !Array.isArray(contactChanges)) return;
+    try {
+      const r = await fetch(withSheetId(`/api/forms/submissions/${rowId}/contact-change`, sheetId));
+      const d = await parseApiJson(r);
+      if (r.ok && Array.isArray(d.history)) {
+        setContactChanges(d.history as ContactChangeLogItem[]);
+      }
+    } catch {
+      // leave existing log visible
     }
   }
 
@@ -201,6 +242,12 @@ export function SubmissionDetailModal({
     }
   }
 
+  const canReroute =
+    roles.includes("admin") ||
+    roles.includes("approver") ||
+    roles.includes("coordinator") ||
+    roles.includes("programs_team");
+
   return (
     <Modal open={open} onClose={onClose} size="lg">
       <div className="p-1 sm:p-2">
@@ -222,16 +269,34 @@ export function SubmissionDetailModal({
               roles={roles}
               actionBusy={actionBusy}
               timeline={timeline}
+              contactChanges={canReroute ? contactChanges : undefined}
               attachments={attachments}
               discussions={discussions}
               commentText={commentText}
               canResend={canResend}
               resendHint={resendHint}
+              sheetId={sheetId}
               onCommentChange={setCommentText}
               onResend={() => void resendNotification()}
               onToggleTimeline={() => void toggleTimeline()}
+              onToggleContactChanges={canReroute ? () => void toggleContactChanges() : undefined}
               onLoadExtras={loadExtras}
               onPostComment={() => void postComment()}
+              reroutePanel={
+                canReroute &&
+                (submission.approvalStatus?.state === "current" ||
+                  submission.approvalStatus?.state === "not-started") ? (
+                  <RerouteApproverPanel
+                    embedded
+                    rowId={submission.rowId}
+                    sheetId={sheetId}
+                    onSubmitted={() => {
+                      onChanged?.();
+                      void refreshContactChangesIfOpen();
+                    }}
+                  />
+                ) : undefined
+              }
               className="border-0 shadow-none"
             />
           </div>

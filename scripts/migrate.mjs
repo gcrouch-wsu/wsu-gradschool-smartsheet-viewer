@@ -1,6 +1,9 @@
 /**
  * Apply versioned SQL migrations when DATABASE_URL is set.
  * Usage: node scripts/migrate.mjs
+ *
+ * Plain `node` does not load `.env` (Next.js does). Load it here so
+ * process.env.DATABASE_URL works locally. Optional: `node --env-file=.env scripts/migrate.mjs`
  */
 import { readdir, readFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
@@ -8,6 +11,13 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+try {
+  // Node 20.12+ / 21.7+: built-in .env loader (no dotenv package).
+  process.loadEnvFile(join(root, ".env"));
+} catch {
+  // .env missing is fine when DATABASE_URL is already in the environment.
+}
+
 const url = (process.env.DATABASE_URL ?? "").trim();
 
 if (!url) {
@@ -15,11 +25,17 @@ if (!url) {
   process.exit(0);
 }
 
-const pool = new pg.Pool({ connectionString: url, max: 1 });
+console.log("Connecting to database…");
+const pool = new pg.Pool({
+  connectionString: url,
+  max: 1,
+  connectionTimeoutMillis: 15_000,
+});
 
 async function main() {
   const client = await pool.connect();
   try {
+    console.log("Connected. Checking migrations…");
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         id TEXT PRIMARY KEY,

@@ -48,7 +48,7 @@ export default async function HomePage() {
               href="/admin"
               className={`${headerActionClass} border border-crimson bg-crimson text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)] hover:bg-[var(--crimson-deep)]`}
             >
-              Open admin
+              Admin
             </Link>
           </>
         }
@@ -122,7 +122,7 @@ export default async function HomePage() {
                       focusRing,
                     ].join(" ")}
                   >
-                    Open admin
+                    Admin
                   </Link>
                 </div>
               ) : (

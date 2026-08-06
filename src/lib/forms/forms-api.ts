@@ -4,7 +4,7 @@ import { config as formsConfig } from "@/lib/forms/config";
 import { isFullAdminRole } from "@/lib/admin-users";
 import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 
-export type FormsRole = "admin" | "approver" | "viewer" | "coordinator";
+export type FormsRole = "admin" | "approver" | "viewer" | "coordinator" | "programs_team";
 
 export interface FormsSessionUser {
   email: string;
@@ -13,6 +13,7 @@ export interface FormsSessionUser {
   isAdmin: boolean;
   isApprover: boolean;
   isCoordinator: boolean;
+  isProgramsTeam: boolean;
 }
 
 export interface FormsAccessResult {
@@ -20,6 +21,7 @@ export interface FormsAccessResult {
   isAdmin: boolean;
   isApprover: boolean;
   isCoordinator: boolean;
+  isProgramsTeam: boolean;
 }
 
 export interface FormsAccessError {
@@ -37,6 +39,18 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
         isAdmin: false,
         isApprover: true,
         isCoordinator: true,
+        isProgramsTeam: false,
+      };
+    }
+    if (admin.role === "programs_team") {
+      return {
+        email: admin.email ?? admin.identifier,
+        name: admin.displayName,
+        roles: ["programs_team", "admin", "approver", "viewer"],
+        isAdmin: true,
+        isApprover: true,
+        isCoordinator: false,
+        isProgramsTeam: true,
       };
     }
     return {
@@ -46,6 +60,7 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
       isAdmin: true,
       isApprover: true,
       isCoordinator: false,
+      isProgramsTeam: false,
     };
   }
 
@@ -58,6 +73,7 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
       isAdmin: false,
       isApprover: true,
       isCoordinator: false,
+      isProgramsTeam: false,
     };
   }
 
@@ -73,6 +89,7 @@ export async function getFormsSessionPayload() {
     isAdmin: user?.isAdmin ?? false,
     isApprover: user?.isApprover ?? false,
     isCoordinator: user?.isCoordinator ?? false,
+    isProgramsTeam: user?.isProgramsTeam ?? false,
   };
 }
 
@@ -94,6 +111,7 @@ export async function requireFormsAccess(request?: Request): Promise<FormsAccess
     isAdmin: user.isAdmin,
     isApprover: user.isApprover,
     isCoordinator: user.isCoordinator,
+    isProgramsTeam: user.isProgramsTeam,
   };
 }
 
@@ -106,18 +124,23 @@ export async function requireFormsAdminAccess(): Promise<FormsAccessResult | For
   if (!isFullAdminRole(principal.role)) {
     return { response: forbiddenResponse("Full admin access is required.") };
   }
+  const isProgramsTeam = principal.role === "programs_team";
   return {
     user: {
       email: principal.username,
       name: principal.displayName ?? principal.username,
-      roles: ["admin", "approver", "viewer"],
+      roles: isProgramsTeam
+        ? ["programs_team", "admin", "approver", "viewer"]
+        : ["admin", "approver", "viewer"],
       isAdmin: true,
       isApprover: true,
       isCoordinator: false,
+      isProgramsTeam,
     },
     isAdmin: true,
     isApprover: true,
     isCoordinator: false,
+    isProgramsTeam,
   };
 }
 

@@ -1,27 +1,27 @@
 import Link from "next/link";
-import { listManagedAdminUsers } from "@/lib/admin-users";
 import { Button, EmptyState, RecentCard, StatCard } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
+import { listForms } from "@/lib/forms/registry";
 
-function DataIcon({ kind }: { kind: "sources" | "views" | "published" | "admins" }) {
+function DataIcon({ kind }: { kind: "sources" | "views" | "published" | "forms" }) {
   const paths = {
     sources: <><ellipse cx="12" cy="5" rx="7" ry="3" /><path d="M5 5v10c0 1.7 3.1 3 7 3s7-1.3 7-3V5" /><path d="M5 10c0 1.7 3.1 3 7 3s7-1.3 7-3" /></>,
     views: <><rect x="4" y="5" width="16" height="14" rx="1.5" /><path d="M4 10h16M10 5v14" /></>,
     published: <><circle cx="12" cy="12" r="8" /><path d="M4.5 12h15M12 4c2.2 2.2 3.4 5 3.4 8S14.2 17.8 12 20M12 4c-2.2 2.2-3.4 5-3.4 8S9.8 17.8 12 20" /></>,
-    admins: <><path d="M12 3l7 3v5c0 4.3-2.9 7.4-7 9-4.1-1.6-7-4.7-7-9V6l7-3z" /><path d="M9.5 12l1.6 1.6 3.5-3.6" /></>,
+    forms: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2" /></>,
   };
   return <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>{paths[kind]}</svg>;
 }
 
 export default async function AdminDashboardPage() {
   await requireAdminPageAccess("/admin");
-  const [sources, views] = await Promise.all([
+  const [sources, views, forms] = await Promise.all([
     listSourceConfigs(),
     listViewConfigs(),
+    listForms(),
   ]);
-  const managedAdmins = await listManagedAdminUsers();
   const publicViews = views.filter((view) => view.public);
 
   return (
@@ -29,10 +29,10 @@ export default async function AdminDashboardPage() {
       <PageHeader
         eyebrow="Admin builder"
         title="Workspace overview"
-        description="Sources, views, and publishing at a glance. Open a list below to configure the catalog."
+        description="Sources, views, forms, and publishing at a glance. Open a list below to configure the catalog."
         actions={
-          <Link href="/admin/users">
-            <Button variant="primary">Manage admins</Button>
+          <Link href="/forms/manage">
+            <Button variant="primary">Manage forms</Button>
           </Link>
         }
       />
@@ -42,10 +42,10 @@ export default async function AdminDashboardPage() {
         <StatCard label="Views" value={views.length} description="Public view definitions." icon={<DataIcon kind="views" />} />
         <StatCard label="Published" value={publicViews.length} description="Live on public routes." icon={<DataIcon kind="published" />} />
         <StatCard
-          label="Admins"
-          value={managedAdmins.length + 1}
-          description={`Owner plus ${managedAdmins.length} managed admin${managedAdmins.length === 1 ? "" : "s"}.`}
-          icon={<DataIcon kind="admins" />}
+          label="Forms"
+          value={forms.length}
+          description={`${forms.length === 1 ? "1 form" : `${forms.length} forms`} in the registry.`}
+          icon={<DataIcon kind="forms" />}
         />
       </section>
 

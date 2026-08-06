@@ -197,16 +197,25 @@ export function mockGetRow(sheetId: string | number, rowId: string | number) {
 
 export function mockUpdateRows(
   sheetId: string | number,
-  rows: { id: number; cells: Cell[] }[],
+  rows: {
+    id: number;
+    cells: Array<{ columnId: number; value?: string | boolean; objectValue?: unknown }>;
+  }[],
 ) {
   const s = get(sheetId);
   for (const upd of rows) {
     const row = s.rows.find((r) => r.id === upd.id);
     if (!row) continue;
     for (const c of upd.cells) {
+      const value =
+        "value" in c && c.value !== undefined
+          ? c.value
+          : c.objectValue != null
+            ? JSON.stringify(c.objectValue)
+            : "";
       const existing = row.cells.find((x) => x.columnId === c.columnId);
-      if (existing) existing.value = c.value;
-      else row.cells.push(c);
+      if (existing) existing.value = value as string | boolean;
+      else row.cells.push({ columnId: c.columnId, value: value as string | boolean });
     }
   }
   return { message: "SUCCESS", result: rows.map((r) => ({ id: r.id })) };

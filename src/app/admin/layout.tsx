@@ -2,11 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
-import { getCurrentAdminAuthResult } from "@/lib/admin-users";
+import { canManageUsers, getCurrentAdminAuthResult } from "@/lib/admin-users";
 import { productNav } from "@/lib/product-navigation";
 import { AdminLogoutButton } from "./AdminLogoutButton";
 
 export const dynamic = "force-dynamic";
+
+function roleLabel(role: string) {
+  if (role === "owner") return "Owner";
+  if (role === "programs_team") return "Programs Team";
+  return "Admin";
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const auth = await getCurrentAdminAuthResult();
@@ -24,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <ProductShell
-      globalNav={productNav(true)}
+      globalNav={productNav(true, { canManageUsers: canManageUsers(principal.role) })}
       eyebrow="Washington State University"
       title="Smartsheet Workspace"
       description="Register sources, build views, manage submissions, and administer approval workflows."
@@ -36,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="min-w-0">
             <span className="block truncate text-[13.5px] font-semibold leading-none text-ink">{principalLabel}</span>
             <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">
-              {principal.role === "owner" ? "Owner" : "Admin"}
+              {roleLabel(principal.role)}
             </span>
           </span>
         </div>

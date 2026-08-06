@@ -1,0 +1,14 @@
+{
+  "id": "bachelor-s-master-s-program",
+  "label": "Bachelor's/Master's Program",
+  "sourceType": "sheet",
+  "smartsheetId": 2111374792544132,
+  "connectionKey": "default",
+  "apiBaseUrl": "https://api.smartsheet.com/2.0",
+  "cacheTtlSeconds": 120,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true,
+    "level": 2
+  }
+}

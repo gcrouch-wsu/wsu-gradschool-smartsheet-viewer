@@ -20,7 +20,7 @@ export interface Principal {
   identifier: string;
   displayName: string;
   email?: string;
-  role?: "owner" | "admin" | "coordinator";
+  role?: "owner" | "admin" | "coordinator" | "programs_team";
   source?: "env" | "managed";
   capabilities: PrincipalCapability[];
   session: {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
+import { IconMore } from "@/components/forms/icons";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import type { AdminAccountSummary, ManagedAdminStorageMode, ManagedAdminUserSummary } from "@/lib/admin-users";
@@ -18,7 +19,7 @@ interface UserFormState {
   displayName: string;
   password: string;
   isActive: boolean;
-  role: "admin" | "coordinator";
+  role: "admin" | "coordinator" | "programs_team";
 }
 
 interface ResetLinkState {
@@ -33,6 +34,12 @@ const PASSWORD_HINT =
 
 const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson";
+
+const iconBtnClass =
+  "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line-strong bg-white text-ink transition hover:border-mist hover:bg-[#faf7f8] disabled:cursor-not-allowed disabled:opacity-60";
+
+const menuItemClass =
+  "block w-full px-3 py-2 text-left text-xs font-medium text-ink hover:bg-[#faf7f8] disabled:opacity-50";
 
 function emptyForm(): UserFormState {
   return {
@@ -65,6 +72,18 @@ function buildErrorMessage(payload: { message?: string; error?: string; errors?:
   return `${lead} ${payload.errors.join(" ")}`;
 }
 
+function roleLabel(role: string) {
+  if (role === "coordinator") return "Coordinator";
+  if (role === "programs_team") return "Programs Team";
+  return "Admin";
+}
+
+function normalizeFormRole(role: string): UserFormState["role"] {
+  if (role === "coordinator") return "coordinator";
+  if (role === "programs_team") return "programs_team";
+  return "admin";
+}
+
 function StatusPill({ active, hasPassword }: { active: boolean; hasPassword: boolean }) {
   if (!active) {
     return (
@@ -84,6 +103,106 @@ function StatusPill({ active, hasPassword }: { active: boolean; hasPassword: boo
     <span className="inline-flex rounded-full bg-[var(--crimson-soft)] px-2.5 py-1 text-[11px] font-medium text-crimson">
       Active
     </span>
+  );
+}
+
+function UserRowActions({
+  user,
+  busy,
+  generatingReset,
+  onGenerateResetLink,
+  onEdit,
+  onDelete,
+}: {
+  user: ManagedAdminUserSummary;
+  busy: boolean;
+  generatingReset: boolean;
+  onGenerateResetLink: (user: ManagedAdminUserSummary) => void;
+  onEdit: (user: ManagedAdminUserSummary) => void;
+  onDelete: (user: ManagedAdminUserSummary) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const label = user.displayName ?? user.username;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  return (
+    <div ref={rootRef} className="relative flex justify-start sm:justify-end">
+      <button
+        type="button"
+        className={iconBtnClass}
+        disabled={busy}
+        onClick={() => setMenuOpen((open) => !open)}
+        aria-label={`Actions for ${label}`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        title="Actions"
+      >
+        <IconMore className="h-4 w-4" />
+      </button>
+      {menuOpen ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-20 mt-1 min-w-[11rem] rounded-lg border border-line bg-white py-1 shadow-md"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass}
+            disabled={busy || generatingReset}
+            onClick={() => {
+              setMenuOpen(false);
+              onGenerateResetLink(user);
+            }}
+          >
+            {generatingReset ? "Generating…" : "Generate reset link"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={menuItemClass}
+            disabled={busy}
+            onClick={() => {
+              setMenuOpen(false);
+              onEdit(user);
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${menuItemClass} text-rose-700 hover:bg-rose-50`}
+            disabled={busy}
+            onClick={() => {
+              setMenuOpen(false);
+              onDelete(user);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -143,7 +262,7 @@ export function AdminUsersManager({
       displayName: user.displayName ?? "",
       password: "",
       isActive: user.isActive,
-      role: user.role === "coordinator" ? "coordinator" : "admin",
+      role: normalizeFormRole(user.role),
     });
     setShowPassword(false);
     setError(null);
@@ -316,7 +435,7 @@ export function AdminUsersManager({
           <p className="mx-auto mt-1 max-w-[34ch] text-[13px] text-sub">
             {query.trim()
               ? "Try a different name or email."
-              : "Add an Admin or Coordinator by email. They create their password on first sign-in."}
+              : "Add an Admin, Programs Team, or Coordinator by email. They create their password on first sign-in."}
           </p>
           {!query.trim() ? (
             <div className="mt-4">
@@ -339,31 +458,21 @@ export function AdminUsersManager({
                 </div>
                 <p className="truncate text-xs text-sub sm:text-sm">{user.username}</p>
                 <p className="text-xs font-medium capitalize text-ink sm:text-sm">
-                  {user.role === "coordinator" ? "Coordinator" : "Admin"}
+                  {roleLabel(user.role)}
                 </p>
                 <div>
                   <StatusPill active={user.isActive} hasPassword={user.hasPassword} />
                 </div>
                 <p className="hidden text-xs text-sub sm:block">{formatTimestamp(user.updatedAt)}</p>
-                <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => void handleGenerateResetLink(user)}
-                    disabled={isPending || loadingResetId === user.id}
-                  >
-                    {loadingResetId === user.id ? "Generating…" : "Generate reset link"}
-                  </Button>
-                  <Button type="button" onClick={() => openEdit(user)} disabled={isPending}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void handleDelete(user)}
-                    disabled={isPending}
-                    className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
-                  >
-                    Delete
-                  </Button>
+                <div className="sm:justify-self-end">
+                  <UserRowActions
+                    user={user}
+                    busy={isPending}
+                    generatingReset={loadingResetId === user.id}
+                    onGenerateResetLink={(u) => void handleGenerateResetLink(u)}
+                    onEdit={openEdit}
+                    onDelete={(u) => void handleDelete(u)}
+                  />
                 </div>
                 {resetLink?.userId === user.id ? (
                   <div className="col-span-2 space-y-2 rounded-lg border border-line bg-[#fdfbfc] px-3 py-3 sm:col-span-6">
@@ -400,8 +509,8 @@ export function AdminUsersManager({
         <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
           <p className="text-sm text-sub">
             {editingUserId
-              ? "Update display name, role, optional password, or active status."
-              : "Add an email and choose Admin or Coordinator. They create their password on first sign-in."}
+              ? "Update role, display name, optional password, or whether they can sign in."
+              : "Add an email and choose a role. They create their password on first sign-in."}
           </p>
 
           <label className="block space-y-1.5">
@@ -419,31 +528,74 @@ export function AdminUsersManager({
             <span className="text-xs text-sub">Lowercase letters, numbers, dots, dashes, underscores, and @ only.</span>
           </label>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">Role</span>
-            <select
-              value={form.role}
-              onChange={(event) =>
-                handleInputChange("role", event.target.value === "coordinator" ? "coordinator" : "admin")
-              }
-              disabled={isPending}
-              className={inputClass}
-            >
-              <option value="admin">Admin — full workspace access</option>
-              <option value="coordinator">Coordinator — forms sheet and resend only</option>
-            </select>
-          </label>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-ink">Role</legend>
+            <div className="space-y-2">
+              {(
+                [
+                  {
+                    value: "admin" as const,
+                    title: "Admin",
+                    description: "Full workspace access, including inviting users.",
+                  },
+                  {
+                    value: "programs_team" as const,
+                    title: "Programs Team",
+                    description: "Full admin access except adding users. Reviews contact reroutes.",
+                  },
+                  {
+                    value: "coordinator" as const,
+                    title: "Coordinator",
+                    description: "Forms sheet and resend notifications only.",
+                  },
+                ] as const
+              ).map((option) => {
+                const selected = form.role === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={[
+                      "flex cursor-pointer gap-3 rounded-lg border px-3 py-2.5 transition",
+                      selected
+                        ? "border-crimson bg-[var(--crimson-soft)]"
+                        : "border-line bg-white hover:border-mist",
+                      isPending ? "opacity-60" : "",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      name="admin-role"
+                      value={option.value}
+                      checked={selected}
+                      disabled={isPending}
+                      onChange={() => handleInputChange("role", option.value)}
+                      className="mt-1 h-4 w-4 border-line text-crimson focus:ring-crimson"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-ink">{option.title}</span>
+                      <span className="mt-0.5 block text-xs text-sub">{option.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink">Display name</span>
-            <input
-              type="text"
-              value={form.displayName}
-              onChange={(event) => handleInputChange("displayName", event.target.value)}
-              disabled={isPending}
-              className={inputClass}
-            />
-          </label>
+          {editingUserId ? (
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-ink">
+                Display name <span className="font-normal text-sub">(optional)</span>
+              </span>
+              <input
+                type="text"
+                value={form.displayName}
+                onChange={(event) => handleInputChange("displayName", event.target.value)}
+                disabled={isPending}
+                className={inputClass}
+                placeholder="Shown in the workspace instead of email"
+              />
+            </label>
+          ) : null}
 
           {editingUserId ? (
             <label className="block space-y-1.5">
@@ -469,16 +621,23 @@ export function AdminUsersManager({
             </label>
           ) : null}
 
-          <label className="flex items-center gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => handleInputChange("isActive", event.target.checked)}
-              disabled={isPending}
-              className="h-4 w-4 rounded border-line text-crimson focus:ring-crimson"
-            />
-            Allow this admin to sign in
-          </label>
+          {editingUserId ? (
+            <label className="flex items-start gap-2.5 rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) => handleInputChange("isActive", event.target.checked)}
+                disabled={isPending}
+                className="mt-0.5 h-4 w-4 rounded border-line text-crimson focus:ring-crimson"
+              />
+              <span>
+                <span className="block font-medium">Allow this user to sign in</span>
+                <span className="mt-0.5 block text-xs text-sub">
+                  Uncheck to deactivate the account. They cannot sign in or set a password until re-enabled.
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           {error ? (
             <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div>

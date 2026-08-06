@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProductShell } from "@/components/layout/ProductShell";
@@ -14,6 +13,7 @@ interface FormsSessionInfo {
   isAdmin: boolean;
   isApprover: boolean;
   isCoordinator?: boolean;
+  isProgramsTeam?: boolean;
 }
 
 function initialsFromSession(session: FormsSessionInfo | null): string {
@@ -38,9 +38,9 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/forms/session")
-      .then((r) => r.json())
-      .then((payload) => {
-        if (!cancelled) setSession(payload as FormsSessionInfo);
+      .then(async (r) => {
+        const payload = (await r.json().catch(() => null)) as FormsSessionInfo | null;
+        if (!cancelled) setSession(payload);
       })
       .catch(() => {
         if (!cancelled) setSession(null);
@@ -53,10 +53,20 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    if (!sessionLoaded || session?.user) return;
+    const next =
+      pathname.startsWith("/forms") && pathname !== "/forms/approver/sign-in"
+        ? `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`
+        : "/forms/sheet";
+    router.replace(`/admin/sign-in?next=${encodeURIComponent(next)}`);
+  }, [sessionLoaded, session, pathname, router]);
+
   const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
   const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
+    if (session.isProgramsTeam) return "Programs Team";
     if (session.isAdmin) return "Admin";
     if (session.isCoordinator) return "Coordinator";
     return "Approver";
@@ -84,42 +94,46 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return (
-    <ProductShell
-      globalNav={productNav(showAdminNav)}
-      title="Smartsheet Workspace"
-      description="Submit forms, track approvals, and manage Smartsheet workflows."
-      identity={
-        !sessionLoaded ? (
+  if (!sessionLoaded || !session?.user) {
+    return (
+      <ProductShell
+        globalNav={productNav(showAdminNav)}
+        title="Smartsheet Workspace"
+        description="Submit forms, track approvals, and manage Smartsheet workflows."
+        identity={
           <div
             className="h-11 w-36 animate-pulse rounded-full border border-line-strong bg-[color:var(--wsu-stone)]"
             aria-hidden
           />
-        ) : session?.user ? (
-          <button
-            type="button"
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="flex items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left transition hover:border-mist disabled:opacity-60"
-            aria-label="Account menu — sign out"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
-              {initialsFromSession(session)}
-            </span>
-            <span>
-              <span className="block text-[13.5px] font-semibold leading-none text-ink">{session.user.name || session.user.email}</span>
-              <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">{accountLabel}</span>
-            </span>
-            <IconChevronDown className="ml-1 h-3.5 w-3.5 text-mist" />
-          </button>
-        ) : (
-          <Link
-            href="/forms/approver/sign-in"
-            className="rounded-full border border-line-strong bg-white px-4 py-2 text-[13.5px] font-medium text-ink transition hover:border-mist hover:bg-[#faf7f8]"
-          >
-            Sign in
-          </Link>
-        )
+        }
+      >
+        <p className="text-sm text-[color:var(--wsu-muted)]">Redirecting to sign in…</p>
+      </ProductShell>
+    );
+  }
+
+  return (
+    <ProductShell
+      globalNav={productNav(showAdminNav, { canManageUsers: Boolean(session?.isAdmin) && !session?.isProgramsTeam })}
+      title="Smartsheet Workspace"
+      description="Submit forms, track approvals, and manage Smartsheet workflows."
+      identity={
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="flex items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left transition hover:border-mist disabled:opacity-60"
+          aria-label="Account menu — sign out"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
+            {initialsFromSession(session)}
+          </span>
+          <span>
+            <span className="block text-[13.5px] font-semibold leading-none text-ink">{session.user.name || session.user.email}</span>
+            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">{accountLabel}</span>
+          </span>
+          <IconChevronDown className="ml-1 h-3.5 w-3.5 text-mist" />
+        </button>
       }
       actions={
         canSearch ? (

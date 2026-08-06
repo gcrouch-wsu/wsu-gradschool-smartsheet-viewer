@@ -1,0 +1,15 @@
+{
+  "id": "test-re-enrollment-routing-form",
+  "label": "Test Re-Enrollment Routing Form",
+  "sourceType": "sheet",
+  "smartsheetId": 6343540522045316,
+  "fetchOptions": {
+    "includeObjectValue": true,
+    "includeColumnOptions": true
+  },
+  "formsEnabled": true,
+  "formSlug": "test-re-enrollment-routing-form",
+  "formPublic": false,
+  "formProvenance": "template",
+  "formRegisteredAt": "2026-07-30T19:09:48.052Z"
+}

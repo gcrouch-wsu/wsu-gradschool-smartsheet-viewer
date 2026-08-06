@@ -27,6 +27,37 @@ export async function findCurrentStage(
   return null;
 }
 
+/** Stages that are not yet approved (current pending + upcoming) — eligible for contact reroute. */
+export async function findEditableContactStages(
+  sheet: { id?: string | number; columns?: unknown[]; rows?: unknown[] },
+  rowId: number,
+): Promise<Array<{ name: string; columnId: number; isCurrent: boolean }>> {
+  const wf = await resolveWorkflow(sheet);
+  const stages = await stageColumns(sheet);
+  const row = (sheet.rows ?? []).find((r) => (r as { id: number }).id === rowId) as
+    | { cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown }> }
+    | undefined;
+  if (!row) return [];
+
+  const approved = new Set(wf.approvedValues.map((v) => v.toLowerCase()));
+  const declined = new Set(wf.declinedValues.map((v) => v.toLowerCase()));
+  const result: Array<{ name: string; columnId: number; isCurrent: boolean }> = [];
+  let foundCurrent = false;
+
+  for (const st of stages) {
+    const cell = (row.cells ?? []).find((c) => c.columnId === st.columnId);
+    const value = String(cell?.value ?? cell?.displayValue ?? "").trim();
+    const lv = value.toLowerCase();
+    if (value && declined.has(lv)) break;
+    if (value && approved.has(lv)) continue;
+    // blank or non-approved → editable
+    const isCurrent = !foundCurrent;
+    foundCurrent = true;
+    result.push({ ...st, isCurrent });
+  }
+  return result;
+}
+
 export async function validateWorkflowValue(
   sheet: { id?: string | number; columns?: unknown[] },
   columnTitle: string,

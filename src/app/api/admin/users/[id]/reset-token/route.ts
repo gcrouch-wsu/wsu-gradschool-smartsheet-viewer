@@ -9,7 +9,7 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdminApiAccess();
+  const auth = await requireAdminApiAccess({ usersOnly: true });
   if (auth.response) return auth.response;
 
   const { id } = await params;
