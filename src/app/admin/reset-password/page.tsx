@@ -29,7 +29,7 @@ export default async function AdminResetPasswordPage({
       />
 
       <div className="relative z-10">
-        <FormBrandHeader maxWidthClassName="max-w-6xl" />
+        <FormBrandHeader />
 
         <div className="flex min-h-[calc(100vh-4.5rem)] flex-col justify-center px-4 py-12 sm:px-6 sm:py-16">
           <div className="mx-auto w-full max-w-[26rem]">

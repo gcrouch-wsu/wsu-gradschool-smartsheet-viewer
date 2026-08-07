@@ -1,17 +1,13 @@
 import Link from "next/link";
-import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
+import {
+  FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
+  FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
+  FormBrandHeader,
+} from "@/components/forms/submission/FormBrandHeader";
 import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
 export const dynamic = "force-dynamic";
-
-const focusRing =
-  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson";
-
-const headerActionClass = [
-  "inline-flex min-h-11 items-center justify-center rounded-full px-3.5 py-2 text-sm font-medium transition",
-  focusRing,
-].join(" ");
 
 export default async function HomePage() {
   const [pages, connectionOk] = await Promise.all([
@@ -27,33 +23,23 @@ export default async function HomePage() {
           "sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50",
           "focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-ink",
           "focus:shadow-[var(--shadow-md)]",
-          focusRing,
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson",
         ].join(" ")}
       >
         Skip to main content
       </a>
 
       <FormBrandHeader
-        maxWidthClassName="max-w-[1200px]"
         actionsLabel="Workspace administration"
         actions={
           <>
-            <Link
-              href="/forms/my"
-              className={`${headerActionClass} border border-[var(--crimson-line)] bg-white text-crimson hover:bg-[var(--crimson-soft)]`}
-            >
+            <Link href="/forms/my" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               My submissions
             </Link>
-            <Link
-              href="/instructions/admin"
-              className={`${headerActionClass} border border-[var(--crimson-line)] bg-white text-crimson hover:bg-[var(--crimson-soft)]`}
-            >
+            <Link href="/instructions/admin" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               Admin guide
             </Link>
-            <Link
-              href="/admin"
-              className={`${headerActionClass} border border-crimson bg-crimson text-white shadow-[0_2px_6px_rgba(152,30,50,0.24)] hover:bg-[var(--crimson-deep)]`}
-            >
+            <Link href="/admin" className={FORM_BRAND_HEADER_ACTION_SOLID_CLASS}>
               Admin
             </Link>
           </>

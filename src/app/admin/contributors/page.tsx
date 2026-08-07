@@ -2,8 +2,14 @@ import { resolveAdminTablePage } from "@/components/admin/AdminDataTable";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
+import type { ContributorAccountKind } from "@/lib/contributor-account-kinds";
 import { listContributorUsers } from "@/lib/contributor-auth";
+import { resolveContributorAccountKinds } from "@/lib/resolve-contributor-account-kinds";
 import { ContributorAccountsManager } from "./ContributorAccountsManager";
+
+type ContributorListUser = Awaited<ReturnType<typeof listContributorUsers>>[number] & {
+  accountKind: ContributorAccountKind;
+};
 
 export default async function AdminContributorsPage({
   searchParams,
@@ -15,11 +21,21 @@ export default async function AdminContributorsPage({
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
 
-  let users: Awaited<ReturnType<typeof listContributorUsers>> = [];
+  let users: ContributorListUser[] = [];
   let dbError: string | null = null;
 
   try {
-    users = await listContributorUsers();
+    const accounts = await listContributorUsers();
+    let kinds = new Map<string, ContributorAccountKind>();
+    try {
+      kinds = await resolveContributorAccountKinds(accounts.map((user) => user.email));
+    } catch {
+      // Sheet lookup is best-effort; still show accounts without type labels.
+    }
+    users = accounts.map((user) => ({
+      ...user,
+      accountKind: kinds.get(user.email) ?? "none",
+    }));
   } catch (err) {
     dbError = err instanceof Error ? err.message : "Unable to load contributor accounts.";
   }
@@ -35,7 +51,7 @@ export default async function AdminContributorsPage({
       <PageHeader
         eyebrow="Admin builder"
         title="Contributors"
-        description="People who can submit and edit records through your forms, scoped by role group."
+        description="Shared password accounts for contributor editing and the student portal. Type is based on current sheet membership."
       />
 
       {dbError ? (

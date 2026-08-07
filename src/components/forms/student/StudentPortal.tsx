@@ -2,8 +2,12 @@
 
 import { startTransition, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContactChangeRequest } from "@/lib/forms/store/contact-change-requests";
+import {
+  FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
+  FormBrandHeader,
+} from "@/components/forms/submission/FormBrandHeader";
 import { StudentLoginForm } from "@/components/forms/student/StudentLoginForm";
+import type { ContactChangeRequest } from "@/lib/forms/store/contact-change-requests";
 
 type SheetSummary = {
   sheetId: string;
@@ -207,34 +211,48 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
     });
   }
 
-  if (!email) {
-    return (
-      <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
-        <StudentLoginForm
-          returnHref="/forms/my"
-        />
-      </div>
-    );
-  }
-
   const selectedStage = stages.find((s) => s.name === stageTitle);
   const stagePending = Boolean(selectedStage?.pendingRequestId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-[color:var(--wsu-muted)]">Signed in as</p>
-          <p className="font-medium text-[color:var(--wsu-ink)]">{email}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
-        >
-          Sign out
-        </button>
-      </div>
+    <div className="min-h-screen bg-[color:var(--wsu-stone,#f7f5f2)] text-[color:var(--wsu-ink)]">
+      <FormBrandHeader
+        {...(email
+          ? {
+              actionsLabel: "Student account",
+              actions: (
+                <button type="button" onClick={() => void signOut()} className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
+                  Sign out
+                </button>
+              ),
+            }
+          : {})}
+      />
+
+      <div className="px-4 py-8 sm:px-7 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <header className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">
+              Graduate School
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">My submissions</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">
+              {email
+                ? "View sheets that include you, open your rows, and propose contact reroutes for Programs Team review."
+                : "Sign in with your @wsu.edu Student Email to see sheets that include you, view your rows, and propose contact reroutes for Programs Team review."}
+            </p>
+          </header>
+
+          {!email ? (
+            <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
+              <StudentLoginForm returnHref="/forms/my" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm text-[color:var(--wsu-muted)]">Signed in as</p>
+                <p className="font-medium text-[color:var(--wsu-ink)]">{email}</p>
+              </div>
 
       <section className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[color:var(--wsu-ink)]">Your sheets</h2>
@@ -452,6 +470,10 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
           </div>
         </section>
       ) : null}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

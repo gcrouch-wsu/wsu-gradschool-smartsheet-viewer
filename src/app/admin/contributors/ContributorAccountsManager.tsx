@@ -8,12 +8,35 @@ import {
   resolveAdminTablePage,
 } from "@/components/admin/AdminDataTable";
 import { Button, EmptyState } from "@/components/admin/WorkspacePrimitives";
+import {
+  labelForContributorAccountKind,
+  type ContributorAccountKind,
+} from "@/lib/contributor-account-kinds";
 
 interface ContributorUser {
   id: string;
   email: string;
   createdAt: string;
   updatedAt: string;
+  accountKind: ContributorAccountKind;
+}
+
+function AccountKindPill({ kind }: { kind: ContributorAccountKind }) {
+  const label = labelForContributorAccountKind(kind);
+  const className =
+    kind === "student"
+      ? "bg-sky-50 text-sky-800"
+      : kind === "contributor"
+        ? "bg-[var(--crimson-soft)] text-crimson"
+        : kind === "both"
+          ? "bg-violet-50 text-violet-800"
+          : "bg-[#f4f0f1] text-sub";
+
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${className}`}>
+      {label}
+    </span>
+  );
 }
 
 interface ResetLinkState {
@@ -194,7 +217,7 @@ export function ContributorAccountsManager({
       ) : null}
 
       <AdminDataTable
-        headers={["Email", "Created", "Last updated", "Actions"]}
+        headers={["Email", "Type", "Created", "Last updated", "Actions"]}
         items={filteredUsers}
         page={page}
         basePath={basePath}
@@ -208,7 +231,7 @@ export function ContributorAccountsManager({
             description={
               initialQuery.trim()
                 ? "Try a different email address."
-                : "Accounts are created when contributors complete first-time access."
+                : "Accounts are created when contributors or students complete first-time access."
             }
             variant="panel"
           />
@@ -217,6 +240,12 @@ export function ContributorAccountsManager({
           <>
             <div className="min-w-0 sm:col-span-1">
               <p className="truncate text-sm font-medium text-ink">{user.email}</p>
+              <div className="mt-1 sm:hidden">
+                <AccountKindPill kind={user.accountKind} />
+              </div>
+            </div>
+            <div className="hidden sm:block">
+              <AccountKindPill kind={user.accountKind} />
             </div>
             <p className="hidden text-sm text-sub sm:block">{formatDate(user.createdAt)}</p>
             <p className="hidden text-sm text-sub sm:block">{formatDate(user.updatedAt)}</p>

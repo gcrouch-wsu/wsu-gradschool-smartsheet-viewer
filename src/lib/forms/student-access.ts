@@ -197,6 +197,36 @@ export async function isStudentEligibleAnywhere(email: string): Promise<boolean>
   return false;
 }
 
+/** All Student Email addresses currently present on allowlisted sources (for admin labeling). */
+export async function collectStudentEmailsAnywhere(): Promise<Set<string>> {
+  const emails = new Set<string>();
+  const sources = await listStudentAllowlistedSources();
+  await Promise.all(
+    sources.map(async (entry) => {
+      try {
+        const sheet = await ss.getSheet(entry.sheetId);
+        const columns = (sheet.columns ?? []) as FormsSheetColumn[];
+        const studentEmailColumnIds = await resolveStudentEmailColumnIds(entry.source, columns);
+        if (studentEmailColumnIds.length === 0) return;
+
+        const rows = (Array.isArray(sheet.rows) ? sheet.rows : []) as FormsSheetRow[];
+        for (const row of rows) {
+          const cells = row.cells ?? [];
+          for (const columnId of studentEmailColumnIds) {
+            const cell = cells.find((c) => c.columnId === columnId);
+            for (const email of extractEmailsFromCell(cell)) {
+              emails.add(email);
+            }
+          }
+        }
+      } catch {
+        // Skip sheets that fail to load.
+      }
+    }),
+  );
+  return emails;
+}
+
 export async function discoverStudentSheets(email: string): Promise<StudentSheetMembership[]> {
   const normalized = normalizeContributorEmail(email);
   const sources = await listStudentAllowlistedSources();
