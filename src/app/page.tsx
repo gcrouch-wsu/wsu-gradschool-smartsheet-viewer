@@ -39,6 +39,12 @@ export default async function HomePage() {
         actions={
           <>
             <Link
+              href="/forms/my"
+              className={`${headerActionClass} border border-[var(--crimson-line)] bg-white text-crimson hover:bg-[var(--crimson-soft)]`}
+            >
+              My submissions
+            </Link>
+            <Link
               href="/instructions/admin"
               className={`${headerActionClass} border border-[var(--crimson-line)] bg-white text-crimson hover:bg-[var(--crimson-soft)]`}
             >

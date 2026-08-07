@@ -1288,12 +1288,20 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
     }
   }
 
+  const studentVisible =
+    input.studentVisible === undefined ? undefined : asBoolean(input.studentVisible, false);
+  const studentEmailColumns = parseNumberArray(input.studentEmailColumnIds, "studentEmailColumnIds");
+  errors.push(...studentEmailColumns.errors);
+
   if (sourceType === "report") {
     if (formPublic) {
       errors.push("Reports cannot be published as forms.");
     }
     if (formsEnabled === true) {
       errors.push("Reports cannot be enabled for Forms (sheets only).");
+    }
+    if (studentVisible === true) {
+      errors.push("Reports cannot be enabled for student discovery (sheets only).");
     }
   }
 
@@ -1322,6 +1330,10 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
           ...(formPublishedAt ? { formPublishedAt } : {}),
           ...(formProvenance ? { formProvenance } : {}),
           ...(formRegisteredAt ? { formRegisteredAt } : {}),
+          ...(studentVisible !== undefined ? { studentVisible } : {}),
+          ...(studentEmailColumns.values.length > 0
+            ? { studentEmailColumnIds: studentEmailColumns.values }
+            : {}),
         },
   };
 }
