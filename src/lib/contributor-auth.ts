@@ -19,7 +19,8 @@ export const CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR =
 /** Email not found in configured contact columns for this view (or not a @wsu.edu address). */
 export const CONTRIBUTOR_CLAIM_NOT_ELIGIBLE_ERROR =
   "We could not verify this email in the sheet contact columns for this view. Use the same @wsu.edu address as in the sheet, or contact your coordinator.";
-export const CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR = "Too many attempts. Try again later.";
+export const CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR =
+  "Too many attempts. Try again 15 minutes after your most recent attempt.";
 
 export interface ContributorSessionPayload {
   email: string;

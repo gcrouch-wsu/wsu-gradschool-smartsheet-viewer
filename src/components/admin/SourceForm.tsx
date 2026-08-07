@@ -956,6 +956,73 @@ export function SourceForm({
         </div>
       </section>
 
+      {form.sourceType === "sheet" ? (
+        <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
+          <div>
+            <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Student portal</h2>
+            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+              Students signed in at <code className="text-xs">/forms/my</code> can discover this sheet when their email
+              appears in a Student Email column. Forms-enabled sheets are included by default; use the toggle for
+              views-only sheets.
+            </p>
+          </div>
+
+          <label className="mt-4 inline-flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+            <input
+              type="checkbox"
+              checked={Boolean(form.studentVisible)}
+              onChange={(event) => update("studentVisible", event.target.checked)}
+            />
+            Visible to students (even if not used in Forms)
+          </label>
+
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-medium text-[color:var(--wsu-ink)]">Student Email columns</p>
+            <p className="text-xs text-[color:var(--wsu-muted)]">
+              Fetch schema preview to pick columns. If none are selected, the portal looks for a column titled
+              &quot;Student Email&quot;, then a form field marked as email.
+            </p>
+            {schema?.columns?.length ? (
+              <div className="mt-2 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-[color:var(--wsu-border)] bg-white p-3">
+                {schema.columns.map((column) => {
+                  const checked = (form.studentEmailColumnIds ?? []).includes(column.id);
+                  return (
+                    <label key={column.id} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => {
+                          const current = form.studentEmailColumnIds ?? [];
+                          const next = event.target.checked
+                            ? [...new Set([...current, column.id])]
+                            : current.filter((id) => id !== column.id);
+                          update("studentEmailColumnIds", next.length ? next : undefined);
+                        }}
+                      />
+                      <span>
+                        {column.title}{" "}
+                        <span className="text-xs text-[color:var(--wsu-muted)]">({column.type})</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-[color:var(--wsu-muted)]">Fetch the schema preview below to choose columns.</p>
+            )}
+            {(form.studentEmailColumnIds?.length ?? 0) > 0 ? (
+              <button
+                type="button"
+                className="text-xs font-medium text-[color:var(--wsu-crimson)] underline underline-offset-2"
+                onClick={() => update("studentEmailColumnIds", undefined)}
+              >
+                Clear selected columns
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
         <div className="flex items-start justify-between gap-4">
           <div>

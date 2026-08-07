@@ -59,7 +59,6 @@ export function ContributorAccountsManager({
     setQuery(initialQuery);
   }, [initialQuery]);
 
-  // Filter from the URL query so pagination links stay aligned with the applied search.
   const filteredUsers = useMemo(() => {
     const q = initialQuery.trim().toLowerCase();
     if (!q) return users;

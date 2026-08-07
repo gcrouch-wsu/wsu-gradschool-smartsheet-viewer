@@ -8,6 +8,7 @@ ALTER TABLE IF EXISTS admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS config_sources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS config_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS contributor_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS student_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS contributor_login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS admin_login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS form_registry ENABLE ROW LEVEL SECURITY;
@@ -105,6 +106,29 @@ BEGIN
         'contributor_users_app_role_access',
         'public',
         'contributor_users',
+        current_user
+      );
+    END IF;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF to_regclass('public.student_users') IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename = 'student_users'
+        AND policyname = 'student_users_app_role_access'
+    ) THEN
+      EXECUTE format('ALTER POLICY %I ON %I.%I TO %I', 'student_users_app_role_access', 'public', 'student_users', current_user);
+    ELSE
+      EXECUTE format(
+        'CREATE POLICY %I ON %I.%I FOR ALL TO %I USING (true) WITH CHECK (true)',
+        'student_users_app_role_access',
+        'public',
+        'student_users',
         current_user
       );
     END IF;
