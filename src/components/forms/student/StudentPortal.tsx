@@ -2,10 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
-  FormBrandHeader,
-} from "@/components/forms/submission/FormBrandHeader";
+import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { StudentLoginForm } from "@/components/forms/student/StudentLoginForm";
 import type { ContactChangeRequest } from "@/lib/forms/store/contact-change-requests";
 
@@ -221,9 +218,32 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
           ? {
               actionsLabel: "Student account",
               actions: (
-                <button type="button" onClick={() => void signOut()} className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
-                  Sign out
-                </button>
+                <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                  <p className="min-w-0 truncate text-sm font-medium text-[color:var(--wsu-ink)]" title={email}>
+                    {email}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void signOut()}
+                    aria-label="Sign out"
+                    title="Sign out"
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--crimson-line)] bg-white text-crimson transition hover:bg-[var(--crimson-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson"
+                  >
+                    <svg
+                      className="h-[18px] w-[18px]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                      <path d="M16 17l5-5-5-5M21 12H9" />
+                    </svg>
+                  </button>
+                </div>
               ),
             }
           : {})}
@@ -249,11 +269,6 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
             </div>
           ) : (
             <div className="space-y-6">
-              <div>
-                <p className="text-sm text-[color:var(--wsu-muted)]">Signed in as</p>
-                <p className="font-medium text-[color:var(--wsu-ink)]">{email}</p>
-              </div>
-
       <section className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-[color:var(--wsu-ink)]">Your sheets</h2>
         <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">

@@ -18,7 +18,7 @@ import {
 import { loadFormFields } from "@/lib/forms/store/field-config";
 import { requireStudentSession } from "@/lib/forms/student-auth";
 import { assertOwnedRow, loadOwnedSheetContext } from "@/lib/forms/student-rows";
-import { getContributorUserByEmail } from "@/lib/contributor-auth";
+import { getStudentUserByEmail } from "@/lib/forms/student-users";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,7 +181,7 @@ export async function POST(
       return NextResponse.json({ error: "Could not build contact cell updates." }, { status: 422 });
     }
 
-    const user = await getContributorUserByEmail(session.email);
+    const user = await getStudentUserByEmail(session.email);
 
     const requestRecord = await createContactChangeRequest({
       sheetId: loaded.context.entry.sheetId,

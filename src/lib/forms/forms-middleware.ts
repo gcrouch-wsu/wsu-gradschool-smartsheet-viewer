@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { ADMIN_SESSION_COOKIE_NAME, authorizeAdminSession } from "@/lib/admin-auth";
 import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/session-cookies";
 
-/** Edge-safe cookie name (do not import contributor-auth — it pulls Node crypto). */
-const CONTRIBUTOR_SESSION_COOKIE_NAME = "smartsheets_view_contributor_session";
+/** Edge-safe student cookie name (do not import student-users — it pulls Node crypto). */
+const STUDENT_SESSION_COOKIE_NAME = "smartsheets_view_student_session";
 
 const FORMS_PUBLIC_PATHS = new Set([
   "/forms/approver/sign-in",
@@ -81,9 +81,9 @@ function hasApproverSession(request: NextRequest): boolean {
   return Boolean(request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value?.trim());
 }
 
-function hasContributorSession(request: NextRequest): boolean {
+function hasStudentSession(request: NextRequest): boolean {
   // Cookie presence for Edge; student Node handlers validate the token fully.
-  return Boolean(request.cookies.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value?.trim());
+  return Boolean(request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value?.trim());
 }
 
 async function resolveAdminRole(request: NextRequest): Promise<string | null> {
@@ -129,11 +129,12 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
 
   const adminOk = await hasAdminSession(request);
   const approverOk = hasApproverSession(request);
-  const contributorOk = hasContributorSession(request);
+  const studentOk = hasStudentSession(request);
 
-  // Student portal: allow page without session (login UI); APIs need contributor/staff cookie.
+  // Student portal: allow page without session (login UI); APIs need student/staff cookie.
+  // Contributor cookie must not grant student API access.
   if (isStudentPortalPath(pathname)) {
-    if (adminOk || approverOk || contributorOk) {
+    if (adminOk || approverOk || studentOk) {
       return NextResponse.next();
     }
     if (!pathname.startsWith("/api/")) {

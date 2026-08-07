@@ -1,6 +1,6 @@
 /**
- * Derive whether a shared password account is a student, contributor, both, or neither
- * based on current sheet membership (not a stored role).
+ * Classify emails by sheet membership (Student Email vs contributor contact columns).
+ * Used for one-time account migration out of the shared contributor_users table.
  */
 
 import { normalizeContributorEmail } from "@/lib/contributor-utils";

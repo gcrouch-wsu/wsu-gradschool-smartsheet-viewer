@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { StudentPortal } from "@/components/forms/student/StudentPortal";
-import { getContributorConfigurationError } from "@/lib/contributor-auth";
 import { readStudentSessionEmail } from "@/lib/forms/student-auth";
+import { getStudentConfigurationError } from "@/lib/forms/student-users";
 
 export const metadata: Metadata = {
   title: "My submissions - Graduate School Forms",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function StudentMySubmissionsPage() {
-  const configurationError = getContributorConfigurationError();
+  const configurationError = getStudentConfigurationError();
   const email = configurationError ? null : await readStudentSessionEmail();
 
   if (configurationError) {

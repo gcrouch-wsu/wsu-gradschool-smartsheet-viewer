@@ -2,28 +2,28 @@ import { resolveAdminTablePage } from "@/components/admin/AdminDataTable";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
-import { listContributorUsers } from "@/lib/contributor-auth";
+import { listStudentUsers } from "@/lib/forms/student-users";
 import { ensureStudentAccountsMigrated } from "@/lib/forms/migrate-student-accounts";
-import { ContributorAccountsManager } from "./ContributorAccountsManager";
+import { StudentAccountsManager } from "./StudentAccountsManager";
 
-export default async function AdminContributorsPage({
+export default async function AdminStudentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  await requireAdminPageAccess("/admin/contributors");
+  await requireAdminPageAccess("/admin/students");
 
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
 
-  let users: Awaited<ReturnType<typeof listContributorUsers>> = [];
+  let users: Awaited<ReturnType<typeof listStudentUsers>> = [];
   let dbError: string | null = null;
 
   try {
     await ensureStudentAccountsMigrated();
-    users = await listContributorUsers();
+    users = await listStudentUsers();
   } catch (err) {
-    dbError = err instanceof Error ? err.message : "Unable to load contributor accounts.";
+    dbError = err instanceof Error ? err.message : "Unable to load student accounts.";
   }
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -36,8 +36,8 @@ export default async function AdminContributorsPage({
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
-        title="Contributors"
-        description="Password accounts for contributor editing on published views. Student portal accounts are managed separately under Students."
+        title="Students"
+        description="Password accounts for the student portal (/forms/my). Separate from contributor editing accounts."
       />
 
       {dbError ? (
@@ -45,19 +45,19 @@ export default async function AdminContributorsPage({
           role="alert"
           className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900"
         >
-          <p className="font-medium">Contributor editing requires DATABASE_URL.</p>
+          <p className="font-medium">Student accounts require DATABASE_URL.</p>
           <p className="mt-1 text-xs">{dbError}</p>
         </div>
       ) : users.length === 0 && !normalizedQuery ? (
         <EmptyState
-          icon={<span className="text-sm font-semibold">C</span>}
-          title="No contributors yet"
-          description="Accounts are created when contributors complete first-time access on a published view."
-          action={{ href: "/", label: "Published views home" }}
+          icon={<span className="text-sm font-semibold">S</span>}
+          title="No students yet"
+          description="Accounts appear here when students claim a password at My submissions."
+          action={{ href: "/forms/my", label: "Open student portal" }}
           variant="panel"
         />
       ) : (
-        <ContributorAccountsManager users={users} page={page} query={query} />
+        <StudentAccountsManager users={users} page={page} query={query} />
       )}
     </div>
   );

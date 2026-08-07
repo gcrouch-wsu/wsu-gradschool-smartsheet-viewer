@@ -111,7 +111,7 @@ export default async function HomePage() {
                     href="/admin"
                     className={[
                       "mt-4 inline-flex min-h-11 items-center justify-center gap-1 rounded-full px-4 text-sm font-medium text-crimson underline-offset-2 hover:underline",
-                      focusRing,
+                      "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-crimson",
                     ].join(" ")}
                   >
                     Admin

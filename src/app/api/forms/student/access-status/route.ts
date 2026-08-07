@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
 import {
   CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR,
-  getContributorConfigurationError,
-  getContributorUserByEmail,
   isContributorRateLimited,
   recordContributorFailedAttempt,
 } from "@/lib/contributor-auth";
 import { isWsuEmail, normalizeContributorEmail } from "@/lib/contributor-utils";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isStudentEligibleAnywhere } from "@/lib/forms/student-access";
+import {
+  getStudentConfigurationError,
+  getStudentUserByEmail,
+} from "@/lib/forms/student-users";
 import { contributorAuthRateLimitKey } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const configurationError = getContributorConfigurationError();
+  const configurationError = getStudentConfigurationError();
   if (configurationError) {
     return NextResponse.json({ error: configurationError }, { status: 503 });
   }
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const existingUser = await getContributorUserByEmail(email);
+  const existingUser = await getStudentUserByEmail(email);
   return NextResponse.json({
     mode: existingUser ? "sign_in" : "claim",
   });

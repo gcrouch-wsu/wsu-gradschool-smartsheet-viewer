@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
 import {
-  CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR,
-  CONTRIBUTOR_SESSION_COOKIE_NAME,
   CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR,
-  createContributorSessionToken,
-  createContributorUser,
-  getContributorConfigurationError,
-  getContributorSessionCookieSettings,
-  getContributorUserByEmail,
   isContributorRateLimited,
   recordContributorFailedAttempt,
-  validateContributorPassword,
 } from "@/lib/contributor-auth";
 import { isWsuEmail, normalizeContributorEmail } from "@/lib/contributor-utils";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isStudentEligibleAnywhere } from "@/lib/forms/student-access";
+import {
+  STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR,
+  STUDENT_CLAIM_NOT_ELIGIBLE_ERROR,
+  STUDENT_SESSION_COOKIE_NAME,
+  createStudentSessionToken,
+  createStudentUser,
+  getStudentConfigurationError,
+  getStudentSessionCookieSettings,
+  getStudentUserByEmail,
+  validateStudentPassword,
+} from "@/lib/forms/student-users";
 import { contributorAuthRateLimitKey } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
@@ -25,7 +28,7 @@ function isUniqueViolation(error: unknown) {
 }
 
 export async function POST(request: Request) {
-  const configurationError = getContributorConfigurationError();
+  const configurationError = getStudentConfigurationError();
   if (configurationError) {
     return NextResponse.json({ error: configurationError }, { status: 503 });
   }
@@ -41,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR }, { status: 429 });
   }
 
-  const passwordError = validateContributorPassword(password);
+  const passwordError = validateStudentPassword(password);
   if (passwordError) {
     await recordContributorFailedAttempt(rateLimitKey);
     return NextResponse.json({ error: passwordError }, { status: 400 });
@@ -49,46 +52,34 @@ export async function POST(request: Request) {
 
   if (!isWsuEmail(email)) {
     await recordContributorFailedAttempt(rateLimitKey);
-    return NextResponse.json(
-      {
-        error:
-          "We could not verify this email as a Student Email on an available sheet. Use your @wsu.edu address from the sheet, or contact your coordinator.",
-      },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: STUDENT_CLAIM_NOT_ELIGIBLE_ERROR }, { status: 403 });
   }
 
-  const existingUser = await getContributorUserByEmail(email);
+  const existingUser = await getStudentUserByEmail(email);
   if (existingUser) {
-    return NextResponse.json({ error: CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
+    return NextResponse.json({ error: STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
   }
 
   const eligible = await isStudentEligibleAnywhere(email);
   if (!eligible) {
     await recordContributorFailedAttempt(rateLimitKey);
-    return NextResponse.json(
-      {
-        error:
-          "We could not verify this email as a Student Email on an available sheet. Use your @wsu.edu address from the sheet, or contact your coordinator.",
-      },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: STUDENT_CLAIM_NOT_ELIGIBLE_ERROR }, { status: 403 });
   }
 
   try {
-    await createContributorUser(email, password);
+    await createStudentUser(email, password);
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return NextResponse.json({ error: CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
+      return NextResponse.json({ error: STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
     }
     throw error;
   }
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(
-    CONTRIBUTOR_SESSION_COOKIE_NAME,
-    await createContributorSessionToken(email),
-    getContributorSessionCookieSettings(),
+    STUDENT_SESSION_COOKIE_NAME,
+    await createStudentSessionToken(email),
+    getStudentSessionCookieSettings(),
   );
   return response;
 }

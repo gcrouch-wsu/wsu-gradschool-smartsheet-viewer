@@ -199,6 +199,12 @@ export function StudentLoginForm({ returnHref = "/forms/my" }: { returnHref?: st
         >
           {isSubmitting ? "Working..." : isClaim ? "Set password and continue" : "Sign in"}
         </button>
+
+        {!isClaim ? (
+          <p className="mt-3 text-xs text-[color:var(--wsu-muted)]">
+            Forgot your password? Contact gradschool@wsu.edu for a student portal reset link.
+          </p>
+        ) : null}
       </form>
     </div>
   );

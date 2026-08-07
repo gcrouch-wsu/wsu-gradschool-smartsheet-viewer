@@ -9,7 +9,7 @@ import {
 } from "@/components/admin/AdminDataTable";
 import { Button, EmptyState } from "@/components/admin/WorkspacePrimitives";
 
-interface ContributorUser {
+interface StudentUser {
   id: string;
   email: string;
   createdAt: string;
@@ -22,10 +22,10 @@ interface ResetLinkState {
   copied: boolean;
 }
 
-function contributorsBasePath(query: string): string {
+function studentsBasePath(query: string): string {
   const trimmed = query.trim();
-  if (!trimmed) return "/admin/contributors";
-  return `/admin/contributors?q=${encodeURIComponent(trimmed)}`;
+  if (!trimmed) return "/admin/students";
+  return `/admin/students?q=${encodeURIComponent(trimmed)}`;
 }
 
 function formatDate(value: string) {
@@ -34,17 +34,17 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export function ContributorAccountsManager({
+export function StudentAccountsManager({
   users: initialUsers,
   page: initialPage,
   query: initialQuery = "",
 }: {
-  users: ContributorUser[];
+  users: StudentUser[];
   page: number;
   query?: string;
 }) {
   const router = useRouter();
-  const [users, setUsers] = useState<ContributorUser[]>(initialUsers);
+  const [users, setUsers] = useState<StudentUser[]>(initialUsers);
   const [query, setQuery] = useState(initialQuery);
   const [resetLink, setResetLink] = useState<ResetLinkState | null>(null);
   const [loadingResetId, setLoadingResetId] = useState<string | null>(null);
@@ -66,18 +66,18 @@ export function ContributorAccountsManager({
   }, [users, initialQuery]);
 
   const page = resolveAdminTablePage(String(initialPage), filteredUsers.length);
-  const basePath = contributorsBasePath(initialQuery);
+  const basePath = studentsBasePath(initialQuery);
 
   function applySearch(event: React.FormEvent) {
     event.preventDefault();
-    router.push(contributorsBasePath(query));
+    router.push(studentsBasePath(query));
   }
 
-  async function handleGenerateResetLink(user: ContributorUser) {
+  async function handleGenerateResetLink(user: StudentUser) {
     setActionError(null);
     setLoadingResetId(user.id);
     try {
-      const response = await fetch(`/api/admin/contributors/${encodeURIComponent(user.id)}/reset-token`, {
+      const response = await fetch(`/api/admin/students/${encodeURIComponent(user.id)}/reset-token`, {
         method: "POST",
       });
       const payload = (await response.json().catch(() => null)) as { token?: string; message?: string } | null;
@@ -86,7 +86,7 @@ export function ContributorAccountsManager({
         return;
       }
       const token = payload?.token ?? "";
-      const url = `${window.location.origin}/contributor/reset-password?token=${encodeURIComponent(token)}`;
+      const url = `${window.location.origin}/student/reset-password?token=${encodeURIComponent(token)}`;
       setResetLink({ userId: user.id, url, copied: false });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to generate reset link.");
@@ -107,26 +107,26 @@ export function ContributorAccountsManager({
     }
   }
 
-  async function handleRemove(user: ContributorUser) {
-    if (!window.confirm(`Remove contributor account for ${user.email}?`)) return;
+  async function handleRemove(user: StudentUser) {
+    if (!window.confirm(`Remove student account for ${user.email}?`)) return;
     setActionError(null);
     setRemovingId(user.id);
     try {
-      const response = await fetch("/api/admin/contributors", {
+      const response = await fetch("/api/admin/students", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user.id }),
       });
       const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok) {
-        setActionError(payload?.message ?? "Failed to remove contributor.");
+        setActionError(payload?.message ?? "Failed to remove student.");
         return;
       }
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
       if (resetLink?.userId === user.id) setResetLink(null);
       router.refresh();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to remove contributor.");
+      setActionError(err instanceof Error ? err.message : "Failed to remove student.");
     } finally {
       setRemovingId(null);
     }
@@ -136,7 +136,7 @@ export function ContributorAccountsManager({
     <div className="space-y-4">
       <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2">
         <label className="relative block min-w-[14rem] max-w-md flex-1">
-          <span className="sr-only">Search contributors</span>
+          <span className="sr-only">Search students</span>
           <input
             type="search"
             value={query}
@@ -151,7 +151,7 @@ export function ContributorAccountsManager({
             type="button"
             onClick={() => {
               setQuery("");
-              router.push("/admin/contributors");
+              router.push("/admin/students");
             }}
           >
             Clear
@@ -172,7 +172,7 @@ export function ContributorAccountsManager({
         <div className="rounded-xl border border-line bg-surface p-4">
           <p className="mb-2 text-sm font-medium text-ink">Reset link generated</p>
           <p className="mb-3 text-xs text-sub">
-            Copy this link and send it to the contributor. It expires in 24 hours and can only be used once.
+            Copy this link and send it to the student. It expires in 24 hours and can only be used once.
           </p>
           <div className="flex flex-wrap gap-2">
             <input
@@ -202,12 +202,12 @@ export function ContributorAccountsManager({
         getRowKey={(user) => user.id}
         empty={
           <EmptyState
-            icon={<span className="text-sm font-semibold">C</span>}
-            title={initialQuery.trim() ? "No contributors match your search" : "No contributors yet"}
+            icon={<span className="text-sm font-semibold">S</span>}
+            title={initialQuery.trim() ? "No students match your search" : "No students yet"}
             description={
               initialQuery.trim()
                 ? "Try a different email address."
-                : "Accounts are created when contributors complete first-time access."
+                : "Accounts are created when students complete first-time access at My submissions."
             }
             variant="panel"
           />
