@@ -33,6 +33,13 @@ interface AttachmentPreviewDialogProps {
   attachment: TrackerAttachment | null;
   rowId: number;
   sheetId?: string | null;
+  /**
+   * Optional ownership-scoped attachment route. When omitted, uses the staff
+   * submission attachment API for backward compatibility.
+   */
+  attachmentApiBasePath?: string;
+  /** Direct preview endpoint for generated documents that are not sheet attachments. */
+  attachmentPreviewPath?: string;
 }
 
 export function AttachmentPreviewDialog({
@@ -41,6 +48,8 @@ export function AttachmentPreviewDialog({
   attachment,
   rowId,
   sheetId,
+  attachmentApiBasePath,
+  attachmentPreviewPath,
 }: AttachmentPreviewDialogProps) {
   const [metaMime, setMetaMime] = useState<string | undefined>();
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -48,8 +57,10 @@ export function AttachmentPreviewDialog({
 
   const basePath = useMemo(() => {
     if (!attachment) return "";
+    if (attachmentPreviewPath) return attachmentPreviewPath;
+    if (attachmentApiBasePath) return `${attachmentApiBasePath}/${attachment.id}`;
     return attachmentPath(rowId, attachment.id, sheetId);
-  }, [attachment, rowId, sheetId]);
+  }, [attachment, attachmentApiBasePath, attachmentPreviewPath, rowId, sheetId]);
 
   const viewUrl = basePath ? withQuery(basePath, { disposition: "inline" }) : "";
   const downloadUrl = basePath ? withQuery(basePath, { disposition: "attachment" }) : "";
