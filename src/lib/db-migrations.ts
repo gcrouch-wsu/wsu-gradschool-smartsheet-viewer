@@ -11,6 +11,7 @@ const RLS_TABLES = [
   "config_sources",
   "config_views",
   "contributor_users",
+  "student_users",
   "contributor_login_attempts",
   "admin_users",
   "admin_login_attempts",

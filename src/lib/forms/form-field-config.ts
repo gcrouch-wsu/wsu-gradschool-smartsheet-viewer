@@ -72,7 +72,9 @@ function optionalTrimmed(value: unknown): string | undefined {
   return trimmed || undefined;
 }
 
-export function isLayoutFormItem(field: Pick<FormFieldDefinition, "itemKind">): boolean {
+export function isLayoutFormItem(
+  field: Pick<FormFieldDefinition, "itemKind">,
+): field is Pick<FormFieldDefinition, "itemKind"> & { itemKind: FormLayoutElementType } {
   return field.itemKind === "heading" || field.itemKind === "description" || field.itemKind === "divider";
 }
 

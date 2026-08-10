@@ -1,14 +1,19 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ConditionalRule } from "@/lib/forms/types";
+import { hasConfiguredConnection } from "@/lib/smartsheet-client";
 
 const root = process.cwd();
 
 const token = (process.env.SMARTSHEET_TOKEN ?? process.env.SMARTSHEET_API_TOKEN ?? "").trim();
 const demoFlag = (process.env.DEMO ?? "").trim().toLowerCase();
 
-/** Demo uses in-memory mock Smartsheet data. DEMO=false forces live mode; otherwise auto-on when no token. */
-const demo = demoFlag === "true" ? true : demoFlag === "false" ? false : !token;
+/**
+ * Demo uses in-memory mock Smartsheet data. DEMO=false forces live mode; otherwise
+ * auto-on only when no supported default connection is configured. This includes
+ * SMARTSHEET_CONNECTIONS_JSON, not just the two legacy token variables.
+ */
+const demo = demoFlag === "true" ? true : demoFlag === "false" ? false : !hasConfiguredConnection();
 
 const smartsheetBaseUrl = (process.env.SMARTSHEET_API_BASE_URL ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 

@@ -3,7 +3,7 @@
  * Cookie issuance stays in existing auth libs; this normalizes the read/guard surface.
  */
 
-export type PrincipalKind = "admin" | "contributor" | "form_approver";
+export type PrincipalKind = "admin" | "contributor" | "form_approver" | "student";
 
 export type PrincipalCapability =
   | "admin.manage"
@@ -11,6 +11,7 @@ export type PrincipalCapability =
   | "forms.admin"
   | "forms.approver"
   | "forms.coordinator"
+  | "forms.student"
   | "contributor.edit"
   | "viewer";
 

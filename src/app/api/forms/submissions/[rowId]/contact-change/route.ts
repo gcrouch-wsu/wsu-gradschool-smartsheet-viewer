@@ -207,6 +207,7 @@ export async function POST(
       proposedName,
       proposedEmail,
       note: note || undefined,
+      requestedByKind: "staff",
       requestedBy: {
         id: actor?.id ?? access.user.email,
         name: actor?.displayName ?? access.user.name,

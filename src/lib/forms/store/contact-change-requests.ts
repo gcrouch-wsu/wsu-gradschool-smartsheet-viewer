@@ -18,6 +18,8 @@ export interface ContactChangeFieldSnapshot {
   previousName: string;
 }
 
+export type ContactChangeRequesterKind = "student" | "staff";
+
 export interface ContactChangeRequest {
   id: string;
   sheetId: string;
@@ -33,6 +35,8 @@ export interface ContactChangeRequest {
   note?: string;
   status: ContactChangeStatus;
   requestedBy: { id: string; name: string; email?: string };
+  /** Who proposed the reroute — students vs staff (Programs Team queue). */
+  requestedByKind?: ContactChangeRequesterKind;
   requestedAt: string;
   reviewedBy?: { id: string; name: string; email?: string };
   reviewedAt?: string;

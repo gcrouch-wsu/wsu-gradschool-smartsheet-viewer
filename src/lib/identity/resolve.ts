@@ -18,6 +18,10 @@ import {
   readFormApproverSessionToken,
 } from "@/lib/forms/approver-auth";
 import {
+  STUDENT_SESSION_COOKIE_NAME,
+  readStudentSessionToken,
+} from "@/lib/forms/student-users";
+import {
   type Principal,
   type PrincipalCapability,
   principalHasAnyCapability,
@@ -128,16 +132,40 @@ export async function resolveContributorPrincipal(): Promise<Principal | null> {
   };
 }
 
+export async function resolveStudentPrincipal(): Promise<Principal | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(STUDENT_SESSION_COOKIE_NAME)?.value;
+  if (!token) return null;
+  const result = await readStudentSessionToken(token);
+  if (!result.ok || !result.payload) return null;
+  const payload = result.payload;
+  return {
+    kind: "student",
+    id: payload.email,
+    identifier: payload.email,
+    displayName: payload.email,
+    email: payload.email,
+    capabilities: ["forms.student", "viewer"],
+    session: {
+      issuedAt: payload.issuedAt,
+      expiresAt: payload.expiresAt,
+      credentialsVersion: payload.credentialsVersion,
+    },
+  };
+}
+
 /**
  * Highest-privilege principal among cookies present.
- * Prefer admin over approver over contributor.
+ * Prefer admin over approver over contributor over student.
  */
 export async function resolvePrincipal(request?: Request): Promise<Principal | null> {
   const admin = await resolveAdminPrincipal();
   if (admin) return admin;
   const approver = await resolveApproverPrincipal(request);
   if (approver) return approver;
-  return resolveContributorPrincipal();
+  const contributor = await resolveContributorPrincipal();
+  if (contributor) return contributor;
+  return resolveStudentPrincipal();
 }
 
 export async function requirePrincipalCapabilities(

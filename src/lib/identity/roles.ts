@@ -12,6 +12,7 @@ export type PlatformRole =
   | "coordinator"
   | "programs_team"
   | "contributor"
+  | "student"
   | "viewer_public";
 
 const ROLE_CAPABILITIES: Record<PlatformRole, PrincipalCapability[]> = {
@@ -22,6 +23,7 @@ const ROLE_CAPABILITIES: Record<PlatformRole, PrincipalCapability[]> = {
   approver: ["forms.approver", "viewer"],
   coordinator: ["forms.coordinator", "forms.approver", "viewer"],
   contributor: ["contributor.edit"],
+  student: ["forms.student", "viewer"],
   viewer_public: ["viewer"],
 };
 
@@ -43,6 +45,9 @@ export function rolesFromPrincipal(principal: Principal): PlatformRole[] {
   }
   if (principal.kind === "contributor") {
     return ["contributor"];
+  }
+  if (principal.kind === "student") {
+    return ["student"];
   }
   return ["viewer_public"];
 }

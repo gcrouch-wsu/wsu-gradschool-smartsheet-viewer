@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listContributorUsers } from "@/lib/contributor-auth";
+import { ensureStudentAccountsMigrated } from "@/lib/forms/migrate-student-accounts";
 import { ContributorAccountsManager } from "./ContributorAccountsManager";
 
 export default async function AdminContributorsPage({
@@ -19,6 +20,7 @@ export default async function AdminContributorsPage({
   let dbError: string | null = null;
 
   try {
+    await ensureStudentAccountsMigrated();
     users = await listContributorUsers();
   } catch (err) {
     dbError = err instanceof Error ? err.message : "Unable to load contributor accounts.";
@@ -35,7 +37,7 @@ export default async function AdminContributorsPage({
       <PageHeader
         eyebrow="Admin builder"
         title="Contributors"
-        description="People who can submit and edit records through your forms, scoped by role group."
+        description="Password accounts for contributor editing on published views. Student portal accounts are managed separately under Students."
       />
 
       {dbError ? (
@@ -50,8 +52,8 @@ export default async function AdminContributorsPage({
         <EmptyState
           icon={<span className="text-sm font-semibold">C</span>}
           title="No contributors yet"
-          description="Invite colleagues to submit through forms. Assign them to a role group to control what they can see and edit."
-          action={{ href: "/forms/manage", label: "Manage forms" }}
+          description="Accounts are created when contributors complete first-time access on a published view."
+          action={{ href: "/", label: "Published views home" }}
           variant="panel"
         />
       ) : (

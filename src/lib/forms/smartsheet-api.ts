@@ -5,6 +5,7 @@ import {
   SmartsheetRequestError,
   listAllPages as clientListAllPages,
   listAllTokenPages as clientListAllTokenPages,
+  resolveConnection,
   smartsheetRequest,
   type ConnectionConfig,
 } from "@/lib/smartsheet-client";
@@ -30,10 +31,7 @@ export const DEFAULT_COLUMNS = [
 
 /** Forms connection: prefer config token/base (supports SMARTSHEET_TOKEN alias + demo). */
 function formsConnection(): ConnectionConfig {
-  return {
-    token: config.smartsheetToken,
-    apiBaseUrl: normalizeSmartsheetApiBaseUrl(config.smartsheetBaseUrl),
-  };
+  return resolveConnection("default", normalizeSmartsheetApiBaseUrl(config.smartsheetBaseUrl));
 }
 
 /** Preserve Forms error shape (`Error` with `.status` / `.smartsheetErrorCode`) for existing callers. */

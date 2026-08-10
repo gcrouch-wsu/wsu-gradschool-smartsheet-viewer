@@ -87,6 +87,7 @@ export function ContactReroutesManager({
       const haystack = [
         req.requestedBy.name,
         req.requestedBy.email,
+        req.requestedByKind,
         req.sheetName,
         req.sheetId,
         req.stageTitle,
@@ -216,7 +217,7 @@ export function ContactReroutesManager({
               description={
                 initialQuery.trim()
                   ? "Try a different name, email, sheet, or stage."
-                  : "Staff can propose contact changes from a submission detail. Until Programs Team approves, the sheet and Smartsheet notifications stay unchanged."
+                  : "Staff or students can propose contact changes. Until Programs Team approves, the sheet and Smartsheet notifications stay unchanged."
               }
               variant="panel"
             />
@@ -232,12 +233,18 @@ export function ContactReroutesManager({
               req.fields.map((f) => f.previousDisplay).filter(Boolean).join(" · ") ||
               "—";
             const next = [req.proposedName, req.proposedEmail].filter(Boolean).join(" · ");
+            const requesterKind = req.requestedByKind === "student" ? "Student" : "Staff";
 
             return (
               <>
                 <div className="min-w-0">
                   <p className="font-medium text-ink">{req.requestedBy.name}</p>
-                  <p className="mt-1 text-xs text-sub">{formatWhen(req.requestedAt)}</p>
+                  <p className="mt-1 text-xs text-sub">
+                    <span className="mr-1 inline-flex rounded-full border border-line bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sub">
+                      {requesterKind}
+                    </span>
+                    {formatWhen(req.requestedAt)}
+                  </p>
                   {req.note ? <p className="mt-1 text-xs text-sub">{req.note}</p> : null}
                 </div>
                 <div className="min-w-0">

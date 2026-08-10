@@ -3,16 +3,36 @@ import { NextResponse } from "next/server";
 import { ADMIN_SESSION_COOKIE_NAME, authorizeAdminSession } from "@/lib/admin-auth";
 import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/session-cookies";
 
+/** Edge-safe student cookie name (do not import student-users — it pulls Node crypto). */
+const STUDENT_SESSION_COOKIE_NAME = "smartsheets_view_student_session";
+
 const FORMS_PUBLIC_PATHS = new Set([
   "/forms/approver/sign-in",
   "/api/forms/approver/session",
   "/api/forms/session",
 ]);
 
+/** Student claim/login endpoints — no session required. */
+const STUDENT_AUTH_PUBLIC_PATHS = new Set([
+  "/api/forms/student/access-status",
+  "/api/forms/student/claim",
+  "/api/forms/student/login",
+  "/api/forms/student/sign-out",
+]);
+
 function isPublicFormPath(pathname: string) {
   if (pathname === "/f" || pathname.startsWith("/f/")) return true;
   if (pathname.startsWith("/api/forms/public/")) return true;
   return false;
+}
+
+function isStudentPortalPath(pathname: string) {
+  return (
+    pathname === "/forms/my" ||
+    pathname.startsWith("/forms/my/") ||
+    pathname === "/api/forms/student" ||
+    pathname.startsWith("/api/forms/student/")
+  );
 }
 
 function isFormsPath(pathname: string) {
@@ -61,6 +81,11 @@ function hasApproverSession(request: NextRequest): boolean {
   return Boolean(request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value?.trim());
 }
 
+function hasStudentSession(request: NextRequest): boolean {
+  // Cookie presence for Edge; student Node handlers validate the token fully.
+  return Boolean(request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value?.trim());
+}
+
 async function resolveAdminRole(request: NextRequest): Promise<string | null> {
   const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -98,12 +123,25 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.redirect(dest);
   }
 
-  if (FORMS_PUBLIC_PATHS.has(pathname)) {
+  if (FORMS_PUBLIC_PATHS.has(pathname) || STUDENT_AUTH_PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
   const adminOk = await hasAdminSession(request);
   const approverOk = hasApproverSession(request);
+  const studentOk = hasStudentSession(request);
+
+  // Student portal: allow page without session (login UI); APIs need student/staff cookie.
+  // Contributor cookie must not grant student API access.
+  if (isStudentPortalPath(pathname)) {
+    if (adminOk || approverOk || studentOk) {
+      return NextResponse.next();
+    }
+    if (!pathname.startsWith("/api/")) {
+      return NextResponse.next();
+    }
+    return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+  }
 
   // Sheet picker needs GET /api/forms/registry; coordinators share this with admins/approvers.
   if (isFormsRegistryListPath(pathname) && request.method === "GET") {
@@ -132,6 +170,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.redirect(signInUrl);
   }
 
+  // Staff forms routes: admin/approver only — contributor cookie must not grant access.
   if (adminOk || approverOk) {
     return NextResponse.next();
   }

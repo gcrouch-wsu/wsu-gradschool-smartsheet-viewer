@@ -81,6 +81,13 @@ export interface SourceConfig {
   formProvenance?: FormProvenance;
   /** ISO timestamp when first registered for Forms (maps to FormEntry.createdAt). */
   formRegisteredAt?: string;
+  /**
+   * When true, this sheet source is discoverable in the student portal even if formsEnabled is false.
+   * Forms-enabled sheets are also discoverable when Student Email columns resolve.
+   */
+  studentVisible?: boolean;
+  /** Column ids used to match a student's @wsu.edu email for ownership (Student Email / CONTACT). */
+  studentEmailColumnIds?: number[];
 }
 
 export interface FieldSourceSelector {
