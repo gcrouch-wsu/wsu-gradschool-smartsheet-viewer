@@ -70,8 +70,9 @@ export async function GET(
       const column = byTitle.get(item.columnTitle.toLowerCase());
       if (!column) continue;
       const meta = fieldMeta[item.columnTitle.toLowerCase()];
+      const itemLabel = "label" in item ? item.label?.trim() : undefined;
       entries.push({
-        label: meta?.label?.trim() || item.label?.trim() || item.columnTitle,
+        label: meta?.label?.trim() || itemLabel || item.columnTitle,
         columnTitle: item.columnTitle,
         value: formatPdfCellValue(values.get(column.id) ?? ""),
         kind: "field",
