@@ -321,7 +321,7 @@ export function FormsTable({
   ];
 
   return (
-    <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
+    <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white" data-tour="fm-table">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--wsu-border)] px-4 py-3">
         <div>
           <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Your forms</h2>
@@ -330,7 +330,7 @@ export function FormsTable({
           </p>
           <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">Active path: {activePath || "—"}</p>
         </div>
-        <div className="relative w-full sm:w-56">
+        <div className="relative w-full sm:w-56" data-tour="fm-search">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wsu-muted)]" />
           <input
             type="search"

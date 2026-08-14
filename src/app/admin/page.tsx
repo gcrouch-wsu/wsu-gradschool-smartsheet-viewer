@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Button, EmptyState, RecentCard, StatCard } from "@/components/admin/WorkspacePrimitives";
+import {
+  ADMIN_DASHBOARD_TOUR_STEPS,
+  ADMIN_DASHBOARD_TOUR_STORAGE_KEY,
+} from "@/components/admin/tours/admin-dashboard-tour";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 import { listForms } from "@/lib/forms/registry";
@@ -30,14 +35,20 @@ export default async function AdminDashboardPage() {
         eyebrow="Admin builder"
         title="Workspace overview"
         description="Sources, views, forms, and publishing at a glance. Open a list below to configure the catalog."
+        dataTour="ad-heading"
         actions={
-          <Link href="/forms/manage">
-            <Button variant="primary">Manage forms</Button>
-          </Link>
+          <>
+            <ProductTourControls storageKey={ADMIN_DASHBOARD_TOUR_STORAGE_KEY} steps={ADMIN_DASHBOARD_TOUR_STEPS} />
+            <span data-tour="ad-forms">
+              <Link href="/forms/manage">
+                <Button variant="primary">Manage forms</Button>
+              </Link>
+            </span>
+          </>
         }
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-tour="ad-stats">
         <StatCard label="Sources" value={sources.length} description="Registered sheets and reports." icon={<DataIcon kind="sources" />} />
         <StatCard label="Views" value={views.length} description="Public view definitions." icon={<DataIcon kind="views" />} />
         <StatCard label="Published" value={publicViews.length} description="Live on public routes." icon={<DataIcon kind="published" />} />
@@ -50,73 +61,77 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-3 lg:grid-cols-2">
-        <RecentCard
-          title="Recent sources"
-          subtitle="Connection, schema, and role groups."
-          action={
-            <Link href="/admin/sources">
-              <Button>All sources</Button>
-            </Link>
-          }
-        >
-          {sources.length === 0 ? (
-            <EmptyState
-              icon={<DataIcon kind="sources" />}
-              title="No sources yet"
-              description="Register a Smartsheet sheet or report to make its data available to views."
-              action={{ href: "/admin/sources/new", label: "Register a source" }}
-            />
-          ) : (
-            <div className="space-y-2">
-              {sources.slice(0, 5).map((source) => (
-                <Link
-                  key={source.id}
-                  href={`/admin/sources/${source.id}`}
-                  className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
-                >
-                  <p className="text-sm font-medium text-ink">{source.label}</p>
-                  <p className="mt-1 text-xs text-sub">
-                    {source.sourceType} · {source.smartsheetId}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </RecentCard>
+        <div data-tour="ad-sources">
+          <RecentCard
+            title="Recent sources"
+            subtitle="Connection, schema, and role groups."
+            action={
+              <Link href="/admin/sources">
+                <Button>All sources</Button>
+              </Link>
+            }
+          >
+            {sources.length === 0 ? (
+              <EmptyState
+                icon={<DataIcon kind="sources" />}
+                title="No sources yet"
+                description="Register a Smartsheet sheet or report to make its data available to views."
+                action={{ href: "/admin/sources/new", label: "Register a source" }}
+              />
+            ) : (
+              <div className="space-y-2">
+                {sources.slice(0, 5).map((source) => (
+                  <Link
+                    key={source.id}
+                    href={`/admin/sources/${source.id}`}
+                    className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
+                  >
+                    <p className="text-sm font-medium text-ink">{source.label}</p>
+                    <p className="mt-1 text-xs text-sub">
+                      {source.sourceType} · {source.smartsheetId}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </RecentCard>
+        </div>
 
-        <RecentCard
-          title="Recent views"
-          subtitle="Layout, fields, preview, and publishing."
-          action={
-            <Link href="/admin/views">
-              <Button>All views</Button>
-            </Link>
-          }
-        >
-          {views.length === 0 ? (
-            <EmptyState
-              icon={<DataIcon kind="views" />}
-              title="No views yet"
-              description="Build a view to expose selected fields from a source on a public route."
-              action={{ href: "/admin/views/new", label: "Create a view" }}
-            />
-          ) : (
-            <div className="space-y-2">
-              {views.slice(0, 5).map((view) => (
-                <Link
-                  key={view.id}
-                  href={`/admin/views/${view.id}`}
-                  className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
-                >
-                  <p className="text-sm font-medium text-ink">{view.label}</p>
-                  <p className="mt-1 text-xs text-sub">
-                    /{view.slug} · {view.layout} · {view.public ? "published" : "draft"}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </RecentCard>
+        <div data-tour="ad-views">
+          <RecentCard
+            title="Recent views"
+            subtitle="Layout, fields, preview, and publishing."
+            action={
+              <Link href="/admin/views">
+                <Button>All views</Button>
+              </Link>
+            }
+          >
+            {views.length === 0 ? (
+              <EmptyState
+                icon={<DataIcon kind="views" />}
+                title="No views yet"
+                description="Build a view to expose selected fields from a source on a public route."
+                action={{ href: "/admin/views/new", label: "Create a view" }}
+              />
+            ) : (
+              <div className="space-y-2">
+                {views.slice(0, 5).map((view) => (
+                  <Link
+                    key={view.id}
+                    href={`/admin/views/${view.id}`}
+                    className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
+                  >
+                    <p className="text-sm font-medium text-ink">{view.label}</p>
+                    <p className="mt-1 text-xs text-sub">
+                      /{view.slug} · {view.layout} · {view.public ? "published" : "draft"}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </RecentCard>
+        </div>
       </section>
     </div>
   );

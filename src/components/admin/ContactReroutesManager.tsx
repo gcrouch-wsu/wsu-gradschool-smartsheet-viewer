@@ -140,7 +140,7 @@ export function ContactReroutesManager({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2">
+      <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2" data-tour="ar-search">
         <label className="relative block min-w-[14rem] max-w-md flex-1">
           <span className="sr-only">Search reroutes</span>
           <input
@@ -171,7 +171,7 @@ export function ContactReroutesManager({
         </span>
       </form>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2" data-tour="ar-status">
         {(["pending", "approved", "rejected", "all"] as StatusFilter[]).map((s) => (
           <button
             key={s}
@@ -197,13 +197,16 @@ export function ContactReroutesManager({
       {loading ? (
         <p className="text-sm text-sub">Loading…</p>
       ) : (
+        <div data-tour="ar-table">
         <AdminDataTable
-          headers={["Requested", "Submission", "Stage", "Change", "Status", "Actions"]}
+          headers={["Requested", "Sheet", "Stage", "Change", "Status", "Actions"]}
           items={filteredRequests}
           page={page}
           basePath={basePath}
           pageSize={ADMIN_TABLE_PAGE_SIZE}
           columns={6}
+          gridClassName="grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,1.45fr)_minmax(0,0.9fr)_minmax(0,1.25fr)_minmax(0,0.65fr)_auto] sm:gap-x-4 sm:gap-y-2"
+          headerClassName="max-sm:hidden"
           endAlignLastHeader
           getRowKey={(req) => req.id}
           empty={
@@ -234,22 +237,31 @@ export function ContactReroutesManager({
               "—";
             const next = [req.proposedName, req.proposedEmail].filter(Boolean).join(" · ");
             const requesterKind = req.requestedByKind === "student" ? "Student" : "Staff";
+            const sheetTitle = req.sheetName?.trim() || req.sheetId;
 
             return (
               <>
-                <div className="min-w-0">
-                  <p className="font-medium text-ink">{req.requestedBy.name}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-sub sm:hidden">Requested</p>
+                  <p className="truncate font-medium text-ink" title={req.requestedBy.name}>
+                    {req.requestedBy.name}
+                  </p>
                   <p className="mt-1 text-xs text-sub">
                     <span className="mr-1 inline-flex rounded-full border border-line bg-white px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sub">
                       {requesterKind}
                     </span>
                     {formatWhen(req.requestedAt)}
                   </p>
-                  {req.note ? <p className="mt-1 text-xs text-sub">{req.note}</p> : null}
+                  {req.note ? <p className="mt-1 line-clamp-2 text-xs text-sub">{req.note}</p> : null}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-ink">{req.sheetName || req.sheetId}</p>
-                  <p className="mt-1 text-xs text-sub">Row {req.rowId}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-sub sm:hidden">Sheet</p>
+                  <p className="break-words text-sm font-medium text-ink" title={sheetTitle}>
+                    {sheetTitle}
+                  </p>
+                  <p className="mt-1 truncate text-xs text-sub" title={`Row ${req.rowId}`}>
+                    Row {req.rowId}
+                  </p>
                   <Link
                     href={`/forms/sheet?sheetId=${encodeURIComponent(req.sheetId)}&rowId=${req.rowId}`}
                     className="mt-1 inline-block text-xs font-medium text-crimson hover:underline"
@@ -257,18 +269,18 @@ export function ContactReroutesManager({
                     Open sheet
                   </Link>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-ink">{req.stageTitle}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="break-words text-sm text-ink">{req.stageTitle}</p>
                   <p className={`mt-1 text-xs ${req.isCurrentStage ? "text-amber-800" : "text-sub"}`}>
                     {req.isCurrentStage ? "Current pending stage" : "Future stage"}
                   </p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-sub">From: {prev}</p>
-                  <p className="mt-0.5 text-sm font-medium text-ink">To: {next}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="break-words text-xs text-sub">From: {prev}</p>
+                  <p className="mt-0.5 break-words text-sm font-medium text-ink">To: {next}</p>
                 </div>
-                <p className="min-w-0 text-sm capitalize text-sub">{req.status}</p>
-                <div className="flex flex-nowrap items-center gap-2 sm:justify-end">
+                <p className="min-w-0 overflow-hidden text-sm capitalize text-sub">{req.status}</p>
+                <div className="flex flex-nowrap items-center gap-2 sm:justify-end" data-tour="ar-actions">
                   {req.status === "pending" ? (
                     <>
                       <button
@@ -303,6 +315,7 @@ export function ContactReroutesManager({
             );
           }}
         />
+        </div>
       )}
     </div>
   );

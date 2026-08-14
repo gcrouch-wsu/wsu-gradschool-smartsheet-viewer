@@ -6,6 +6,10 @@ import { approvalTone, approvalToneLabel, type ApprovalTone } from "@/lib/forms/
 import { canTriggerResendForColumn } from "@/lib/forms/resend";
 import { IconRefresh, IconSearch } from "@/components/forms/icons";
 import { FormSheetPicker } from "@/components/forms/sheet/FormSheetPicker";
+import { FORMS_SHEET_TOUR_STEPS, FORMS_SHEET_TOUR_STORAGE_KEY } from "@/components/forms/sheet/forms-sheet-tour";
+import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 export interface SheetGridColumn {
   id: number;
@@ -164,6 +168,7 @@ export function SheetGridView({
   const [highlightApprovals, setHighlightApprovals] = useState(true);
   const [columnFilter, setColumnFilter] = useState<ColumnFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const tour = useProductTour(FORMS_SHEET_TOUR_STORAGE_KEY);
 
   const stageColumns = useMemo(
     () => columns.filter((c) => c.workflowRole === "stage" || c.workflowRole === "overall"),
@@ -233,7 +238,7 @@ export function SheetGridView({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="fs-heading">
           <h1 className="truncate text-xl font-medium text-[color:var(--wsu-ink)]">{sheetName}</h1>
           <p className="mt-1 text-sm">
             {demo ? (
@@ -243,17 +248,22 @@ export function SheetGridView({
             )}
           </p>
         </div>
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
+          <TourHowToButton onClick={tour.startTour} />
           {forms && forms.length > 0 && onSheetChange && selectedSheetId ? (
-            <FormSheetPicker
-              forms={forms}
-              selectedSheetId={selectedSheetId}
-              onSheetChange={onSheetChange}
-            />
+            <div data-tour="fs-picker" className="min-w-0 flex-1 sm:w-64 sm:flex-none">
+              <FormSheetPicker
+                forms={forms}
+                selectedSheetId={selectedSheetId}
+                onSheetChange={onSheetChange}
+                className="relative min-w-0 w-full"
+              />
+            </div>
           ) : null}
           {onRefresh ? (
             <button
               type="button"
+              data-tour="fs-refresh"
               onClick={onRefresh}
               disabled={refreshing}
               aria-label={refreshing ? "Refreshing" : "Refresh"}
@@ -273,6 +283,7 @@ export function SheetGridView({
       </div>
 
       <div
+        data-tour="fs-status"
         className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white"
         role="group"
         aria-label="Filter by submission status"
@@ -345,7 +356,7 @@ export function SheetGridView({
       <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3 border-b border-[color:var(--wsu-border)] px-4 py-3">
-          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs" data-tour="fs-search">
             <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wsu-muted)]" />
             <input
               type="search"
@@ -357,13 +368,16 @@ export function SheetGridView({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tour="fs-columns">
             {filterPill("all", "All columns")}
             {filterPill("form", "Form")}
             {filterPill("workflow", "Approval")}
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--wsu-muted)]">
+          <label
+            className="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--wsu-muted)]"
+            data-tour="fs-highlight"
+          >
             <input
               type="checkbox"
               checked={highlightApprovals}
@@ -407,7 +421,7 @@ export function SheetGridView({
         ) : null}
 
         {/* Table */}
-        <div className="relative max-h-[min(70vh,720px)] overflow-auto">
+        <div className="relative max-h-[min(70vh,720px)] overflow-auto" data-tour="fs-grid">
           {filteredRows.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-[color:var(--wsu-muted)]">
               {rows.length === 0 ? "No rows on this sheet yet." : "No rows match your search."}
@@ -580,6 +594,15 @@ export function SheetGridView({
           {onRowClick ? " · click a row for submission details" : ""}
         </div>
       </div>
+
+      <ProductTour
+        open={tour.open}
+        steps={FORMS_SHEET_TOUR_STEPS}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
+      />
     </div>
   );
 }

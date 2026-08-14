@@ -9,6 +9,13 @@ import {
 } from "@/components/admin/AdminDataTable";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { StudentLoginForm } from "@/components/forms/student/StudentLoginForm";
+import {
+  STUDENT_MY_SHEETS_TOUR_STEPS,
+  STUDENT_MY_SHEETS_TOUR_STORAGE_KEY,
+} from "@/components/forms/student/student-tours";
+import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 type SheetSummary = {
   sheetId: string;
@@ -29,6 +36,9 @@ export function StudentSheetTable({
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(Boolean(initialEmail));
   const [error, setError] = useState("");
+  const tour = useProductTour(STUDENT_MY_SHEETS_TOUR_STORAGE_KEY, {
+    enabled: Boolean(email) && !loading,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,64 +89,83 @@ export function StudentSheetTable({
   return (
     <section className="rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div data-tour="sm-heading">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Student portal</p>
           <h2 className="mt-1 text-xl font-semibold text-ink">My submission sheets</h2>
           <p className="mt-1 text-sm text-sub">Sheets that contain your Student Email.</p>
         </div>
-        <label className="block w-full sm:max-w-xs">
-          <span className="sr-only">Search submission sheets</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search sheets…"
-            className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson"
-          />
-        </label>
+        <div className="flex w-full flex-col gap-2 sm:max-w-xs">
+          <TourHowToButton onClick={tour.startTour} />
+          <label className="block w-full" data-tour="sm-search">
+            <span className="sr-only">Search submission sheets</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search sheets…"
+              className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson"
+            />
+          </label>
+        </div>
       </div>
 
       {loading ? <p className="px-5 py-6 text-sm text-sub">Loading submissions…</p> : null}
-      {error ? <p role="alert" className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</p> : null}
-      {!loading && !error ? (
-        <AdminDataTable
-          headers={["Sheet", "My rows", "Open"]}
-          items={matchingSheets}
-          page={currentPage}
-          basePath="/forms/my"
-          pageSize={ADMIN_TABLE_PAGE_SIZE}
-          columns={3}
-          endAlignLastHeader
-          getRowKey={(sheet) => sheet.sheetId}
-          empty={
-            <EmptyState
-              icon={<span className="text-sm font-semibold">S</span>}
-              title="No submission sheets found"
-              description="There are no available sheets where your Student Email appears."
-              variant="panel"
-            />
-          }
-          renderRow={(sheet) => (
-            <>
-              <div className="min-w-0">
-                <p className="font-medium text-ink">{sheet.name}</p>
-                <p className="mt-1 text-xs text-sub">Submission sheet</p>
-              </div>
-              <p className="text-sm text-sub">
-                {sheet.ownedRowCount} submission{sheet.ownedRowCount === 1 ? "" : "s"}
-              </p>
-              <div className="sm:text-right">
-                <Link
-                  href={`/forms/my/${encodeURIComponent(sheet.sheetId)}`}
-                  className="inline-flex rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-mist hover:bg-[#faf7f8]"
-                >
-                  Open
-                </Link>
-              </div>
-            </>
-          )}
-        />
+      {error ? (
+        <p role="alert" className="m-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {error}
+        </p>
       ) : null}
+      {!loading && !error ? (
+        <div data-tour="sm-table">
+          <AdminDataTable
+            headers={["Sheet", "My rows", "Open"]}
+            items={matchingSheets}
+            page={currentPage}
+            basePath="/forms/my"
+            pageSize={ADMIN_TABLE_PAGE_SIZE}
+            columns={3}
+            endAlignLastHeader
+            getRowKey={(sheet) => sheet.sheetId}
+            empty={
+              <EmptyState
+                icon={<span className="text-sm font-semibold">S</span>}
+                title="No submission sheets found"
+                description="There are no available sheets where your Student Email appears."
+                variant="panel"
+              />
+            }
+            renderRow={(sheet) => (
+              <>
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{sheet.name}</p>
+                  <p className="mt-1 text-xs text-sub">Submission sheet</p>
+                </div>
+                <p className="text-sm text-sub">
+                  {sheet.ownedRowCount} submission{sheet.ownedRowCount === 1 ? "" : "s"}
+                </p>
+                <div className="sm:text-right">
+                  <Link
+                    href={`/forms/my/${encodeURIComponent(sheet.sheetId)}`}
+                    data-tour="sm-open"
+                    className="inline-flex rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-mist hover:bg-[#faf7f8]"
+                  >
+                    Open
+                  </Link>
+                </div>
+              </>
+            )}
+          />
+        </div>
+      ) : null}
+
+      <ProductTour
+        open={tour.open}
+        steps={STUDENT_MY_SHEETS_TOUR_STEPS}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
+      />
     </section>
   );
 }

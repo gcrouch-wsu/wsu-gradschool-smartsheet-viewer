@@ -63,6 +63,7 @@ export function ViewBuilderSetupTab({
             <SetupAccordion
               title="Layout presets"
               subtitle="Templates for table, cards, accordion, and more. Add columns on the Fields tab when ready."
+              dataTour="vb-layout-presets"
             >
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {VIEW_TEMPLATES.map((template) => (
@@ -83,7 +84,11 @@ export function ViewBuilderSetupTab({
               </div>
             </SetupAccordion>
 
-            <SetupAccordion title="Source & page identity" subtitle="Smartsheet source, URL slug, labels, and validation warnings.">
+            <SetupAccordion
+              title="Source & page identity"
+              subtitle="Smartsheet source, URL slug, labels, and validation warnings."
+              dataTour="vb-source-identity"
+            >
             <div className="grid gap-4 md:grid-cols-2">
           <label className="flex min-h-[72px] flex-col justify-center gap-1 text-sm">
             <span className="font-medium text-[color:var(--wsu-ink)]">Source</span>

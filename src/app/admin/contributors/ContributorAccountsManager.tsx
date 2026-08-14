@@ -134,7 +134,7 @@ export function ContributorAccountsManager({
 
   return (
     <div className="space-y-4">
-      <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2">
+      <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2" data-tour="ac-search">
         <label className="relative block min-w-[14rem] max-w-md flex-1">
           <span className="sr-only">Search contributors</span>
           <input
@@ -157,7 +157,10 @@ export function ContributorAccountsManager({
             Clear
           </Button>
         ) : null}
-        <span className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-sub">
+        <span
+          className="rounded-full border border-line bg-white px-3 py-1.5 text-xs font-medium text-sub"
+          data-tour="ac-count"
+        >
           {filteredUsers.length} account{filteredUsers.length === 1 ? "" : "s"}
         </span>
       </form>
@@ -192,53 +195,55 @@ export function ContributorAccountsManager({
         </div>
       ) : null}
 
-      <AdminDataTable
-        headers={["Email", "Created", "Last updated", "Actions"]}
-        items={filteredUsers}
-        page={page}
-        basePath={basePath}
-        pageSize={ADMIN_TABLE_PAGE_SIZE}
-        endAlignLastHeader
-        getRowKey={(user) => user.id}
-        empty={
-          <EmptyState
-            icon={<span className="text-sm font-semibold">C</span>}
-            title={initialQuery.trim() ? "No contributors match your search" : "No contributors yet"}
-            description={
-              initialQuery.trim()
-                ? "Try a different email address."
-                : "Accounts are created when contributors complete first-time access."
-            }
-            variant="panel"
-          />
-        }
-        renderRow={(user) => (
-          <>
-            <div className="min-w-0 sm:col-span-1">
-              <p className="truncate text-sm font-medium text-ink">{user.email}</p>
-            </div>
-            <p className="hidden text-sm text-sub sm:block">{formatDate(user.createdAt)}</p>
-            <p className="hidden text-sm text-sub sm:block">{formatDate(user.updatedAt)}</p>
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-              <Button
-                type="button"
-                disabled={loadingResetId === user.id}
-                onClick={() => void handleGenerateResetLink(user)}
-              >
-                {loadingResetId === user.id ? "Generating…" : "Generate reset link"}
-              </Button>
-              <Button
-                type="button"
-                disabled={removingId === user.id}
-                onClick={() => void handleRemove(user)}
-                className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
-              >
-                {removingId === user.id ? "Removing…" : "Remove"}
-              </Button>
-            </div>
-          </>
-        )}
-      />
+      <div data-tour="ac-table">
+        <AdminDataTable
+          headers={["Email", "Created", "Last updated", "Actions"]}
+          items={filteredUsers}
+          page={page}
+          basePath={basePath}
+          pageSize={ADMIN_TABLE_PAGE_SIZE}
+          endAlignLastHeader
+          getRowKey={(user) => user.id}
+          empty={
+            <EmptyState
+              icon={<span className="text-sm font-semibold">C</span>}
+              title={initialQuery.trim() ? "No contributors match your search" : "No contributors yet"}
+              description={
+                initialQuery.trim()
+                  ? "Try a different email address."
+                  : "Accounts are created when contributors complete first-time access."
+              }
+              variant="panel"
+            />
+          }
+          renderRow={(user) => (
+            <>
+              <div className="min-w-0 sm:col-span-1">
+                <p className="truncate text-sm font-medium text-ink">{user.email}</p>
+              </div>
+              <p className="hidden text-sm text-sub sm:block">{formatDate(user.createdAt)}</p>
+              <p className="hidden text-sm text-sub sm:block">{formatDate(user.updatedAt)}</p>
+              <div className="flex flex-wrap gap-2 sm:justify-end" data-tour="ac-actions">
+                <Button
+                  type="button"
+                  disabled={loadingResetId === user.id}
+                  onClick={() => void handleGenerateResetLink(user)}
+                >
+                  {loadingResetId === user.id ? "Generating…" : "Generate reset link"}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={removingId === user.id}
+                  onClick={() => void handleRemove(user)}
+                  className="border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100"
+                >
+                  {removingId === user.id ? "Removing…" : "Remove"}
+                </Button>
+              </div>
+            </>
+          )}
+        />
+      </div>
     </div>
   );
 }

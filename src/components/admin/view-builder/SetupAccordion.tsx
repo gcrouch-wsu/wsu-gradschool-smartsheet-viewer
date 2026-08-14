@@ -6,14 +6,19 @@ export function SetupAccordion({
   title,
   subtitle,
   children,
+  dataTour,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  /** Optional product-tour spotlight target. */
+  dataTour?: string;
 }) {
   return (
-    <details className="group rounded-2xl border border-[color:var(--wsu-border)] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+    <details
+      className="group rounded-2xl border border-[color:var(--wsu-border)] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+      data-tour={dataTour}
+    >      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[color:var(--wsu-ink)]">{title}</p>
           {subtitle ? <p className="mt-0.5 text-xs text-[color:var(--wsu-muted)]">{subtitle}</p> : null}

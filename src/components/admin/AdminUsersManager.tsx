@@ -385,7 +385,7 @@ export function AdminUsersManager({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-4 sm:px-5">
+      <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-4 sm:px-5" data-tour="au-bootstrap">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-normal text-[color:var(--wsu-muted)]">Bootstrap owner</p>
@@ -403,7 +403,7 @@ export function AdminUsersManager({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-          <label className="relative block min-w-[14rem] max-w-md flex-1">
+          <label className="relative block min-w-[14rem] max-w-md flex-1" data-tour="au-search">
             <span className="sr-only">Search admins</span>
             <input
               type="search"
@@ -417,15 +417,17 @@ export function AdminUsersManager({
             {storageLabel}
           </span>
         </div>
-        <Button type="button" variant="primary" onClick={openCreate}>
-          Add user
-        </Button>
+        <span data-tour="au-add">
+          <Button type="button" variant="primary" onClick={openCreate}>
+            Add user
+          </Button>
+        </span>
       </div>
 
       <p className="text-xs text-sub">{storageDescription}</p>
 
       {filteredUsers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] px-5 py-12 text-center">
+        <div className="rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] px-5 py-12 text-center" data-tour="au-table">
           <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--crimson-line)] bg-white text-sm font-semibold text-crimson">
             A
           </div>
@@ -446,6 +448,7 @@ export function AdminUsersManager({
           ) : null}
         </div>
       ) : (
+        <div data-tour="au-table">
         <TableShell headers={["User", "Email", "Role", "Status", "Updated", "Actions"]} columns={6} endAlignLastHeader>
           <div className="divide-y divide-line">
             {filteredUsers.map((user) => (
@@ -496,6 +499,7 @@ export function AdminUsersManager({
             ))}
           </div>
         </TableShell>
+        </div>
       )}
 
       <Modal

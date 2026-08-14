@@ -7,6 +7,7 @@ import { PublicHeaderBrandStrip } from "@/components/views/shell/PublicHeaderBra
 import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import { ViewWithSearchAndIndex } from "@/components/views/layouts/ViewWithSearchAndIndex";
 import { ViewTabs } from "@/components/views/shell/ViewTabs";
+import { PublicViewTourHost } from "@/components/views/shell/PublicViewTourHost";
 import { LAYOUT_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
 import type { LayoutType } from "@/lib/config/types";
 import { mergeThemeTokens } from "@/lib/config/themes";
@@ -152,7 +153,7 @@ export default async function PublicViewPage({
   const headerPublicUrl = publicOrigin ? `${publicOrigin}${publicPath}` : publicPath;
   const contributorInstructionsHref = showContributorInstructions ? "/instructions/contributor" : null;
   const layoutSwitcher = !activeView.fixedLayout ? (
-    <nav aria-label="Layout" className="view-control-group view-control-group--layouts">
+    <nav aria-label="Layout" className="view-control-group view-control-group--layouts" data-tour="pv-layouts">
       {LAYOUT_OPTIONS.map((option) => {
         const active = option === layout;
         return (
@@ -239,6 +240,11 @@ export default async function PublicViewPage({
               <div className="flex flex-wrap items-start justify-between gap-5 lg:gap-8">
                 <div className="min-w-0 flex-1 space-y-2.5">
                   <PublicHeaderBrandStrip presentation={activeView.presentation} />
+                  {!embed ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PublicViewTourHost />
+                    </div>
+                  ) : null}
                   {!activeView.presentation?.hideHeaderBackLink &&
                     (showPublicEditingChrome ? (
                       <p className="text-sm text-[color:var(--wsu-muted)]">
@@ -276,7 +282,7 @@ export default async function PublicViewPage({
                         ) : null}
                       </nav>
                     ))}
-                  <div>
+                  <div data-tour="pv-heading">
                     {(!activeView.presentation?.hideHeaderBackLink && !showPublicEditingChrome) ||
                     activeView.presentation?.hideHeaderSourceLabel
                       ? null
@@ -437,7 +443,7 @@ export default async function PublicViewPage({
                               : ""
                           }
                         >
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1.5" data-tour="pv-actions">
                             {loginHref ? (
                               <PublicActionLink href={loginHref} label="Contributor sign in" primary compact />
                             ) : null}
@@ -466,6 +472,7 @@ export default async function PublicViewPage({
 
           <section id="main-view-content" className={embed ? "space-y-3 scroll-mt-4" : "space-y-4 scroll-mt-4"}>
             {showViewTabs && (
+              <div data-tour="pv-view-tabs">
               <ViewTabs
                 slug={slug}
                 views={page.resolvedViews.map((raw) => {
@@ -481,6 +488,7 @@ export default async function PublicViewPage({
                 layout={layout}
                 embed={embed}
               />
+              </div>
             )}
 
             <div className="flex flex-wrap items-end justify-between gap-3">

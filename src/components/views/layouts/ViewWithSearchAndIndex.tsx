@@ -356,7 +356,7 @@ export function ViewWithSearchAndIndex({
 
         {showSearchAndIndex && (
           <div className="mb-3 flex flex-col gap-2.5">
-            <div className="view-toolbar">
+            <div className="view-toolbar" data-tour="pv-search">
               <div className="relative min-w-[200px] max-w-lg flex-1">
                 <input
                   type="search"
@@ -390,6 +390,7 @@ export function ViewWithSearchAndIndex({
                 className="flex flex-wrap items-center gap-2"
                 role="group"
                 aria-label="Filter by campus"
+                data-tour="pv-campus"
               >
                 <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--wsu-muted)]">Campus</span>
                 <button
@@ -428,7 +429,7 @@ export function ViewWithSearchAndIndex({
         )}
 
         <div className={showSearchAndIndex && showAlphabetIndex ? "flex items-start gap-2.5" : ""}>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1" data-tour="pv-results">
             <PublicViewRenderer
               layout={layout}
               view={filteredView}
@@ -448,6 +449,7 @@ export function ViewWithSearchAndIndex({
           {showSearchAndIndex && showAlphabetIndex && (
             <nav
               aria-label="Alphabetical index"
+              data-tour="pv-alpha-index"
               className="sticky top-5 shrink-0 flex flex-col gap-px rounded-lg border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)]/95 px-1 py-1.5 shadow-sm backdrop-blur-sm"
             >
               {["#", ...ALPHABET].map((letter) => {

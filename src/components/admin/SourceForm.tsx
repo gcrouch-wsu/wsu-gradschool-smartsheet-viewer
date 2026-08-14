@@ -2,8 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  SOURCE_FORM_TOUR_STEPS,
+  SOURCE_FORM_TOUR_STORAGE_KEY,
+} from "@/components/admin/tours/source-form-tour";
+import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
 import { useToast } from "@/components/ui/Toast";
 import { DataTable } from "@/components/ui/Table";
+import { useProductTour } from "@/hooks/useProductTour";
 import {
   countDelimitedRoleAttributes,
   detectNumberedRoleGroupsFromColumns,
@@ -422,6 +429,7 @@ export function SourceForm({
   const [schemaError, setSchemaError] = useState<string>("");
   const [customRoleGroupLabel, setCustomRoleGroupLabel] = useState("");
   const connectionOptions = useMemo(() => Array.from(new Set(connectionKeys.filter(Boolean))), [connectionKeys]);
+  const tour = useProductTour(SOURCE_FORM_TOUR_STORAGE_KEY);
 
   function update<K extends keyof SourceConfig>(key: K, value: SourceConfig[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -768,7 +776,7 @@ export function SourceForm({
     <div className="space-y-6">
       <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div data-tour="asf-heading">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">
               Source Registry
             </p>
@@ -780,6 +788,7 @@ export function SourceForm({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <TourHowToButton onClick={tour.startTour} />
             {!isNew && (
               <button
                 type="button"
@@ -793,6 +802,7 @@ export function SourceForm({
             )}
             <button
               type="button"
+              data-tour="asf-fetch"
               onClick={() => startTransition(() => {
                 void fetchSchema();
               })}
@@ -802,6 +812,7 @@ export function SourceForm({
             </button>
             <button
               type="button"
+              data-tour="asf-save"
               onClick={() => startTransition(() => {
                 void saveSource();
               })}
@@ -823,7 +834,7 @@ export function SourceForm({
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid gap-4 md:grid-cols-2" data-tour="asf-identity">
           <label className="space-y-2 text-sm">
             <span className="font-medium text-[color:var(--wsu-ink)]">Source ID</span>
             <input
@@ -1023,7 +1034,10 @@ export function SourceForm({
         </section>
       ) : null}
 
-      <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
+      <section
+        className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]"
+        data-tour="asf-schema"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Schema preview</h2>
@@ -1099,7 +1113,10 @@ export function SourceForm({
         )}
       </section>
 
-      <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
+      <section
+        className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]"
+        data-tour="asf-roles"
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Role groups</h2>
@@ -1445,6 +1462,15 @@ export function SourceForm({
           </p>
         )}
       </section>
+
+      <ProductTour
+        open={tour.open}
+        steps={SOURCE_FORM_TOUR_STEPS}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
+      />
     </div>
   );
 }
