@@ -49,22 +49,27 @@ function openContainingDetails(el: Element): void {
 }
 
 function measureTarget(selector: string): SpotlightRect | null {
-  const el = document.querySelector(selector);
-  if (!el || !(el instanceof HTMLElement)) return null;
-  openContainingDetails(el);
-  el.scrollIntoView({
-    block: "nearest",
-    inline: "nearest",
-    behavior: prefersReducedMotion() ? "auto" : "smooth",
-  });
-  const rect = el.getBoundingClientRect();
-  if (rect.width === 0 && rect.height === 0) return null;
-  return {
-    top: rect.top - SPOTLIGHT_PADDING,
-    left: rect.left - SPOTLIGHT_PADDING,
-    width: rect.width + SPOTLIGHT_PADDING * 2,
-    height: rect.height + SPOTLIGHT_PADDING * 2,
-  };
+  const nodes = document.querySelectorAll(selector);
+  for (const el of nodes) {
+    if (!(el instanceof HTMLElement)) continue;
+    openContainingDetails(el);
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) continue;
+    el.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+    const after = el.getBoundingClientRect();
+    if (after.width === 0 && after.height === 0) continue;
+    return {
+      top: after.top - SPOTLIGHT_PADDING,
+      left: after.left - SPOTLIGHT_PADDING,
+      width: after.width + SPOTLIGHT_PADDING * 2,
+      height: after.height + SPOTLIGHT_PADDING * 2,
+    };
+  }
+  return null;
 }
 
 function placeCard(spotlight: SpotlightRect, cardHeight: number): CardPlacement {

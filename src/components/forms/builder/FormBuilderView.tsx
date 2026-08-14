@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
+import { ProductTour } from "@/components/ui/ProductTour";
 import { SubmissionFormView } from "@/components/forms/submission/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
@@ -15,6 +16,10 @@ import {
   useFormBuilder,
 } from "@/components/forms/builder/useFormBuilder";
 import { PdfMappingEditor } from "@/components/forms/builder/PdfMappingEditor";
+import {
+  FORM_BUILDER_TOUR_STEPS,
+  FORM_BUILDER_TOUR_STORAGE_KEY,
+} from "@/components/forms/builder/form-builder-tour";
 import { richTextPlainText } from "@/lib/rendering";
 
 const inputClass =
@@ -333,7 +338,7 @@ function FieldCanvas({
   const lockedHidden = fields.filter((f) => isFieldFormItem(f) && lockedSet.has(f.columnTitle.toLowerCase()) && f.hiddenOnForm);
 
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4" data-tour="fb-canvas">
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Form layout</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Drag to reorder. Toggle to include on the public form.</p>
       <ul className="mt-3 space-y-2">
@@ -865,7 +870,7 @@ function ConditionalRulesEditor({
   }
 
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white">
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white" data-tour="fb-rules">
       <button
         type="button"
         onClick={onToggle}
@@ -1014,6 +1019,7 @@ function BuilderRightRail({
 }) {
   return (
     <aside
+      data-tour="fb-rail"
       className={[
         "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white",
         className,
@@ -1045,7 +1051,12 @@ function ModeToggle({
 }) {
   const labels: Record<BuilderMode, string> = { edit: "Edit", preview: "Preview", pdf: "PDF" };
   return (
-    <div className="inline-flex rounded-lg border border-[color:var(--wsu-border)] bg-white p-0.5" role="group" aria-label="Builder mode">
+    <div
+      className="inline-flex rounded-lg border border-[color:var(--wsu-border)] bg-white p-0.5"
+      role="group"
+      aria-label="Builder mode"
+      data-tour="fb-modes"
+    >
       {(["edit", "preview", "pdf"] as const).map((value) => (
         <button
           key={value}
@@ -1072,13 +1083,68 @@ export function FormBuilderView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [mobileRailOpen, setMobileRailOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
+
+  const markTourSeen = useCallback(() => {
+    try {
+      window.localStorage.setItem(FORM_BUILDER_TOUR_STORAGE_KEY, "1");
+    } catch {
+      // ignore storage failures
+    }
+  }, []);
+
+  const closeTour = useCallback(() => {
+    markTourSeen();
+    setTourOpen(false);
+  }, [markTourSeen]);
+
+  const completeTour = useCallback(() => {
+    markTourSeen();
+    setTourOpen(false);
+  }, [markTourSeen]);
+
+  const startTour = useCallback(() => {
+    setTourStepIndex(0);
+    setTourOpen(true);
+  }, []);
 
   useEffect(() => {
+    if (!builder.state) return;
+    try {
+      if (window.localStorage.getItem(FORM_BUILDER_TOUR_STORAGE_KEY)) return;
+    } catch {
+      return;
+    }
+    const timer = window.setTimeout(() => startTour(), 400);
+    return () => window.clearTimeout(timer);
+  }, [startTour, builder.state]);
+
+  // Keep mode / panels in sync with the active tour step.
+  useEffect(() => {
+    if (!tourOpen) return;
+    const step = FORM_BUILDER_TOUR_STEPS[tourStepIndex];
+    if (!step) return;
+    if (step.mode && step.mode !== mode) {
+      setMode(step.mode);
+    }
+    if (step.openSettings) setSettingsOpen(true);
+    if (step.openRules) setRulesOpen(true);
+    if (step.railTab) {
+      setRailTab(step.railTab);
+      // Desktop rail is always visible; open mobile drawer when needed for the Add palette step.
+      if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+        setMobileRailOpen(true);
+      }
+    }
+  }, [tourOpen, tourStepIndex, mode]);
+
+  useEffect(() => {
+    if (tourOpen) return;
     if (builder.selectedTitle) {
       setRailTab("field");
     }
-  }, [builder.selectedTitle]);
-
+  }, [builder.selectedTitle, tourOpen]);
   useEffect(() => {
     if (builder.state?.conditionalLogic.length) {
       setRulesOpen(true);
@@ -1171,7 +1237,7 @@ export function FormBuilderView() {
   return (
     <div className="flex min-h-0 flex-col gap-3 lg:h-[calc(100dvh-14rem)]">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0" data-tour="fb-heading">
           <h1 className="font-serif text-2xl font-medium tracking-[-0.02em] text-ink">Form builder</h1>
           <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
             {builder.state.sheetName}
@@ -1180,6 +1246,13 @@ export function FormBuilderView() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={startTour}
+            className="rounded-full border border-[color:var(--crimson-line)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
+          >
+            How to use
+          </button>
           <ModeToggle mode={mode} onChange={setMode} />
           {builder.state.formPublic && builder.state.publicUrl ? (
             <Link href={builder.state.publicUrl} target="_blank" rel="noreferrer" className={secondaryBtn}>
@@ -1190,7 +1263,13 @@ export function FormBuilderView() {
             Refresh
           </button>
           {mode !== "pdf" ? (
-            <button type="button" className={primaryBtn} onClick={() => void builder.save()} disabled={builder.saving || !builder.dirty}>
+            <button
+              type="button"
+              data-tour="fb-save"
+              className={primaryBtn}
+              onClick={() => void builder.save()}
+              disabled={builder.saving || !builder.dirty}
+            >
               {builder.saving ? "Saving…" : "Save layout"}
             </button>
           ) : null}
@@ -1204,7 +1283,10 @@ export function FormBuilderView() {
       ) : null}
 
       {mode === "preview" ? (
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 p-3 sm:p-5">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 p-3 sm:p-5"
+          data-tour="fb-preview"
+        >
           {builder.previewSchema ? (
             <SubmissionFormView
               schema={builder.previewSchema}
@@ -1217,7 +1299,7 @@ export function FormBuilderView() {
           )}
         </div>
       ) : mode === "pdf" ? (
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1" data-tour="fb-pdf">
           <PdfMappingEditor
             sheetId={builder.state.sheetId}
             fieldOptions={builder.state.fields
@@ -1238,7 +1320,7 @@ export function FormBuilderView() {
       ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
-            <section className="shrink-0 rounded-xl border border-[color:var(--wsu-border)] bg-white">
+            <section className="shrink-0 rounded-xl border border-[color:var(--wsu-border)] bg-white" data-tour="fb-settings">
               <button
                 type="button"
                 onClick={() => setSettingsOpen((v) => !v)}
@@ -1361,6 +1443,15 @@ export function FormBuilderView() {
           </div>
         </div>
       ) : null}
+
+      <ProductTour
+        open={tourOpen}
+        steps={FORM_BUILDER_TOUR_STEPS}
+        stepIndex={tourStepIndex}
+        onStepIndexChange={setTourStepIndex}
+        onClose={closeTour}
+        onComplete={completeTour}
+      />
     </div>
   );
 }
