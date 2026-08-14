@@ -30,6 +30,7 @@ export function ViewBuilderFiltersTab({
               </div>
               <button
                 type="button"
+                data-tour="vb-add-filter"
                 onClick={() => update("filters", [...(view.filters ?? []), createEmptyFilter()])}
                 className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-sm font-medium"
               >

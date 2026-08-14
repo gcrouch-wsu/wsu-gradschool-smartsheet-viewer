@@ -38,8 +38,10 @@ import {
   columnToField,
   normalizedCompareKey,
   rawFieldOverlapsRoleGroup,
+  VIEW_BUILDER_TOUR_STEPS,
+  VIEW_BUILDER_TOUR_STORAGE_KEY,
 } from "./view-builder";
-
+import { ProductTour } from "@/components/ui/ProductTour";
 
 export function ViewBuilder({
   initialView,
@@ -624,6 +626,8 @@ export function ViewBuilder({
 
   const [activeTab, setActiveTab] = useState<ViewBuilderTab>("setup");
   const [lastAppliedTemplateId, setLastAppliedTemplateId] = useState<string | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(0);
   const [previewData, setPreviewData] = useState<{
     resolvedView: ResolvedView;
     warnings: string[];
@@ -754,11 +758,54 @@ export function ViewBuilder({
 
   const previewHref = !isNew && view.id ? `/admin/views/${view.id}/preview` : null;
 
+  const markTourSeen = useCallback(() => {
+    try {
+      window.localStorage.setItem(VIEW_BUILDER_TOUR_STORAGE_KEY, "1");
+    } catch {
+      // ignore storage failures (private mode, etc.)
+    }
+  }, []);
+
+  const closeTour = useCallback(() => {
+    markTourSeen();
+    setTourOpen(false);
+  }, [markTourSeen]);
+
+  const completeTour = useCallback(() => {
+    markTourSeen();
+    setTourOpen(false);
+  }, [markTourSeen]);
+
+  const startTour = useCallback(() => {
+    setTourStepIndex(0);
+    setTourOpen(true);
+  }, []);
+
+  // First visit: auto-open the tour once.
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(VIEW_BUILDER_TOUR_STORAGE_KEY)) return;
+    } catch {
+      return;
+    }
+    const timer = window.setTimeout(() => startTour(), 400);
+    return () => window.clearTimeout(timer);
+  }, [startTour]);
+
+  // Keep the builder tab in sync with the active tour step.
+  useEffect(() => {
+    if (!tourOpen) return;
+    const step = VIEW_BUILDER_TOUR_STEPS[tourStepIndex];
+    if (step?.tab && step.tab !== activeTab) {
+      setActiveTab(step.tab);
+    }
+  }, [tourOpen, tourStepIndex, activeTab]);
+
   return (
     <div className="space-y-6">
       <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div data-tour="vb-heading">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">View Builder</p>
             <h1 className="mt-2 text-3xl font-semibold text-[color:var(--wsu-ink)]">
               {isNew ? "Create view" : `Edit view: ${initialView?.label ?? view.label}`}
@@ -768,6 +815,13 @@ export function ViewBuilder({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={startTour}
+              className="rounded-full border border-[color:var(--crimson-line)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
+            >
+              How to use
+            </button>
             {!isNew && (
               <button
                 type="button"
@@ -825,6 +879,7 @@ export function ViewBuilder({
             {!isNew && (
               <button
                 type="button"
+                data-tour="vb-publish"
                 onClick={() => void togglePublish(!view.public)}
                 disabled={isPublishing}
                 className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)] disabled:opacity-50"
@@ -834,6 +889,7 @@ export function ViewBuilder({
             )}
             <button
               type="button"
+              data-tour="vb-save"
               onClick={() => void saveView()}
               disabled={isSaving}
               className="btn-crimson rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--wsu-crimson-dark)] disabled:opacity-50"
@@ -863,6 +919,7 @@ export function ViewBuilder({
               aria-selected={activeTab === tab}
               aria-controls={`tabpanel-${tab}`}
               id={`tab-${tab}`}
+              data-tour={`vb-tab-${tab}`}
               onClick={() => setActiveTab(tab)}
               className={`min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition ${
                 activeTab === tab
@@ -965,6 +1022,15 @@ export function ViewBuilder({
           />
         )}
       </section>
+
+      <ProductTour
+        open={tourOpen}
+        steps={VIEW_BUILDER_TOUR_STEPS}
+        stepIndex={tourStepIndex}
+        onStepIndexChange={setTourStepIndex}
+        onClose={closeTour}
+        onComplete={completeTour}
+      />
     </div>
   );
 }

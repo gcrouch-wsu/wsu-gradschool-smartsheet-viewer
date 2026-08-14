@@ -79,7 +79,7 @@ export function ViewBuilderFieldsTab({
                 <li>Switch to Preview to see the result.</li>
               </ol>
             </div>
-            <div>
+            <div data-tour="vb-load-columns">
               <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Columns & display names</h2>
               <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">Load columns from the source, then select which to include and set their display names.</p>
               {view.presentation?.hideCampusFieldInRecordDisplay && view.presentation?.campusFieldKey && (
