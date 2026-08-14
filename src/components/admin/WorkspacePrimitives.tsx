@@ -164,6 +164,8 @@ export function TableShell({
   children,
   className = "",
   columns,
+  gridClassName,
+  headerClassName = "",
   endAlignLastHeader = false,
 }: {
   headers?: string[];
@@ -171,6 +173,13 @@ export function TableShell({
   className?: string;
   /** Desktop column count. Defaults to `headers.length` (falls back to 4). */
   columns?: number;
+  /**
+   * Optional Tailwind grid classes for header + row layout.
+   * When set, overrides the default `sm:grid-cols-N` from `columns`.
+   */
+  gridClassName?: string;
+  /** Extra classes for the header row (e.g. `max-sm:hidden`). */
+  headerClassName?: string;
   /** Right-align the last header (use when the last column is action buttons). */
   endAlignLastHeader?: boolean;
 }) {
@@ -185,17 +194,20 @@ export function TableShell({
           : colCount === 5
             ? "sm:grid-cols-5"
             : "sm:grid-cols-6";
+  const gridLayoutClass = gridClassName ?? `grid-cols-2 gap-3 ${smColsClass}`;
 
   return (
     <section className={`overflow-hidden rounded-xl border border-line bg-surface ${className}`}>
       {headers ? (
-        <div className={`grid grid-cols-2 gap-3 border-b border-line bg-[#fbf9fa] px-4 py-2.5 ${smColsClass}`}>
+        <div
+          className={`grid border-b border-line bg-[#fbf9fa] px-4 py-2.5 ${gridLayoutClass} ${headerClassName}`}
+        >
           {headers.map((header, index) => {
             const isLast = index === headers.length - 1;
             return (
               <span
                 key={`${header}-${index}`}
-                className={`text-xs font-medium text-sub ${endAlignLastHeader && isLast ? "sm:text-right" : ""}`}
+                className={`min-w-0 truncate text-xs font-medium text-sub ${endAlignLastHeader && isLast ? "sm:text-right" : ""}`}
               >
                 {header}
               </span>

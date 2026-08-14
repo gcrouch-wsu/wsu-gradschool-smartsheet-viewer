@@ -69,6 +69,7 @@ export function AdminSectionNav({ active, onSelect }: AdminSectionNavProps) {
               aria-selected={isActive}
               onClick={() => onSelect(section.id)}
               className={pillClass(isActive)}
+              data-tour={section.id === "webhooks" ? "fm-webhooks-tab" : undefined}
             >
               {section.icon}
               {section.label}

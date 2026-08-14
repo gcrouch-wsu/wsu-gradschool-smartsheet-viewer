@@ -137,7 +137,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
       }
       actions={
         canSearch ? (
-          <form onSubmit={runSearch} className="relative w-full sm:w-56">
+          <form onSubmit={runSearch} className="relative w-full sm:w-56" data-tour="fse-shell-search">
             <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" />
             <input
               type="search"

@@ -4,6 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ContactChangeRequest } from "@/lib/forms/store/contact-change-requests";
 import { AttachmentPreviewDialog } from "@/components/forms/tracker/AttachmentPreviewDialog";
 import type { TrackerAttachment } from "@/components/forms/tracker/types";
+import {
+  STUDENT_DETAIL_TOUR_STEPS,
+  STUDENT_DETAIL_TOUR_STORAGE_KEY,
+} from "@/components/forms/student/student-tours";
+import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 type StageOption = {
   name: string;
@@ -45,6 +52,15 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState("");
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
+  const tour = useProductTour(STUDENT_DETAIL_TOUR_STORAGE_KEY, { enabled: !loading && !error });
+
+  useEffect(() => {
+    if (!tour.open) return;
+    const step = STUDENT_DETAIL_TOUR_STEPS[tour.stepIndex];
+    if (step?.tab && step.tab !== activeTab) {
+      setActiveTab(step.tab);
+    }
+  }, [tour.open, tour.stepIndex, activeTab]);
 
   const rowPath = `/api/forms/student/sheets/${encodeURIComponent(sheetId)}/rows/${encodeURIComponent(rowId)}`;
   const reroutePath = `${rowPath}/contact-change`;
@@ -131,11 +147,17 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <TourHowToButton onClick={tour.startTour} />
+      </div>
       {loading ? <p className="rounded-xl border border-line bg-white px-5 py-6 text-sm text-sub">Loading submission…</p> : null}
       {error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</p> : null}
       {!loading && !error ? (
         <>
-          <div className="grid grid-cols-3 border-b border-line" role="tablist" aria-label="Submission sections">
+          <div data-tour="sd-heading" className="sr-only">
+            Submission detail for {sheetName || "this row"}
+          </div>
+          <div className="grid grid-cols-3 border-b border-line" role="tablist" aria-label="Submission sections" data-tour="sd-tabs">
             {([
               ["details", "Submission details"],
               ["reroute", "Contact reroute"],
@@ -159,7 +181,7 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
           </div>
 
           {activeTab === "details" ? (
-          <section className="rounded-xl border border-line bg-surface" role="tabpanel">
+          <section className="rounded-xl border border-line bg-surface" role="tabpanel" data-tour="sd-details">
             <div className="border-b border-line px-5 py-5">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Submission detail</p>
               <h2 className="mt-1 text-xl font-semibold text-ink">{sheetName || "My submission"}</h2>
@@ -173,6 +195,7 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
                       hasGeneratedPdf ? (
                         <button
                           type="button"
+                          data-tour="sd-pdf"
                           onClick={() => setPreviewPdfName(cell.displayValue)}
                           className="text-left font-medium text-crimson underline-offset-2 hover:underline"
                         >
@@ -181,6 +204,7 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
                       ) : attachedPdf ? (
                         <button
                           type="button"
+                          data-tour="sd-pdf"
                           onClick={() => setPreviewAttachment(attachedPdf)}
                           className="text-left font-medium text-crimson underline-offset-2 hover:underline"
                         >
@@ -203,7 +227,7 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
           ) : null}
 
           {activeTab === "reroute" ? (
-          <section className="rounded-xl border border-line bg-surface p-5">
+          <section className="rounded-xl border border-line bg-surface p-5" data-tour="sd-reroute">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Contact reroute</p>
             <h2 className="mt-1 text-xl font-semibold text-ink">Propose a contact change</h2>
             <p className="mt-1 text-sm text-sub">
@@ -252,7 +276,7 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
           ) : null}
 
           {activeTab === "history" ? (
-          <section className="rounded-xl border border-line bg-surface">
+          <section className="rounded-xl border border-line bg-surface" data-tour="sd-history">
             <div className="border-b border-line px-5 py-5">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Request history</p>
               <h2 className="mt-1 text-xl font-semibold text-ink">Reroute status</h2>
@@ -290,6 +314,14 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
         rowId={Number(rowId)}
         attachmentPreviewPath={previewPdfName ? pdfPreviewPath : undefined}
         attachmentApiBasePath={previewAttachment ? attachmentsPath : undefined}
+      />
+      <ProductTour
+        open={tour.open}
+        steps={STUDENT_DETAIL_TOUR_STEPS}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
       />
     </div>
   );

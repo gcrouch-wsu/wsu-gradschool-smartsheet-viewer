@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { approvalTone, approvalToneLabel, type ApprovalTone } from "@/lib/forms/approval-style";
 import { canTriggerResendForColumn } from "@/lib/forms/resend";
@@ -8,6 +8,8 @@ import { IconRefresh, IconSearch } from "@/components/forms/icons";
 import { FormSheetPicker } from "@/components/forms/sheet/FormSheetPicker";
 import { FORMS_SHEET_TOUR_STEPS, FORMS_SHEET_TOUR_STORAGE_KEY } from "@/components/forms/sheet/forms-sheet-tour";
 import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 export interface SheetGridColumn {
   id: number;
@@ -166,41 +168,7 @@ export function SheetGridView({
   const [highlightApprovals, setHighlightApprovals] = useState(true);
   const [columnFilter, setColumnFilter] = useState<ColumnFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [tourOpen, setTourOpen] = useState(false);
-  const [tourStepIndex, setTourStepIndex] = useState(0);
-
-  const markTourSeen = useCallback(() => {
-    try {
-      window.localStorage.setItem(FORMS_SHEET_TOUR_STORAGE_KEY, "1");
-    } catch {
-      // ignore storage failures (private mode, etc.)
-    }
-  }, []);
-
-  const closeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const completeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const startTour = useCallback(() => {
-    setTourStepIndex(0);
-    setTourOpen(true);
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(FORMS_SHEET_TOUR_STORAGE_KEY)) return;
-    } catch {
-      return;
-    }
-    const timer = window.setTimeout(() => startTour(), 400);
-    return () => window.clearTimeout(timer);
-  }, [startTour]);
+  const tour = useProductTour(FORMS_SHEET_TOUR_STORAGE_KEY);
 
   const stageColumns = useMemo(
     () => columns.filter((c) => c.workflowRole === "stage" || c.workflowRole === "overall"),
@@ -281,13 +249,7 @@ export function SheetGridView({
           </p>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
-          <button
-            type="button"
-            onClick={startTour}
-            className="shrink-0 rounded-full border border-[color:var(--crimson-line)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
-          >
-            How to use
-          </button>
+          <TourHowToButton onClick={tour.startTour} />
           {forms && forms.length > 0 && onSheetChange && selectedSheetId ? (
             <div data-tour="fs-picker" className="min-w-0 flex-1 sm:w-64 sm:flex-none">
               <FormSheetPicker
@@ -634,12 +596,12 @@ export function SheetGridView({
       </div>
 
       <ProductTour
-        open={tourOpen}
+        open={tour.open}
         steps={FORMS_SHEET_TOUR_STEPS}
-        stepIndex={tourStepIndex}
-        onStepIndexChange={setTourStepIndex}
-        onClose={closeTour}
-        onComplete={completeTour}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
       />
     </div>
   );

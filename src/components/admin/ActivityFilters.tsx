@@ -24,13 +24,14 @@ export function ActivityFilters({
   }
 
   return (
-    <form onSubmit={applyFilters} className="flex flex-wrap gap-2">
+    <form onSubmit={applyFilters} className="flex flex-wrap gap-2" data-tour="aa-filters">
       <input
         type="text"
         placeholder="Filter by actor id"
         value={actorId}
         onChange={(e) => setActorId(e.target.value)}
         className="rounded-lg border border-line-strong px-3 py-2 text-sm"
+        data-tour="aa-actor"
       />
       <input
         type="text"
@@ -38,6 +39,7 @@ export function ActivityFilters({
         value={resourceType}
         onChange={(e) => setResourceType(e.target.value)}
         className="rounded-lg border border-line-strong px-3 py-2 text-sm"
+        data-tour="aa-resource"
       />
       <button type="submit" className="rounded-lg bg-crimson px-4 py-2 text-sm font-medium text-white">
         Apply

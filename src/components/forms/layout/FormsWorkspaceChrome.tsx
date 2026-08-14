@@ -40,6 +40,7 @@ export function FormsWorkspaceChrome({
         eyebrow="Forms workspace"
         title="Form administration"
         description="Sheet sources from the shared Admin Sources catalog. Use a form in grid/builder; publish for public submit."
+        dataTour="fm-heading"
         actions={actions}
       />
 

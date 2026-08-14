@@ -1,5 +1,10 @@
 import { ContactReroutesManager } from "@/components/admin/ContactReroutesManager";
+import {
+  REROUTES_TOUR_STEPS,
+  REROUTES_TOUR_STORAGE_KEY,
+} from "@/components/admin/tours/reroutes-tour";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 
 export default async function AdminReroutesPage({
@@ -23,6 +28,10 @@ export default async function AdminReroutesPage({
         eyebrow="Approval workflow"
         title="Contact reroutes"
         description="Programs Team reviews proposed changes to pending approver name/email contacts. Until approved, Smartsheet is not updated and the new approver is not notified."
+        dataTour="ar-heading"
+        actions={
+          <ProductTourControls storageKey={REROUTES_TOUR_STORAGE_KEY} steps={REROUTES_TOUR_STEPS} />
+        }
       />
       <ContactReroutesManager
         page={Number.isFinite(page) ? page : 1}

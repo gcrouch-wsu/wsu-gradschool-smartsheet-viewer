@@ -29,6 +29,8 @@ export function AdminDataTable<T>({
   basePath,
   pageSize = ADMIN_TABLE_PAGE_SIZE,
   columns,
+  gridClassName,
+  headerClassName,
   endAlignLastHeader = false,
   empty,
   getRowKey,
@@ -43,6 +45,10 @@ export function AdminDataTable<T>({
   basePath: string;
   pageSize?: number;
   columns?: number;
+  /** Optional Tailwind grid classes shared by header + rows (overrides equal `sm:grid-cols-N`). */
+  gridClassName?: string;
+  /** Extra classes for the header row (e.g. `max-sm:hidden`). */
+  headerClassName?: string;
   endAlignLastHeader?: boolean;
   empty: ReactNode;
   getRowKey: (item: T) => string;
@@ -60,6 +66,7 @@ export function AdminDataTable<T>({
           : colCount === 5
             ? "sm:grid-cols-5"
             : "sm:grid-cols-6";
+  const gridLayoutClass = gridClassName ?? `grid-cols-2 gap-3 ${smColsClass}`;
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(totalPages, Math.max(1, page));
@@ -73,6 +80,8 @@ export function AdminDataTable<T>({
     <TableShell
       headers={headers}
       columns={colCount}
+      gridClassName={gridLayoutClass}
+      headerClassName={headerClassName}
       endAlignLastHeader={endAlignLastHeader}
       className={className}
     >
@@ -84,7 +93,7 @@ export function AdminDataTable<T>({
             {pageItems.map((item) => (
               <div
                 key={getRowKey(item)}
-                className={`grid grid-cols-2 gap-3 px-5 py-4 transition hover:bg-[#fdfafb] ${smColsClass} sm:items-center`}
+                className={`grid px-5 py-4 transition hover:bg-[#fdfafb] ${gridLayoutClass} sm:items-start`}
               >
                 {renderRow(item)}
               </div>

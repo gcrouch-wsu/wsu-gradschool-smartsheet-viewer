@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
 import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
 import { SubmissionFormView } from "@/components/forms/submission/SubmissionFormView";
 import { IconPlus } from "@/components/forms/icons";
 import type { FormFieldDefinition } from "@/lib/forms/form-field-config";
@@ -20,6 +21,7 @@ import {
   FORM_BUILDER_TOUR_STEPS,
   FORM_BUILDER_TOUR_STORAGE_KEY,
 } from "@/components/forms/builder/form-builder-tour";
+import { useProductTour } from "@/hooks/useProductTour";
 import { richTextPlainText } from "@/lib/rendering";
 
 const inputClass =
@@ -1083,47 +1085,12 @@ export function FormBuilderView() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [mobileRailOpen, setMobileRailOpen] = useState(false);
-  const [tourOpen, setTourOpen] = useState(false);
-  const [tourStepIndex, setTourStepIndex] = useState(0);
-
-  const markTourSeen = useCallback(() => {
-    try {
-      window.localStorage.setItem(FORM_BUILDER_TOUR_STORAGE_KEY, "1");
-    } catch {
-      // ignore storage failures
-    }
-  }, []);
-
-  const closeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const completeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const startTour = useCallback(() => {
-    setTourStepIndex(0);
-    setTourOpen(true);
-  }, []);
-
-  useEffect(() => {
-    if (!builder.state) return;
-    try {
-      if (window.localStorage.getItem(FORM_BUILDER_TOUR_STORAGE_KEY)) return;
-    } catch {
-      return;
-    }
-    const timer = window.setTimeout(() => startTour(), 400);
-    return () => window.clearTimeout(timer);
-  }, [startTour, builder.state]);
+  const tour = useProductTour(FORM_BUILDER_TOUR_STORAGE_KEY, { enabled: Boolean(builder.state) });
 
   // Keep mode / panels in sync with the active tour step.
   useEffect(() => {
-    if (!tourOpen) return;
-    const step = FORM_BUILDER_TOUR_STEPS[tourStepIndex];
+    if (!tour.open) return;
+    const step = FORM_BUILDER_TOUR_STEPS[tour.stepIndex];
     if (!step) return;
     if (step.mode && step.mode !== mode) {
       setMode(step.mode);
@@ -1132,19 +1099,19 @@ export function FormBuilderView() {
     if (step.openRules) setRulesOpen(true);
     if (step.railTab) {
       setRailTab(step.railTab);
-      // Desktop rail is always visible; open mobile drawer when needed for the Add palette step.
       if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
         setMobileRailOpen(true);
       }
     }
-  }, [tourOpen, tourStepIndex, mode]);
+  }, [tour.open, tour.stepIndex, mode]);
 
   useEffect(() => {
-    if (tourOpen) return;
+    if (tour.open) return;
     if (builder.selectedTitle) {
       setRailTab("field");
     }
-  }, [builder.selectedTitle, tourOpen]);
+  }, [builder.selectedTitle, tour.open]);
+
   useEffect(() => {
     if (builder.state?.conditionalLogic.length) {
       setRulesOpen(true);
@@ -1246,13 +1213,7 @@ export function FormBuilderView() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={startTour}
-            className="rounded-full border border-[color:var(--crimson-line)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
-          >
-            How to use
-          </button>
+          <TourHowToButton onClick={tour.startTour} />
           <ModeToggle mode={mode} onChange={setMode} />
           {builder.state.formPublic && builder.state.publicUrl ? (
             <Link href={builder.state.publicUrl} target="_blank" rel="noreferrer" className={secondaryBtn}>
@@ -1445,12 +1406,12 @@ export function FormBuilderView() {
       ) : null}
 
       <ProductTour
-        open={tourOpen}
+        open={tour.open}
         steps={FORM_BUILDER_TOUR_STEPS}
-        stepIndex={tourStepIndex}
-        onStepIndexChange={setTourStepIndex}
-        onClose={closeTour}
-        onComplete={completeTour}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
       />
     </div>
   );

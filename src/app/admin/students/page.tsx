@@ -1,6 +1,11 @@
 import { resolveAdminTablePage } from "@/components/admin/AdminDataTable";
+import {
+  STUDENTS_TOUR_STEPS,
+  STUDENTS_TOUR_STORAGE_KEY,
+} from "@/components/admin/tours/students-tour";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listStudentUsers } from "@/lib/forms/student-users";
 import { ensureStudentAccountsMigrated } from "@/lib/forms/migrate-student-accounts";
@@ -38,6 +43,10 @@ export default async function AdminStudentsPage({
         eyebrow="Admin builder"
         title="Students"
         description="Password accounts for the student portal (/forms/my). Separate from contributor editing accounts."
+        dataTour="ast-heading"
+        actions={
+          <ProductTourControls storageKey={STUDENTS_TOUR_STORAGE_KEY} steps={STUDENTS_TOUR_STEPS} />
+        }
       />
 
       {dbError ? (

@@ -68,7 +68,10 @@ export function AddSheetCard({
       : "";
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+    <div
+      className="flex h-full flex-col rounded-xl border border-[color:var(--wsu-border)] bg-white p-4"
+      data-tour="fm-add-sheet"
+    >
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Add existing sheet</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
         {sheetsLoading

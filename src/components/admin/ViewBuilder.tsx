@@ -42,6 +42,8 @@ import {
   VIEW_BUILDER_TOUR_STORAGE_KEY,
 } from "./view-builder";
 import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 export function ViewBuilder({
   initialView,
@@ -626,8 +628,7 @@ export function ViewBuilder({
 
   const [activeTab, setActiveTab] = useState<ViewBuilderTab>("setup");
   const [lastAppliedTemplateId, setLastAppliedTemplateId] = useState<string | null>(null);
-  const [tourOpen, setTourOpen] = useState(false);
-  const [tourStepIndex, setTourStepIndex] = useState(0);
+  const tour = useProductTour(VIEW_BUILDER_TOUR_STORAGE_KEY);
   const [previewData, setPreviewData] = useState<{
     resolvedView: ResolvedView;
     warnings: string[];
@@ -758,48 +759,14 @@ export function ViewBuilder({
 
   const previewHref = !isNew && view.id ? `/admin/views/${view.id}/preview` : null;
 
-  const markTourSeen = useCallback(() => {
-    try {
-      window.localStorage.setItem(VIEW_BUILDER_TOUR_STORAGE_KEY, "1");
-    } catch {
-      // ignore storage failures (private mode, etc.)
-    }
-  }, []);
-
-  const closeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const completeTour = useCallback(() => {
-    markTourSeen();
-    setTourOpen(false);
-  }, [markTourSeen]);
-
-  const startTour = useCallback(() => {
-    setTourStepIndex(0);
-    setTourOpen(true);
-  }, []);
-
-  // First visit: auto-open the tour once.
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(VIEW_BUILDER_TOUR_STORAGE_KEY)) return;
-    } catch {
-      return;
-    }
-    const timer = window.setTimeout(() => startTour(), 400);
-    return () => window.clearTimeout(timer);
-  }, [startTour]);
-
   // Keep the builder tab in sync with the active tour step.
   useEffect(() => {
-    if (!tourOpen) return;
-    const step = VIEW_BUILDER_TOUR_STEPS[tourStepIndex];
+    if (!tour.open) return;
+    const step = VIEW_BUILDER_TOUR_STEPS[tour.stepIndex];
     if (step?.tab && step.tab !== activeTab) {
       setActiveTab(step.tab);
     }
-  }, [tourOpen, tourStepIndex, activeTab]);
+  }, [tour.open, tour.stepIndex, activeTab]);
 
   return (
     <div className="space-y-6">
@@ -815,13 +782,7 @@ export function ViewBuilder({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={startTour}
-              className="rounded-full border border-[color:var(--crimson-line)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)]"
-            >
-              How to use
-            </button>
+            <TourHowToButton onClick={tour.startTour} />
             {!isNew && (
               <button
                 type="button"
@@ -1024,12 +985,12 @@ export function ViewBuilder({
       </section>
 
       <ProductTour
-        open={tourOpen}
+        open={tour.open}
         steps={VIEW_BUILDER_TOUR_STEPS}
-        stepIndex={tourStepIndex}
-        onStepIndexChange={setTourStepIndex}
-        onClose={closeTour}
-        onComplete={completeTour}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
       />
     </div>
   );

@@ -2,7 +2,12 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  FORMS_SEARCH_TOUR_STEPS,
+  FORMS_SEARCH_TOUR_STORAGE_KEY,
+} from "@/components/forms/search/forms-search-tour";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
 
 interface Result {
   objectId: number;
@@ -30,8 +35,10 @@ function SearchContent() {
   }, [q]);
 
   return (
-    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-5 shadow-sm">
-      <h2 className="text-base font-medium text-[color:var(--wsu-ink)]">Results for “{q}”</h2>
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-5 shadow-sm" data-tour="fse-results">
+      <h2 className="text-base font-medium text-[color:var(--wsu-ink)]" data-tour="fse-query">
+        Results for “{q}”
+      </h2>
       {error ? <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div> : null}
       {!results ? (
         <p className="mt-4 text-sm text-[color:var(--wsu-muted)]">Searching…</p>
@@ -61,6 +68,10 @@ export default function SearchPage() {
         eyebrow="Forms workspace"
         title="Search"
         description="Find submissions and sheets across your Smartsheet account."
+        dataTour="fse-heading"
+        actions={
+          <ProductTourControls storageKey={FORMS_SEARCH_TOUR_STORAGE_KEY} steps={FORMS_SEARCH_TOUR_STEPS} />
+        }
       />
       <Suspense
         fallback={

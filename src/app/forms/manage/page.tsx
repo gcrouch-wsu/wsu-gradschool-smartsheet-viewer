@@ -8,12 +8,19 @@ import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
 import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
 import { DuplicateFormModal } from "@/components/forms/admin/DuplicateFormModal";
+import {
+  FORMS_MANAGE_TOUR_STEPS,
+  FORMS_MANAGE_TOUR_STORAGE_KEY,
+} from "@/components/forms/admin/forms-manage-tour";
 import { FormsTable } from "@/components/forms/admin/FormsTable";
 import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { WebhooksCard, type WebhookInfo } from "@/components/forms/admin/WebhooksCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { IconPlus } from "@/components/forms/icons";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { ProductTour } from "@/components/ui/ProductTour";
+import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useProductTour } from "@/hooks/useProductTour";
 
 interface FormEntry {
   id: string;
@@ -113,6 +120,7 @@ function ManagePageContent() {
   const [duplicateName, setDuplicateName] = useState("");
   const [duplicateError, setDuplicateError] = useState("");
   const [duplicating, setDuplicating] = useState(false);
+  const tour = useProductTour(FORMS_MANAGE_TOUR_STORAGE_KEY);
 
   const duplicateSource = useMemo(
     () => forms.find((f) => String(f.id) === String(duplicateSourceId ?? "")) ?? null,
@@ -500,10 +508,18 @@ function ManagePageContent() {
       activeTab={tab}
       onSelectTab={handleSectionSelect}
       actions={
-        <button type="button" onClick={openCreateModal} className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}>
-          <IconPlus className="h-4 w-4" />
-          Create form
-        </button>
+        <>
+          <TourHowToButton onClick={tour.startTour} />
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}
+            data-tour="fm-create"
+          >
+            <IconPlus className="h-4 w-4" />
+            Create form
+          </button>
+        </>
       }
     >
       {formsError ? <Alert text={formsError} /> : null}
@@ -607,6 +623,15 @@ function ManagePageContent() {
         danger
         busy={webhookDeletingId != null}
         busyLabel="Deleting…"
+      />
+
+      <ProductTour
+        open={tour.open}
+        steps={FORMS_MANAGE_TOUR_STEPS}
+        stepIndex={tour.stepIndex}
+        onStepIndexChange={tour.setStepIndex}
+        onClose={tour.closeTour}
+        onComplete={tour.completeTour}
       />
     </FormsWorkspaceChrome>
   );

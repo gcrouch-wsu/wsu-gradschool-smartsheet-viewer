@@ -1,6 +1,11 @@
 import { resolveAdminTablePage } from "@/components/admin/AdminDataTable";
+import {
+  CONTRIBUTORS_TOUR_STEPS,
+  CONTRIBUTORS_TOUR_STORAGE_KEY,
+} from "@/components/admin/tours/contributors-tour";
 import { EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listContributorUsers } from "@/lib/contributor-auth";
 import { ensureStudentAccountsMigrated } from "@/lib/forms/migrate-student-accounts";
@@ -38,6 +43,10 @@ export default async function AdminContributorsPage({
         eyebrow="Admin builder"
         title="Contributors"
         description="Password accounts for contributor editing on published views. Student portal accounts are managed separately under Students."
+        dataTour="ac-heading"
+        actions={
+          <ProductTourControls storageKey={CONTRIBUTORS_TOUR_STORAGE_KEY} steps={CONTRIBUTORS_TOUR_STEPS} />
+        }
       />
 
       {dbError ? (

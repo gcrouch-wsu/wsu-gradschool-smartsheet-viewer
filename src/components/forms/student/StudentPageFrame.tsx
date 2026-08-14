@@ -7,12 +7,16 @@ export function StudentPageFrame({
   eyebrow = "Graduate School",
   title,
   description,
+  actions,
+  headingTourId,
   children,
 }: {
   breadcrumbs: BreadcrumbItem[];
   eyebrow?: string;
   title: string;
   description?: string;
+  actions?: ReactNode;
+  headingTourId?: string;
   children: ReactNode;
 }) {
   return (
@@ -21,10 +25,13 @@ export function StudentPageFrame({
       <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <Breadcrumbs items={breadcrumbs} />
-          <header className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">{eyebrow}</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
-            {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">{description}</p> : null}
+          <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div data-tour={headingTourId}>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">{eyebrow}</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
+              {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">{description}</p> : null}
+            </div>
+            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
           </header>
           {children}
         </div>
