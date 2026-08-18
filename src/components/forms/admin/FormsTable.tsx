@@ -8,7 +8,7 @@ export interface FormEntryRow {
   id: string;
   name: string;
   createdAt: string;
-  source: "template" | "scratch" | "imported" | "sample";
+  source: "template" | "scratch" | "imported" | "sample" | "excel";
   slug?: string;
   public?: boolean;
   publishedAt?: string;
@@ -20,6 +20,7 @@ const SOURCE_LABEL: Record<FormEntryRow["source"], string> = {
   scratch: "From scratch",
   imported: "Added",
   sample: "Sample",
+  excel: "From Excel",
 };
 
 const iconBtnClass =

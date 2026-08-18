@@ -78,7 +78,7 @@ export interface FormEntry {
   id: string;
   name: string;
   createdAt: string;
-  source: "template" | "scratch" | "imported" | "sample";
+  source: "template" | "scratch" | "imported" | "sample" | "excel";
   /** Public path segment for `/f/[slug]`. */
   slug?: string;
   /** When true, anonymous users may load/submit via the public URL. Independent of activeSheetId. */
