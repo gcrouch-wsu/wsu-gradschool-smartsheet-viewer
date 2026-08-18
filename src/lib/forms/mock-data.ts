@@ -10,6 +10,7 @@ interface Col {
   type: string;
   options?: string[];
   primary?: boolean;
+  formula?: string;
 }
 interface Cell {
   columnId: number;
