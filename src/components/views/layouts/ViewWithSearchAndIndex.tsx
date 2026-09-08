@@ -8,6 +8,7 @@ import { ContributorProvider } from "@/components/views/contributor/ContributorC
 import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
 import { EditRowDrawer } from "@/components/views/contributor/EditRowDrawer";
 import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
 import { describeResolvedField, getIndexText } from "@/components/views/layouts/layout-utils";
 import {
@@ -323,6 +324,7 @@ export function ViewWithSearchAndIndex({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <NotificationBell />
               {printHref ? (
                 <Link href={printHref} className="link-pill-muted px-3 py-1.5 text-sm">
                   Print / PDF

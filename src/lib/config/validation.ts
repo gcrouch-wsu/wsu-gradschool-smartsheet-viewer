@@ -98,6 +98,8 @@ const FILTER_OPERATORS: FilterOperator[] = [
   "not_in",
   "is_empty",
   "not_empty",
+  "is_after",
+  "is_before",
 ];
 const DATE_STYLES = ["full", "long", "medium", "short"] as const;
 const TRANSFORM_OPS = [

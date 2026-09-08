@@ -39,6 +39,7 @@ interface SheetOption {
 }
 
 interface Rule {
+  id?: number | string;
   name?: string;
   enabled?: boolean;
   action?: { type?: string; recipients?: { email?: string; recipientColumnId?: number }[] };
@@ -422,6 +423,47 @@ function ManagePageContent() {
     }
   }
 
+  async function setAutomationEnabled(ruleId: string, enabled: boolean) {
+    setAutoLoading(true);
+    setFormsError("");
+    try {
+      const r = await fetch(`/api/forms/platform/automations/${ruleId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Could not update automation.");
+      await loadAutomations();
+    } catch (e: unknown) {
+      setFormsError(e instanceof Error ? e.message : "Could not update automation.");
+      setAutoLoading(false);
+    }
+  }
+
+  async function setAllAutomations(enabled: boolean) {
+    const message = enabled
+      ? "Turn listed Smartsheet automations back on for this sheet?"
+      : "Turn off listed Smartsheet automations? Smartsheet emails for those rules will stop. In-app workflows and grid Approve/Decline keep running. Rules are disabled, not deleted.";
+    if (!window.confirm(message)) return;
+    setAutoLoading(true);
+    setFormsError("");
+    try {
+      const r = await fetch("/api/forms/platform/automations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || d.message || "Could not update automations.");
+      if (d.notice) setFormsError(d.notice);
+      await loadAutomations();
+    } catch (e: unknown) {
+      setFormsError(e instanceof Error ? e.message : "Could not update automations.");
+      setAutoLoading(false);
+    }
+  }
+
   async function loadWebhooks(opts?: { silent?: boolean }) {
     if (!opts?.silent) setWebhookRefreshing(true);
     try {
@@ -565,6 +607,8 @@ function ManagePageContent() {
               autoNotice={autoNotice}
               autoLoading={autoLoading}
               onLoad={loadAutomations}
+              onSetEnabled={(id, enabled) => void setAutomationEnabled(id, enabled)}
+              onSetAll={(enabled) => void setAllAutomations(enabled)}
             />
           </div>
         </div>

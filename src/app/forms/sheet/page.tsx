@@ -136,10 +136,11 @@ function SheetViewPageContent() {
       if (formsReady && forms.length === 0) setLoading(false);
       return;
     }
-    setSelectedRowId(null);
+    const rowFromUrl = Number(searchParams.get("rowId") ?? "");
+    setSelectedRowId(Number.isFinite(rowFromUrl) && rowFromUrl > 0 ? rowFromUrl : null);
     setNotice("");
     loadSheet();
-  }, [selectedSheetId, loadSheet, formsReady, forms.length]);
+  }, [selectedSheetId, loadSheet, formsReady, forms.length, searchParams]);
 
   // Live updates only when Smartsheet posts a webhook for the selected sheet.
   useEffect(() => {

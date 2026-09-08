@@ -556,7 +556,11 @@ export function SheetGridView({
                             <button
                               type="button"
                               disabled={resendBusyRowId === row.id}
-                              title={`Resend / re-trigger automation for ${col.title}`}
+                              title={
+                                resendBusyRowId === row.id
+                                  ? "Sending…"
+                                  : `Resend only re-triggers Smartsheet automations. If those rules are turned off, this will not send email. ${col.title}`
+                              }
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void onResend?.(row, col);

@@ -13,6 +13,7 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
     if (pathname.startsWith("/forms/manage")) return [dashboard, forms, { href: null, label: "Manage" }];
     if (pathname.startsWith("/forms/builder")) return [dashboard, forms, { href: null, label: "Builder" }];
     if (pathname.startsWith("/forms/search")) return [dashboard, forms, { href: null, label: "Search" }];
+    if (pathname.startsWith("/forms/workflows")) return [dashboard, forms, { href: null, label: "Workflows" }];
     return [dashboard, forms];
   }
 

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function StudentPageFrame({
   breadcrumbs,
@@ -31,7 +32,7 @@ export function StudentPageFrame({
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
               {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">{description}</p> : null}
             </div>
-            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : <NotificationBell />}
           </header>
           {children}
         </div>

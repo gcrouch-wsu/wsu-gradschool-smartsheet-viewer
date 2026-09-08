@@ -3,6 +3,7 @@
 import { IconRefresh } from "@/components/forms/icons";
 
 interface Rule {
+  id?: number | string;
   name?: string;
   enabled?: boolean;
 }
@@ -12,28 +13,29 @@ interface AutomationsCardProps {
   autoNotice: string;
   autoLoading: boolean;
   onLoad: () => void;
+  onSetEnabled?: (ruleId: string, enabled: boolean) => void;
+  onSetAll?: (enabled: boolean) => void;
 }
 
-export function AutomationsCard({ rules, autoNotice, autoLoading, onLoad }: AutomationsCardProps) {
+export function AutomationsCard({
+  rules,
+  autoNotice,
+  autoLoading,
+  onLoad,
+  onSetEnabled,
+  onSetAll,
+}: AutomationsCardProps) {
   const hasRules = rules && rules.length > 0;
+  const anyEnabled = Boolean(rules?.some((rule) => rule.enabled !== false));
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
       <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Automations</h2>
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
-        Approval emails are sent by Smartsheet, not this app. The recipient is whoever’s email was entered
-        on the form (a Contact column on the row). Configure Approval Request workflows on the sheet in
-        Smartsheet; this card only lists API-visible single-action rules.
+        Smartsheet automations stay on until you turn them off. In-app workflows do not replace them. This card
+        lists API-visible single-action rules. Turning a rule off disables it; it does not delete it. Multi-step
+        rules may still need a one-time change in Smartsheet.
       </p>
-
-      <ol className="mt-3 list-decimal space-y-1 pl-4 text-xs text-[color:var(--wsu-muted)]">
-        <li>Put a Contact (or Email) field on the public form for the approver.</li>
-        <li>
-          In Smartsheet → Automation, request approval from <span className="font-medium text-[color:var(--wsu-ink)]">contacts in that column</span>.
-        </li>
-        <li>Prefer cloning a template that already has those rules, or add rules on the new sheet afterward.</li>
-        <li>Load below and confirm rules show as enabled.</li>
-      </ol>
 
       <div className="mt-4 flex-1">
         {!hasRules ? (
@@ -44,18 +46,29 @@ export function AutomationsCard({ rules, autoNotice, autoLoading, onLoad }: Auto
           <ul className="space-y-2">
             {rules!.map((rule, i) => (
               <li
-                key={i}
-                className="flex items-center justify-between rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm"
+                key={rule.id ?? i}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm"
               >
                 <span className="truncate text-[color:var(--wsu-ink)]">{rule.name || "(unnamed rule)"}</span>
-                <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                    rule.enabled !== false
-                      ? "bg-emerald-50 text-emerald-800"
-                      : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"
-                  }`}
-                >
-                  {rule.enabled !== false ? "Enabled" : "Disabled"}
+                <span className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      rule.enabled !== false
+                        ? "bg-emerald-50 text-emerald-800"
+                        : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"
+                    }`}
+                  >
+                    {rule.enabled !== false ? "Enabled" : "Disabled"}
+                  </span>
+                  {rule.id != null && onSetEnabled ? (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-[color:var(--wsu-crimson)]"
+                      onClick={() => onSetEnabled(String(rule.id), rule.enabled === false)}
+                    >
+                      {rule.enabled === false ? "Turn on" : "Turn off"}
+                    </button>
+                  ) : null}
                 </span>
               </li>
             ))}
@@ -68,15 +81,27 @@ export function AutomationsCard({ rules, autoNotice, autoLoading, onLoad }: Auto
         ) : null}
       </div>
 
-      <button
-        type="button"
-        onClick={onLoad}
-        disabled={autoLoading}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[color:var(--wsu-border)] bg-white py-2.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
-      >
-        <IconRefresh className={`h-4 w-4 ${autoLoading ? "animate-spin" : ""}`} />
-        {autoLoading ? "Loading…" : "Load automations"}
-      </button>
+      <div className="mt-4 space-y-2">
+        {hasRules && onSetAll ? (
+          <button
+            type="button"
+            disabled={autoLoading}
+            onClick={() => onSetAll(!anyEnabled)}
+            className="w-full rounded-lg border border-[color:var(--wsu-border)] bg-white py-2.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+          >
+            {anyEnabled ? "Turn off listed Smartsheet automations" : "Turn listed Smartsheet automations back on"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onLoad}
+          disabled={autoLoading}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[color:var(--wsu-border)] bg-white py-2.5 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)] disabled:opacity-50"
+        >
+          <IconRefresh className={`h-4 w-4 ${autoLoading ? "animate-spin" : ""}`} />
+          {autoLoading ? "Loading…" : "Load automations"}
+        </button>
+      </div>
     </div>
   );
 }

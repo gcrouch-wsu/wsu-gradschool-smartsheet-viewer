@@ -27,6 +27,9 @@ const RLS_TABLES = [
   "form_contact_change_requests",
   "form_pdf_mapping",
   "audit_events",
+  "workflows",
+  "workflow_runs",
+  "user_notifications",
 ] as const;
 
 let migratePromise: Promise<void> | null = null;

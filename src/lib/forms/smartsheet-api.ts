@@ -195,6 +195,19 @@ export async function listAutomationRules(sheetId: string | number): Promise<unk
   return data.data ?? [];
 }
 
+/** Disable or re-enable a Smartsheet automation. Never deletes the rule. */
+export async function updateAutomationRule(
+  sheetId: string | number,
+  ruleId: string | number,
+  enabled: boolean,
+): Promise<unknown> {
+  if (config.demo) return mock.mockUpdateAutomationRule(ruleId, enabled);
+  return api(`/sheets/${sheetId}/automationrules/${ruleId}`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 export async function getCellHistory(
   sheetId: string | number,
   rowId: string | number,

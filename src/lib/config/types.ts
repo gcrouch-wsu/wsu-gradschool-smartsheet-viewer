@@ -21,7 +21,9 @@ export type FilterOperator =
   | "in"
   | "not_in"
   | "is_empty"
-  | "not_empty";
+  | "not_empty"
+  | "is_after"
+  | "is_before";
 
 export type RoleGroupMode = "numbered_slots" | "delimited_parallel";
 

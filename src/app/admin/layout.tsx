@@ -5,6 +5,7 @@ import { ProductShell } from "@/components/layout/ProductShell";
 import { canManageUsers, getCurrentAdminAuthResult } from "@/lib/admin-users";
 import { productNav } from "@/lib/product-navigation";
 import { AdminLogoutButton } from "./AdminLogoutButton";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       }
       actions={
         <>
+          <NotificationBell />
           <Link
             href="/instructions/admin"
             className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-3 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)] xl:flex-none xl:px-4"

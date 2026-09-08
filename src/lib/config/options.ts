@@ -131,6 +131,8 @@ export const FILTER_OPERATOR_OPTIONS: FilterOperator[] = [
   "not_in",
   "is_empty",
   "not_empty",
+  "is_after",
+  "is_before",
 ];
 export const TRANSFORM_OPTIONS = [
   "trim",

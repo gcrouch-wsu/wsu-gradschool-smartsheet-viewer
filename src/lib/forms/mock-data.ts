@@ -126,10 +126,17 @@ export function mockCopySheet(templateId: string | number, name: string) {
 
 export function mockListAutomationRules() {
   return [
-    { name: "Request Nomination from Director", enabled: true, action: { type: "REQUEST_UPDATE", recipients: [{ email: "director@wsu.edu" }] }, createdBy: { name: "Graduate School" } },
-    { name: "Send PDF to Academic Coordinator", enabled: true, action: { type: "REQUEST_UPDATE", recipients: [{ email: "coordinator@wsu.edu" }] }, createdBy: { name: "Graduate School" } },
-    { name: "Notify team on new submission", enabled: false, action: { type: "NOTIFICATION", recipients: [{ email: "team@wsu.edu" }] }, disabledReason: "NO_POTENTIAL_RECIPIENTS", createdBy: { name: "Graduate School" } },
+    { id: 101, name: "Request Nomination from Director", enabled: true, action: { type: "REQUEST_UPDATE", recipients: [{ email: "director@wsu.edu" }] }, createdBy: { name: "Graduate School" } },
+    { id: 102, name: "Send PDF to Academic Coordinator", enabled: true, action: { type: "REQUEST_UPDATE", recipients: [{ email: "coordinator@wsu.edu" }] }, createdBy: { name: "Graduate School" } },
+    { id: 103, name: "Notify team on new submission", enabled: false, action: { type: "NOTIFICATION", recipients: [{ email: "team@wsu.edu" }] }, disabledReason: "NO_POTENTIAL_RECIPIENTS", createdBy: { name: "Graduate School" } },
   ];
+}
+
+export function mockUpdateAutomationRule(ruleId: string | number, enabled: boolean) {
+  const rules = mockListAutomationRules();
+  const rule = rules.find((item) => item.id === Number(ruleId));
+  if (!rule) throw Object.assign(new Error("Automation rule not found."), { status: 404 });
+  return { ...rule, enabled };
 }
 
 function signatoryName(title: string): string {

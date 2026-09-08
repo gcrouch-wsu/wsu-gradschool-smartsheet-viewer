@@ -6,6 +6,10 @@ import {
   normalizeAdminNextPath,
 } from "@/lib/admin-auth";
 import { handleFormsMiddleware } from "@/lib/forms/forms-middleware";
+import { FORM_APPROVER_SESSION_COOKIE_NAME } from "@/lib/forms/session-cookies";
+
+const CONTRIBUTOR_SESSION_COOKIE_NAME = "smartsheets_view_contributor_session";
+const STUDENT_SESSION_COOKIE_NAME = "smartsheets_view_student_session";
 
 const PUBLIC_ADMIN_PATHS = new Set([
   "/admin/sign-in",
@@ -64,6 +68,28 @@ async function adminPrincipalOk(
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (
+    pathname === "/notifications" ||
+    pathname.startsWith("/notifications/") ||
+    pathname === "/api/notifications" ||
+    pathname.startsWith("/api/notifications/")
+  ) {
+    const signedIn = Boolean(
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value ||
+        request.cookies.get(FORM_APPROVER_SESSION_COOKIE_NAME)?.value ||
+        request.cookies.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value ||
+        request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value,
+    );
+    if (signedIn) return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+    }
+    const signInUrl = new URL("/admin/sign-in", request.url);
+    signInUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+
   const formsResult = await handleFormsMiddleware(request);
   if (formsResult) {
     return formsResult;
@@ -121,5 +147,9 @@ export const config = {
     "/admin/:path*",
     "/api/admin",
     "/api/admin/:path*",
+    "/notifications",
+    "/notifications/:path*",
+    "/api/notifications",
+    "/api/notifications/:path*",
   ],
 };

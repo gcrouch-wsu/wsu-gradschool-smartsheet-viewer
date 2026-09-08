@@ -2,6 +2,8 @@ import * as registry from "@/lib/forms/registry";
 import { recordWebhookEvent } from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { validateWebhookSecret } from "@/lib/forms/webhook-auth";
+import { evaluateWebhookEvents, parseWebhookEvent } from "@/lib/workflows/engine";
+import { after } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ export async function POST(request: Request) {
   const active = await registry.activeSheetId();
   const scopeSheetId = Number(body.scopeObjectId ?? active);
   const list = Array.isArray(events) ? events : [events];
+  const parsed = [];
 
   for (const ev of list) {
     if (!ev || typeof ev !== "object") continue;
@@ -38,6 +41,12 @@ export async function POST(request: Request) {
       (ev as { id?: unknown }).id ?? (ev as { rowId?: unknown }).rowId ?? (ev as { objectId?: unknown }).objectId ?? 0,
     );
     await recordWebhookEvent(sheetId, eventType, Number.isFinite(objectId) ? objectId : 0);
+    const workflowEvent = parseWebhookEvent(ev, sheetId);
+    if (workflowEvent) parsed.push(workflowEvent);
+  }
+
+  if (parsed.length) {
+    after(() => evaluateWebhookEvents(parsed));
   }
 
   return Response.json({ ok: true });
