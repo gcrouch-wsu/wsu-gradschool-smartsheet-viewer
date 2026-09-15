@@ -68,7 +68,7 @@ async function adminPrincipalOk(
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   if (
     pathname === "/notifications" ||
     pathname.startsWith("/notifications/") ||
@@ -95,7 +95,6 @@ export async function middleware(request: NextRequest) {
     return formsResult;
   }
 
-  const { pathname, search } = request.nextUrl;
   const isAdminApiRequest = pathname === "/api/admin" || pathname.startsWith("/api/admin/");
   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.has(pathname);
 

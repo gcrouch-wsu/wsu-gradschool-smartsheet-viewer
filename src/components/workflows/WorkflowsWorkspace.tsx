@@ -193,7 +193,7 @@ export function WorkflowsWorkspace() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${workflow.enabled ? "bg-emerald-50 text-emerald-800" : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"}`}>
-                      {workflow.enabled ? "Enabled" : "Draft — later plan or off"}
+                      {workflow.enabled ? "Enabled" : workflow.templateKind === "alert" ? "Off" : "Draft — later plan"}
                     </span>
                     <button type="button" className={secondaryBtnClass} onClick={() => editExisting(workflow)}>Edit</button>
                     {workflow.templateKind === "alert" && workflow.id ? (
