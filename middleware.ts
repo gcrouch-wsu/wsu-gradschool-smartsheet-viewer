@@ -69,6 +69,9 @@ async function adminPrincipalOk(
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   if (
     pathname === "/notifications" ||
     pathname.startsWith("/notifications/") ||
@@ -81,7 +84,7 @@ export async function middleware(request: NextRequest) {
         request.cookies.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value ||
         request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value,
     );
-    if (signedIn) return NextResponse.next();
+    if (signedIn) return NextResponse.next({ request: { headers: requestHeaders } });
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ message: "Sign in required." }, { status: 401 });
     }
@@ -99,22 +102,24 @@ export async function middleware(request: NextRequest) {
   const isPublicAdminPath = PUBLIC_ADMIN_PATHS.has(pathname);
 
   if (pathname === "/admin/sign-in" || pathname === "/admin/reset-password") {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (isPublicAdminPath) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   const auth = await adminPrincipalOk(request);
   if (auth.ok) {
-    if (auth.role === "coordinator" && !isAdminApiRequest) {
+    const onNotifications =
+      pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
+    if (auth.role === "coordinator" && !isAdminApiRequest && !onNotifications) {
       return NextResponse.redirect(new URL("/forms/sheet", request.url));
     }
     if (auth.role === "coordinator" && isAdminApiRequest) {
       return NextResponse.json({ message: "Full admin access is required." }, { status: 403 });
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (isAdminApiRequest) {

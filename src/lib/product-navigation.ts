@@ -11,7 +11,8 @@ export type ProductNavIcon =
   | "grid"
   | "manage"
   | "builder"
-  | "activity";
+  | "activity"
+  | "notifications";
 
 export interface ProductNavItem {
   href: string;
@@ -37,6 +38,9 @@ export function productNav(isAdmin: boolean, options?: { canManageUsers?: boolea
   if (options?.canManageUsers !== false) {
     items.push({ href: "/admin/users", label: "Users", icon: "admins" });
   }
+
+  // Keep Notifications last so it sits after Users on the far right.
+  items.push({ href: "/admin/notifications", label: "Notifications", icon: "notifications" });
 
   return items;
 }

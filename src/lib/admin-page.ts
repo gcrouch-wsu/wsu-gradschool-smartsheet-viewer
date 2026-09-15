@@ -4,7 +4,7 @@ import { normalizeAdminNextPath } from "@/lib/admin-auth";
 
 export async function requireAdminPageAccess(
   nextPath: string,
-  options?: { ownerOnly?: boolean; usersOnly?: boolean },
+  options?: { ownerOnly?: boolean; usersOnly?: boolean; allowCoordinator?: boolean },
 ) {
   const normalizedNextPath = normalizeAdminNextPath(nextPath);
   const result = await getCurrentAdminAuthResult();
@@ -13,7 +13,7 @@ export async function requireAdminPageAccess(
     redirect(`/admin/sign-in?next=${encodeURIComponent(normalizedNextPath)}`);
   }
 
-  if (result.principal.role === "coordinator") {
+  if (result.principal.role === "coordinator" && !options?.allowCoordinator) {
     redirect("/forms/sheet");
   }
 

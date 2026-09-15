@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 function roleLabel(role: string) {
   if (role === "owner") return "Owner";
   if (role === "programs_team") return "Programs Team";
+  if (role === "coordinator") return "Coordinator";
   return "Admin";
 }
 
@@ -23,15 +25,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <>{children}</>;
   }
 
-  if (principal.role === "coordinator") {
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const onNotifications =
+    pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
+
+  if (principal.role === "coordinator" && !onNotifications) {
     redirect("/forms/sheet");
   }
 
   const principalLabel = principal.displayName ?? principal.username;
+  const showFullNav = principal.role !== "coordinator";
+  const coordinatorNav = [
+    { href: "/forms/sheet", label: "Sheet", icon: "grid" as const },
+    { href: "/forms/workflows", label: "Workflows", icon: "manage" as const },
+    { href: "/admin/notifications", label: "Notifications", icon: "notifications" as const }, // last, mirrors full nav
+  ];
 
   return (
     <ProductShell
-      globalNav={productNav(true, { canManageUsers: canManageUsers(principal.role) })}
+      globalNav={showFullNav ? productNav(true, { canManageUsers: canManageUsers(principal.role) }) : coordinatorNav}
       eyebrow="Washington State University"
       title="Smartsheet Workspace"
       description="Register sources, build views, manage submissions, and administer approval workflows."
@@ -51,14 +64,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       actions={
         <>
           <NotificationBell />
-          <Link
-            href="/instructions/admin"
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-3 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)] xl:flex-none xl:px-4"
-          >
-            <ToolbarIcon kind="guide" />
-            <span className="xl:hidden">Guide</span>
-            <span className="hidden xl:inline">Admin guide</span>
-          </Link>
+          {showFullNav ? (
+            <Link
+              href="/instructions/admin"
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--crimson-line)] bg-white px-3 py-2 text-[13.5px] font-medium text-crimson transition hover:bg-[var(--crimson-soft)] xl:flex-none xl:px-4"
+            >
+              <ToolbarIcon kind="guide" />
+              <span className="xl:hidden">Guide</span>
+              <span className="hidden xl:inline">Admin guide</span>
+            </Link>
+          ) : null}
           <AdminLogoutButton />
         </>
       }

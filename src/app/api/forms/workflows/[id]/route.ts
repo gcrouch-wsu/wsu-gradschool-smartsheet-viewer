@@ -1,7 +1,7 @@
 import { formsAuthErrorResponse, requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { deleteWorkflow, getWorkflow, updateWorkflow } from "@/lib/workflows/store";
-import { workflowBody } from "@/app/api/forms/workflows/route";
+import { workflowBody } from "@/lib/workflows/workflow-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
