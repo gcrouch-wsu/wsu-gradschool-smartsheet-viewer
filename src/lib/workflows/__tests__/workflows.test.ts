@@ -62,7 +62,10 @@ describe("workflow filters and recipients", () => {
       ],
       "Full Name",
     )).toBe("Jane Cougar");
-    expect(cellLabel({ objectValue: { name: "Ada Lovelace", email: "ada@wsu.edu" } })).toBe("Ada Lovelace");
+    expect(cellLabel({
+      objectValue: { name: "Ada Lovelace", email: "ada@wsu.edu" },
+      columnId: 0
+    })).toBe("Ada Lovelace");
     expect(
       renderAlertCopy({
         titleTemplate: "Update on {{Primary}}",
