@@ -20,6 +20,7 @@ const SECTIONS: NavItem[] = [
   { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/builder", label: "Builder", icon: <IconPencil className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/sheet", label: "Sheet", icon: <IconGrid className="h-3.5 w-3.5" /> },
+  { kind: "link", href: "/forms/workflows", label: "Workflows", icon: <IconWebhook className="h-3.5 w-3.5" /> },
   { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
 ];
 

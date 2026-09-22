@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { IconChevronDown, IconSearch } from "@/components/forms/icons";
 import { productNav } from "@/lib/product-navigation";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface FormsSessionInfo {
   demo: boolean;
@@ -63,7 +64,8 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   }, [sessionLoaded, session, pathname, router]);
 
   const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
-  const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
+  const onWorkflows = pathname.startsWith("/forms/workflows");
+  const canSearch = !onWorkflows && (session?.isAdmin || session?.isApprover || session?.demo);
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
     if (session.isProgramsTeam) return "Programs Team";
@@ -118,7 +120,9 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
       title="Smartsheet Workspace"
       description="Submit forms, track approvals, and manage Smartsheet workflows."
       identity={
-        <button
+        <div className="flex items-center justify-end gap-2">
+          <NotificationBell />
+          <button
           type="button"
           onClick={handleSignOut}
           disabled={signingOut}
@@ -134,6 +138,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
           </span>
           <IconChevronDown className="ml-1 h-3.5 w-3.5 text-mist" />
         </button>
+        </div>
       }
       actions={
         canSearch ? (

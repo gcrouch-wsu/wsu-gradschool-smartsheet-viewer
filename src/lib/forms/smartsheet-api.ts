@@ -237,6 +237,19 @@ export async function listAutomationRules(sheetId: string | number): Promise<unk
   return data.data ?? [];
 }
 
+/** Disable or re-enable a Smartsheet automation. Never deletes the rule. */
+export async function updateAutomationRule(
+  sheetId: string | number,
+  ruleId: string | number,
+  enabled: boolean,
+): Promise<unknown> {
+  if (config.demo) return mock.mockUpdateAutomationRule(ruleId, enabled);
+  return api(`/sheets/${sheetId}/automationrules/${ruleId}`, {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 export async function getCellHistory(
   sheetId: string | number,
   rowId: string | number,
@@ -252,6 +265,25 @@ export async function getCellHistory(
 export async function getRow(sheetId: string | number, rowId: string | number): Promise<unknown> {
   if (config.demo) return mock.mockGetRow(sheetId, rowId);
   return api(`/sheets/${sheetId}/rows/${rowId}`);
+}
+
+/** First row plus columns, for filling {{Primary}} when an alert has no specific row. */
+export async function getSheetHead(sheetId: string | number): Promise<{
+  columns: Array<{ id: number; title?: string; primary?: boolean }>;
+  row: { id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> } | null;
+}> {
+  if (config.demo) {
+    const sheet = mock.mockGetSheet(sheetId) as {
+      columns?: Array<{ id: number; title?: string; primary?: boolean }>;
+      rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
+    };
+    return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
+  }
+  const sheet = (await api(`/sheets/${sheetId}?pageSize=1`)) as {
+    columns?: Array<{ id: number; title?: string; primary?: boolean }>;
+    rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
+  };
+  return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
 }
 
 export async function updateRows(

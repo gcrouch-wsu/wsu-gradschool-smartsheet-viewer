@@ -63,6 +63,27 @@ function normalizeFilterValues(value: ViewFilterConfig["value"]) {
   return normalized ? [normalized] : [];
 }
 
+function parseComparableDate(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.toLowerCase() === "today") {
+    const now = new Date();
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function matchesDateFilter(cellValues: string[], expectedValues: string[], direction: "after" | "before") {
+  const expected = expectedValues.map(parseComparableDate).filter((value): value is number => value != null);
+  if (expected.length === 0) return false;
+  const cells = cellValues.map(parseComparableDate).filter((value): value is number => value != null);
+  if (cells.length === 0) return false;
+  return cells.some((cell) =>
+    expected.some((target) => (direction === "after" ? cell > target : cell < target)),
+  );
+}
+
 function matchesFilter(row: SmartsheetRow, filter: ViewFilterConfig) {
   const cellValues = getCellValues(getRowCell(row, filter));
   const expectedValues = normalizeFilterValues(filter.value);
@@ -84,6 +105,10 @@ function matchesFilter(row: SmartsheetRow, filter: ViewFilterConfig) {
       return cellValues.length === 0;
     case "not_empty":
       return cellValues.length > 0;
+    case "is_after":
+      return matchesDateFilter(cellValues, expectedValues, "after");
+    case "is_before":
+      return matchesDateFilter(cellValues, expectedValues, "before");
     default:
       return true;
   }

@@ -309,6 +309,12 @@ This is semantic HTML designed for browser print. It is not the same as a guaran
 
 Optional **Print / PDF grouping** (Setup) splits the print page into multiple tables when you choose a non-hidden grouping field.
 
+## In-app workflows
+
+Admins, Programs Team, and coordinators can open **Forms → Workflows** and pick a template. The Alert template posts to the in-app Notifications tab. Other templates can be saved as drafts until a later plan.
+
+Smartsheet automations keep running at the same time. When in-app alerts are ready, Forms Manage → Automations can **turn off** listed Smartsheet rules. That disables them; it does not delete them. Grid Approve/Decline is unchanged.
+
 ## Release Checklist
 
 1. Confirm environment values and database connectivity.

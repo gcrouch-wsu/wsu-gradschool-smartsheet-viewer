@@ -13,6 +13,7 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
     if (pathname.startsWith("/forms/manage")) return [dashboard, forms, { href: null, label: "Manage" }];
     if (pathname.startsWith("/forms/builder")) return [dashboard, forms, { href: null, label: "Builder" }];
     if (pathname.startsWith("/forms/search")) return [dashboard, forms, { href: null, label: "Search" }];
+    if (pathname.startsWith("/forms/workflows")) return [dashboard, forms, { href: null, label: "Workflows" }];
     return [dashboard, forms];
   }
 
@@ -26,6 +27,8 @@ function itemsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/admin/students")) return [dashboard, { href: null, label: "Students" }];
   if (pathname.startsWith("/admin/users")) return [dashboard, { href: null, label: "Users" }];
   if (pathname.startsWith("/admin/activity")) return [dashboard, { href: null, label: "Activity" }];
+  if (pathname.startsWith("/admin/notifications")) return [dashboard, { href: null, label: "Notifications" }];
+  if (pathname.startsWith("/admin/reroutes")) return [dashboard, { href: null, label: "Reroutes" }];
 
   return [{ href: null, label: "Dashboard" }];
 }

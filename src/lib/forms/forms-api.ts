@@ -3,6 +3,7 @@ import { requireAdminApiAccess } from "@/lib/admin-api";
 import { config as formsConfig } from "@/lib/forms/config";
 import { isFullAdminRole } from "@/lib/admin-users";
 import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
+import { isWorkflowAuthorRole } from "@/lib/workflows/access";
 
 export type FormsRole = "admin" | "approver" | "viewer" | "coordinator" | "programs_team";
 
@@ -140,6 +141,40 @@ export async function requireFormsAdminAccess(): Promise<FormsAccessResult | For
     isAdmin: true,
     isApprover: true,
     isCoordinator: false,
+    isProgramsTeam,
+  };
+}
+
+/** Admin, programs team, and coordinators may create in-app workflows. Approvers cannot. */
+export async function requireWorkflowAuthorAccess(): Promise<FormsAccessResult | FormsAccessError> {
+  const auth = await requireAdminApiAccess();
+  if (auth.response) {
+    return { response: auth.response };
+  }
+  const principal = auth.principal!;
+  const role = principal.role;
+  if (!isWorkflowAuthorRole(role)) {
+    return { response: forbiddenResponse("You do not have permission to create workflows.") };
+  }
+  const isCoordinator = role === "coordinator";
+  const isProgramsTeam = role === "programs_team";
+  return {
+    user: {
+      email: principal.username.includes("@") ? principal.username : principal.username,
+      name: principal.displayName ?? principal.username,
+      roles: isCoordinator
+        ? ["coordinator", "approver", "viewer"]
+        : isProgramsTeam
+          ? ["programs_team", "admin", "approver", "viewer"]
+          : ["admin", "approver", "viewer"],
+      isAdmin: !isCoordinator,
+      isApprover: true,
+      isCoordinator,
+      isProgramsTeam,
+    },
+    isAdmin: !isCoordinator,
+    isApprover: true,
+    isCoordinator,
     isProgramsTeam,
   };
 }

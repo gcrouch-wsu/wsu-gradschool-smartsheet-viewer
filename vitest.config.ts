@@ -5,14 +5,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // CJS `pg` is not reliably mocked under pool: "vmForks"; route to a test double.
+      // Route CJS `pg` to a test double so suites do not open a real pool.
       pg: path.resolve(__dirname, "./src/lib/__tests__/mocks/pg.ts"),
     },
   },
   test: {
     environment: "node",
-    // Vite 8's default module runner breaks suite collection on Windows with
-    // forks/threads ("Cannot read properties of undefined (reading 'config')").
-    pool: "vmForks",
+    // vmForks evaluates modules as scripts, so suite collection fails
+    // ("No test suite found" / Unexpected token 'export' on component imports).
+    pool: "forks",
   },
 });

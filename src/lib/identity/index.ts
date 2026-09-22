@@ -9,6 +9,7 @@ export {
   resolveApproverPrincipal,
   resolveContributorPrincipal,
   resolvePrincipal,
+  resolveStudentPrincipal,
 } from "@/lib/identity/resolve";
 export type { PlatformRole } from "@/lib/identity/roles";
 export { capabilitiesForRoles, principalHasRole, rolesFromPrincipal } from "@/lib/identity/roles";

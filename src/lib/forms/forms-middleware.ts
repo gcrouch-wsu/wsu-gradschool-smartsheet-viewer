@@ -45,6 +45,15 @@ function isFormsPath(pathname: string) {
   );
 }
 
+function isWorkflowsPath(pathname: string) {
+  return (
+    pathname === "/forms/workflows" ||
+    pathname.startsWith("/forms/workflows/") ||
+    pathname === "/api/forms/workflows" ||
+    pathname.startsWith("/api/forms/workflows/")
+  );
+}
+
 function isFormsAdminPath(pathname: string) {
   return (
     pathname === "/forms/manage" ||
@@ -149,6 +158,26 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
       return NextResponse.next();
     }
     return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+  }
+
+  // Coordinators can author workflows; approvers cannot.
+  if (isWorkflowsPath(pathname)) {
+    if (!adminOk) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ message: "Sign in required." }, { status: 401 });
+      }
+      const signInUrl = new URL("/admin/sign-in", request.url);
+      signInUrl.searchParams.set("next", normalizeFormsNextPath(pathname, search));
+      return NextResponse.redirect(signInUrl);
+    }
+    const role = await resolveAdminRole(request);
+    if (role === "owner" || role === "admin" || role === "programs_team" || role === "coordinator") {
+      return NextResponse.next();
+    }
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ message: "You do not have permission to create workflows." }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/forms/sheet", request.url));
   }
 
   if (isFormsAdminPath(pathname)) {

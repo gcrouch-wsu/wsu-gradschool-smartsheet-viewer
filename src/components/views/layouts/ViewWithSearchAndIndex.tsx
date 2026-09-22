@@ -8,6 +8,7 @@ import { ContributorProvider } from "@/components/views/contributor/ContributorC
 import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
 import { EditRowDrawer } from "@/components/views/contributor/EditRowDrawer";
 import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
 import { describeResolvedField, getIndexText } from "@/components/views/layouts/layout-utils";
 import {
@@ -19,17 +20,11 @@ import {
 } from "@/lib/campus-grouping";
 import type { LayoutType, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 import type { ContributorEditingClientConfig } from "@/lib/contributor-utils";
+import { canOpenContributorEditor } from "@/components/views/layouts/contributor-editor";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-export function canOpenContributorEditor(
-  embed: boolean,
-  contributorEmail?: string | null,
-  editingConfig?: ContributorEditingClientConfig | null,
-  adminUnrestrictedEditing?: boolean,
-) {
-  return !embed && Boolean(editingConfig && (contributorEmail || adminUnrestrictedEditing));
-}
+export { canOpenContributorEditor };
 
 function getSearchableText(view: ResolvedView, row: ResolvedViewRow): string {
   const parts: string[] = [];
@@ -323,6 +318,7 @@ export function ViewWithSearchAndIndex({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <NotificationBell />
               {printHref ? (
                 <Link href={printHref} className="link-pill-muted px-3 py-1.5 text-sm">
                   Print / PDF
