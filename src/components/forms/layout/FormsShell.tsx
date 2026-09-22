@@ -64,7 +64,8 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   }, [sessionLoaded, session, pathname, router]);
 
   const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
-  const canSearch = session?.isAdmin || session?.isApprover || session?.demo;
+  const onWorkflows = pathname.startsWith("/forms/workflows");
+  const canSearch = !onWorkflows && (session?.isAdmin || session?.isApprover || session?.demo);
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
     if (session.isProgramsTeam) return "Programs Team";

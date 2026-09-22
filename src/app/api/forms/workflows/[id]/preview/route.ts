@@ -4,6 +4,7 @@ import { getWorkflow } from "@/lib/workflows/store";
 import { insertNotifications } from "@/lib/workflows/notifications";
 import { insertWorkflowRun, updateWorkflowRun } from "@/lib/workflows/store";
 import { normalizeEmail } from "@/lib/workflows/recipients";
+import { fieldsFromCells, loadAlertRow, renderAlertCopy } from "@/lib/workflows/alert-content";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,15 +43,30 @@ export async function POST(
   });
   if (!run) return Response.json({ error: "Could not record preview." }, { status: 500 });
 
+  const loaded = await loadAlertRow(workflow.sheetId, null).catch(() => null);
+  const fields = loaded ? fieldsFromCells(loaded.columns, loaded.cells) : [];
+  const rendered = renderAlertCopy({
+    titleTemplate: workflow.action.title || workflow.name,
+    bodyTemplate: workflow.action.body || "This is a preview of your alert.",
+    fallbackTitle: workflow.name,
+    fields,
+    primaryTitle: loaded?.columns.primaryTitle ?? null,
+    includeColumnIds: workflow.action.includeColumnIds,
+    idByTitle: loaded?.columns.idByTitle ?? new Map(),
+  });
+  const rowId = loaded?.rowId ?? null;
+
   await insertNotifications({
     emails: [email],
-    title: workflow.action.title || workflow.name,
-    body: workflow.action.body || "This is a preview of your alert.",
+    title: rendered.title,
+    body: rendered.body,
     payload: {
       sheetId: workflow.sheetId,
-      rowId: null,
-      href: `/forms/sheet?sheetId=${encodeURIComponent(workflow.sheetId)}`,
-      fields: [],
+      rowId,
+      href: rowId
+        ? `/forms/sheet?sheetId=${encodeURIComponent(workflow.sheetId)}&rowId=${rowId}`
+        : `/forms/sheet?sheetId=${encodeURIComponent(workflow.sheetId)}`,
+      fields: rendered.fields,
       templateKind: "alert",
     },
     workflowId: workflow.id,

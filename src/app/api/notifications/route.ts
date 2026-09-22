@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolvePrincipal } from "@/lib/identity";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { listNotificationsForEmail } from "@/lib/workflows/notifications";
+import { refreshPlaceholderNotifications } from "@/lib/workflows/alert-content";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,5 +26,6 @@ export async function GET(request: Request) {
     return Response.json({ items: [], unreadCount: 0, available: true, notice: "This account has no email address for notifications." });
   }
   const result = await listNotificationsForEmail(email);
-  return Response.json({ ...result, available: true });
+  const items = await refreshPlaceholderNotifications(result.items);
+  return Response.json({ ...result, items, available: true });
 }

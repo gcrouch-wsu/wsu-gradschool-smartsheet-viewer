@@ -225,6 +225,25 @@ export async function getRow(sheetId: string | number, rowId: string | number): 
   return api(`/sheets/${sheetId}/rows/${rowId}`);
 }
 
+/** First row plus columns, for filling {{Primary}} when an alert has no specific row. */
+export async function getSheetHead(sheetId: string | number): Promise<{
+  columns: Array<{ id: number; title?: string; primary?: boolean }>;
+  row: { id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> } | null;
+}> {
+  if (config.demo) {
+    const sheet = mock.mockGetSheet(sheetId) as {
+      columns?: Array<{ id: number; title?: string; primary?: boolean }>;
+      rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
+    };
+    return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
+  }
+  const sheet = (await api(`/sheets/${sheetId}?pageSize=1`)) as {
+    columns?: Array<{ id: number; title?: string; primary?: boolean }>;
+    rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
+  };
+  return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
+}
+
 export async function updateRows(
   sheetId: string | number,
   rows: {

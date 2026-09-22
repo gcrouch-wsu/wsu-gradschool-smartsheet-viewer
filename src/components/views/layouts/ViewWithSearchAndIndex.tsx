@@ -20,17 +20,11 @@ import {
 } from "@/lib/campus-grouping";
 import type { LayoutType, ResolvedView, ResolvedViewRow } from "@/lib/config/types";
 import type { ContributorEditingClientConfig } from "@/lib/contributor-utils";
+import { canOpenContributorEditor } from "@/components/views/layouts/contributor-editor";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-export function canOpenContributorEditor(
-  embed: boolean,
-  contributorEmail?: string | null,
-  editingConfig?: ContributorEditingClientConfig | null,
-  adminUnrestrictedEditing?: boolean,
-) {
-  return !embed && Boolean(editingConfig && (contributorEmail || adminUnrestrictedEditing));
-}
+export { canOpenContributorEditor };
 
 function getSearchableText(view: ResolvedView, row: ResolvedViewRow): string {
   const parts: string[] = [];

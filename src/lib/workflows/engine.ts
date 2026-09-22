@@ -1,7 +1,7 @@
 import type { SmartsheetCell, SmartsheetRow, ViewFilterConfig } from "@/lib/config/types";
 import { applyViewFilters } from "@/lib/filters";
 import * as ss from "@/lib/forms/smartsheet-api";
-import { includedFields, mergeTemplate, type MergeField } from "@/lib/workflows/merge";
+import { fieldsFromCells, loadColumnIndex, renderAlertCopy } from "@/lib/workflows/alert-content";
 import { emailsFromContactCell, extractEmails, normalizeEmail } from "@/lib/workflows/recipients";
 import { insertNotifications } from "@/lib/workflows/notifications";
 import { insertWorkflowRun, listEnabledRunnableWorkflows, updateWorkflowRun } from "@/lib/workflows/store";
@@ -18,17 +18,6 @@ export interface WebhookWorkflowEvent {
 }
 
 const DELETE_EVENTS = /delet/i;
-
-function cellText(cell: { displayValue?: unknown; value?: unknown; objectValue?: unknown } | undefined): string {
-  if (!cell) return "";
-  const emails = emailsFromContactCell(cell);
-  if (emails.length) return emails.join(", ");
-  const value = cell.displayValue ?? cell.value;
-  if (value === true) return "Yes";
-  if (value === false) return "No";
-  if (value == null) return "";
-  return String(value);
-}
 
 function mapEventToTrigger(event: WebhookWorkflowEvent): TriggerEvent | null {
   if (DELETE_EVENTS.test(event.eventType) || DELETE_EVENTS.test(event.objectType ?? "")) return null;
@@ -122,9 +111,9 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
     return;
   }
 
-  const columns = await loadColumnTitles(event.sheetId);
+  const columns = await loadColumnIndex(event.sheetId);
   const filterRow = toFilterRow(rowId, raw.cells ?? []);
-  const fields = buildFields(columns, raw.cells ?? []);
+  const fields = fieldsFromCells(columns, raw.cells ?? []);
   const href = `/forms/sheet?sheetId=${encodeURIComponent(String(event.sheetId))}&rowId=${rowId}`;
 
   for (const workflow of matching) {
@@ -145,18 +134,24 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
         await updateWorkflowRun(run.id, "skipped", "No recipients.");
         continue;
       }
-      const title = mergeTemplate(workflow.action.title || workflow.name, fields, { Primary: fields[0]?.value ?? "" });
-      const body = mergeTemplate(workflow.action.body || "", fields);
-      const shown = includedFields(fields, workflow.action.includeColumnIds ?? [], columns.idByTitle);
+      const rendered = renderAlertCopy({
+        titleTemplate: workflow.action.title || workflow.name,
+        bodyTemplate: workflow.action.body || "",
+        fallbackTitle: workflow.name,
+        fields,
+        primaryTitle: columns.primaryTitle,
+        includeColumnIds: workflow.action.includeColumnIds,
+        idByTitle: columns.idByTitle,
+      });
       await insertNotifications({
         emails,
-        title: title || workflow.name,
-        body,
+        title: rendered.title,
+        body: rendered.body,
         payload: {
           sheetId: String(event.sheetId),
           rowId,
           href,
-          fields: shown,
+          fields: rendered.fields,
           templateKind: workflow.templateKind,
         },
         workflowId: workflow.id,
@@ -184,35 +179,6 @@ function resolveRecipients(
     for (const email of emailsFromContactCell(cell)) emails.add(email);
   }
   return [...emails];
-}
-
-function buildFields(
-  columns: { titles: Map<number, string> },
-  cells: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>,
-): MergeField[] {
-  return cells.map((cell) => ({
-    title: columns.titles.get(cell.columnId) ?? `Column ${cell.columnId}`,
-    value: cellText(cell),
-  }));
-}
-
-const columnCache = new Map<string, { at: number; titles: Map<number, string>; idByTitle: Map<string, number> }>();
-
-async function loadColumnTitles(sheetId: number) {
-  const key = String(sheetId);
-  const cached = columnCache.get(key);
-  if (cached && Date.now() - cached.at < 60_000) return cached;
-  const columns = (await ss.listColumns(sheetId)) as Array<{ id: number; title?: string }>;
-  const titles = new Map<number, string>();
-  const idByTitle = new Map<string, number>();
-  for (const column of columns) {
-    const title = String(column.title ?? "");
-    titles.set(column.id, title);
-    idByTitle.set(title, column.id);
-  }
-  const next = { at: Date.now(), titles, idByTitle };
-  columnCache.set(key, next);
-  return next;
 }
 
 export function parseWebhookEvent(raw: unknown, fallbackSheetId: number): WebhookWorkflowEvent | null {
