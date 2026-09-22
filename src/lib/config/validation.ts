@@ -1278,11 +1278,11 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
   const formPublishedAt = asOptionalString(input.formPublishedAt);
   const formRegisteredAt = asOptionalString(input.formRegisteredAt);
   const formProvenanceRaw = asOptionalString(input.formProvenance);
-  const formProvenanceAllowed = new Set(["template", "scratch", "imported", "sample"]);
+  const formProvenanceAllowed = new Set(["template", "scratch", "imported", "sample", "excel"]);
   let formProvenance: SourceConfig["formProvenance"] | undefined;
   if (formProvenanceRaw) {
     if (!formProvenanceAllowed.has(formProvenanceRaw)) {
-      errors.push('formProvenance must be "template", "scratch", "imported", or "sample".');
+      errors.push('formProvenance must be "template", "scratch", "imported", "sample", or "excel".');
     } else {
       formProvenance = formProvenanceRaw as SourceConfig["formProvenance"];
     }

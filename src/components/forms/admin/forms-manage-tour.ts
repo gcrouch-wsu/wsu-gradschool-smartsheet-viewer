@@ -13,7 +13,7 @@ export const FORMS_MANAGE_TOUR_STEPS: ProductTourStep[] = [
     id: "create",
     target: '[data-tour="fm-create"]',
     title: "Create a form",
-    body: "Start from a template or scratch. New forms appear here before you publish a public /f/… URL.",
+    body: "Start from a template, scratch, or Excel upload. New forms appear here before you publish a public /f/… URL.",
   },
   {
     id: "metrics",

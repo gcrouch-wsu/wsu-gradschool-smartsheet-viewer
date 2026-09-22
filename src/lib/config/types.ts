@@ -50,7 +50,7 @@ export interface SourceRoleGroupConfig {
   };
 }
 
-export type FormProvenance = "template" | "scratch" | "imported" | "sample";
+export type FormProvenance = "template" | "scratch" | "imported" | "sample" | "excel";
 
 export interface SourceConfig {
   id: string;

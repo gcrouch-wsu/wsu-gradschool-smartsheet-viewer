@@ -6,7 +6,8 @@ import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
 import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
 import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
 import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
-import { CreateFormModal } from "@/components/forms/admin/CreateFormModal";
+import { CreateFormModal, excelOverridesFromColumns, type CreateFormMode } from "@/components/forms/admin/CreateFormModal";
+import type { ExcelImportColumn } from "@/lib/forms/excel-import-types";
 import { DuplicateFormModal } from "@/components/forms/admin/DuplicateFormModal";
 import {
   FORMS_MANAGE_TOUR_STEPS,
@@ -26,7 +27,7 @@ interface FormEntry {
   id: string;
   name: string;
   createdAt: string;
-  source: "template" | "scratch" | "imported" | "sample";
+  source: "template" | "scratch" | "imported" | "sample" | "excel";
   slug?: string;
   public?: boolean;
   publishedAt?: string;
@@ -93,7 +94,7 @@ function ManagePageContent() {
   const [formsError, setFormsError] = useState("");
   const [addId, setAddId] = useState("");
   const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [mode, setMode] = useState<"template" | "scratch">("template");
+  const [mode, setMode] = useState<CreateFormMode>("template");
   const [sheets, setSheets] = useState<SheetOption[]>([]);
   const [sheetsLive, setSheetsLive] = useState(false);
   const [sheetsError, setSheetsError] = useState("");
@@ -102,6 +103,11 @@ function ManagePageContent() {
   const [destinationFolderId, setDestinationFolderId] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelColumns, setExcelColumns] = useState<ExcelImportColumn[] | null>(null);
+  const [excelRowCount, setExcelRowCount] = useState(0);
+  const [excelPreviewing, setExcelPreviewing] = useState(false);
+  const [excelPreviewError, setExcelPreviewError] = useState("");
   const [rules, setRules] = useState<Rule[] | null>(null);
   const [autoNotice, setAutoNotice] = useState("");
   const [autoLoading, setAutoLoading] = useState(false);
@@ -314,6 +320,52 @@ function ManagePageContent() {
     if (creating) return;
     setCreateModalOpen(false);
     setCreateMsg(null);
+    setExcelFile(null);
+    setExcelColumns(null);
+    setExcelRowCount(0);
+    setExcelPreviewError("");
+  }
+
+  function handleModeChange(next: CreateFormMode) {
+    setMode(next);
+    setCreateMsg(null);
+    if (next !== "excel") {
+      setExcelPreviewError("");
+    }
+  }
+
+  async function previewExcelFile(file?: File | null) {
+    const f = file === undefined ? excelFile : file;
+    setExcelPreviewError("");
+    setExcelColumns(null);
+    setExcelRowCount(0);
+    if (!f) return;
+    setExcelPreviewing(true);
+    try {
+      const body = new FormData();
+      body.append("file", f);
+      const r = await fetch("/api/forms/registry/excel/preview", { method: "POST", body });
+      const d = await parseJson(r);
+      if (!r.ok) throw new Error(String(d.error || d.message || "Could not read that file."));
+      const preview = d.preview as { columns?: ExcelImportColumn[]; rowCount?: number } | undefined;
+      setExcelColumns(preview?.columns ?? []);
+      setExcelRowCount(Number(preview?.rowCount ?? 0));
+      if (!newName.trim() && f.name) {
+        const base = f.name.replace(/\.(xlsx|csv)$/i, "").trim();
+        if (base) setNewName(base);
+      }
+    } catch (e: unknown) {
+      setExcelPreviewError(e instanceof Error ? e.message : "Could not read that file.");
+    } finally {
+      setExcelPreviewing(false);
+    }
+  }
+
+  function handleExcelFileChange(file: File | null) {
+    setExcelFile(file);
+    setExcelColumns(null);
+    setExcelRowCount(0);
+    setExcelPreviewError("");
   }
 
   async function useForm(id: string) {
@@ -377,21 +429,41 @@ function ManagePageContent() {
   async function createForm() {
     setCreateMsg(null);
     if (mode === "template" && !templateId) return setCreateMsg({ ok: false, text: "Choose a template sheet first." });
+    if (mode === "excel") {
+      if (!excelFile) return setCreateMsg({ ok: false, text: "Choose an Excel or CSV file first." });
+      if (!excelColumns?.some((c) => c.included)) {
+        return setCreateMsg({ ok: false, text: "Include at least one column." });
+      }
+    }
     setCreating(true);
     try {
-      const r = await fetch("/api/forms/registry/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          templateId,
-          newName,
-          destinationFolderId: destinationFolderId || undefined,
-        }),
-      });
+      let r: Response;
+      if (mode === "excel") {
+        const body = new FormData();
+        body.append("mode", "excel");
+        body.append("file", excelFile!);
+        body.append("newName", newName);
+        if (destinationFolderId.trim()) body.append("destinationFolderId", destinationFolderId.trim());
+        body.append("columnOverrides", JSON.stringify(excelOverridesFromColumns(excelColumns!)));
+        r = await fetch("/api/forms/registry/create", { method: "POST", body });
+      } else {
+        r = await fetch("/api/forms/registry/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode,
+            templateId,
+            newName,
+            destinationFolderId: destinationFolderId || undefined,
+          }),
+        });
+      }
       const d = await parseJson(r);
       if (!r.ok) throw new Error(String(d.error || d.message || "Create failed."));
       setNewName("");
+      setExcelFile(null);
+      setExcelColumns(null);
+      setExcelRowCount(0);
       const sheet = d.sheet as { name?: string } | undefined;
       setCreateMsg({ ok: true, text: `Created "${sheet?.name ?? "form"}" and set it active.${d.note ? " " + d.note : ""}` });
       await loadForms();
@@ -588,7 +660,7 @@ function ManagePageContent() {
         open={createModalOpen}
         onClose={closeCreateModal}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={handleModeChange}
         templateId={templateId}
         onTemplateIdChange={setTemplateId}
         sheets={sheets}
@@ -600,6 +672,14 @@ function ManagePageContent() {
         creating={creating}
         onCreate={createForm}
         createMsg={createMsg}
+        excelFile={excelFile}
+        onExcelFileChange={handleExcelFileChange}
+        excelColumns={excelColumns}
+        onExcelColumnsChange={setExcelColumns}
+        excelRowCount={excelRowCount}
+        excelPreviewing={excelPreviewing}
+        excelPreviewError={excelPreviewError}
+        onExcelPreview={(file) => void previewExcelFile(file)}
       />
 
       <DuplicateFormModal

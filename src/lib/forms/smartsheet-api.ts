@@ -178,15 +178,57 @@ export async function copySheet(
   });
 }
 
-export async function createSheet(
-  name: string,
-  columns: { title: string; type: string; primary?: boolean; options?: string[] }[],
-): Promise<unknown> {
+export type CreateSheetColumn = {
+  title: string;
+  type: string;
+  primary?: boolean;
+  options?: string[];
+  formula?: string;
+};
+
+export async function createSheet(name: string, columns: CreateSheetColumn[]): Promise<unknown> {
   if (config.demo) return mock.mockCreateSheet(name, columns);
   return api("/sheets", {
     method: "POST",
     body: JSON.stringify({ name, columns }),
   });
+}
+
+export type AddRowCell =
+  | { columnId: number; value: string | boolean }
+  | { columnId: number; objectValue: unknown };
+
+/** Batch-insert rows (Smartsheet allows many rows per POST). */
+export async function addRows(
+  sheetId: string | number,
+  rows: { cells: AddRowCell[] }[],
+  batchSize = 200,
+): Promise<unknown[]> {
+  const results: unknown[] = [];
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const chunk = rows.slice(i, i + batchSize);
+    if (config.demo) {
+      for (const row of chunk) {
+        results.push(
+          await addRow(
+            sheetId,
+            row.cells.map((c) =>
+              "value" in c
+                ? c
+                : {
+                    columnId: c.columnId,
+                    objectValue: (c as { objectValue: unknown }).objectValue,
+                  },
+            ),
+          ),
+        );
+      }
+      continue;
+    }
+    const payload = chunk.map((row) => ({ toBottom: true, cells: row.cells }));
+    results.push(await api(`/sheets/${sheetId}/rows`, { method: "POST", body: JSON.stringify(payload) }));
+  }
+  return results;
 }
 
 export async function listAutomationRules(sheetId: string | number): Promise<unknown[]> {
