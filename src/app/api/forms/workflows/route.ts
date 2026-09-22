@@ -3,29 +3,15 @@ import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { WORKFLOW_TEMPLATES, workflowCategories } from "@/lib/workflows/catalog";
-import { createWorkflow, listWorkflows, type SaveWorkflowInput } from "@/lib/workflows/store";
+import { createWorkflow, listWorkflows } from "@/lib/workflows/store";
 import { listKnownEmails } from "@/lib/workflows/notifications";
-import type { WorkflowAction, WorkflowTrigger } from "@/lib/workflows/types";
-import type { ViewFilterConfig } from "@/lib/config/types";
+import { workflowBody } from "@/lib/workflows/workflow-body";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function authorEmail(username: string): string | null {
   return username.includes("@") ? username.trim().toLowerCase() : null;
-}
-
-export function workflowBody(body: Record<string, unknown>, sheetId: string, email: string | null): SaveWorkflowInput {
-  return {
-    sheetId: String(body.sheetId ?? sheetId),
-    name: String(body.name ?? ""),
-    enabled: Boolean(body.enabled),
-    templateKind: String(body.templateKind ?? ""),
-    createdByEmail: email,
-    trigger: (body.trigger ?? { event: "row_updated", delivery: "immediate" }) as WorkflowTrigger,
-    conditions: (Array.isArray(body.conditions) ? body.conditions : []) as ViewFilterConfig[],
-    action: (body.action ?? { kind: "in_app_notification" }) as WorkflowAction,
-  };
 }
 
 export async function GET(request: Request) {
