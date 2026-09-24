@@ -24,7 +24,14 @@ const PUBLIC_ADMIN_PATHS = new Set([
 
 async function adminPrincipalOk(
   request: NextRequest,
-): Promise<{ ok: boolean; status: number; message: string; role?: string }> {
+): Promise<{
+  ok: boolean;
+  status: number;
+  message: string;
+  role?: string;
+  canAccessAdmin?: boolean;
+  capabilities?: string[];
+}> {
   const sessionToken = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
     const result = await authorizeAdminSession(null);
@@ -44,13 +51,25 @@ async function adminPrincipalOk(
     });
     if (res.ok) {
       let role: string | undefined;
+      let canAccessAdmin = true;
+      let capabilities: string[] | undefined;
       try {
-        const body = (await res.json()) as { role?: string };
+        const body = (await res.json()) as {
+          role?: string;
+          canAccessAdmin?: boolean;
+          capabilities?: string[];
+        };
         if (typeof body.role === "string") role = body.role;
+        if (typeof body.canAccessAdmin === "boolean") canAccessAdmin = body.canAccessAdmin;
+        if (Array.isArray(body.capabilities)) capabilities = body.capabilities;
+        // Legacy: coordinator without capability payload
+        if (body.canAccessAdmin === undefined && role === "coordinator") {
+          canAccessAdmin = false;
+        }
       } catch {
         /* ignore */
       }
-      return { ok: true, status: 200, message: "", role };
+      return { ok: true, status: 200, message: "", role, canAccessAdmin, capabilities };
     }
     let message = "Authentication required.";
     try {
@@ -113,10 +132,18 @@ export async function middleware(request: NextRequest) {
   if (auth.ok) {
     const onNotifications =
       pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
-    if (auth.role === "coordinator" && !isAdminApiRequest && !onNotifications) {
+    const canAccessAdmin = auth.canAccessAdmin !== false;
+    if (!canAccessAdmin && !isAdminApiRequest && !onNotifications) {
+      const caps = auth.capabilities ?? [];
+      if (caps.includes("forms.student")) {
+        return NextResponse.redirect(new URL("/forms/my", request.url));
+      }
+      if (caps.includes("contributor.edit")) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
       return NextResponse.redirect(new URL("/forms/sheet", request.url));
     }
-    if (auth.role === "coordinator" && isAdminApiRequest) {
+    if (!canAccessAdmin && isAdminApiRequest) {
       return NextResponse.json({ message: "Full admin access is required." }, { status: 403 });
     }
     return NextResponse.next({ request: { headers: requestHeaders } });

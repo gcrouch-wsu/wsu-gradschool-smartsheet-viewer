@@ -7,6 +7,7 @@ import {
   resetAdminPassword,
   verifyAdminResetToken,
 } from "@/lib/admin-users";
+import { consumePlatformResetToken } from "@/lib/platform-users";
 import { adminPasswordResetRateLimitKey } from "@/lib/request-ip";
 
 export const runtime = "nodejs";
@@ -26,6 +27,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Token and password are required." }, { status: 400 });
   }
 
+  const passwordError = validateAdminPassword(password);
+  if (passwordError) {
+    await recordAdminFailedLoginAttempt(rateKey);
+    return NextResponse.json({ error: passwordError }, { status: 400 });
+  }
+
+  // Unified platform reset tokens first.
+  const platformResult = await consumePlatformResetToken(token, password);
+  if (platformResult.ok) {
+    return NextResponse.json({ ok: true });
+  }
+
   const username = await verifyAdminResetToken(token);
   if (!username) {
     await recordAdminFailedLoginAttempt(rateKey);
@@ -33,12 +46,6 @@ export async function POST(request: Request) {
       { error: "This reset link is invalid or has expired. Ask an administrator for a new one." },
       { status: 400 },
     );
-  }
-
-  const passwordError = validateAdminPassword(password);
-  if (passwordError) {
-    await recordAdminFailedLoginAttempt(rateKey);
-    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   try {

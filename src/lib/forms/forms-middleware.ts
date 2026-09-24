@@ -92,12 +92,20 @@ function hasApproverSession(request: NextRequest): boolean {
 
 function hasStudentSession(request: NextRequest): boolean {
   // Cookie presence for Edge; student Node handlers validate the token fully.
-  return Boolean(request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value?.trim());
+  // Unified platform sessions reuse the admin cookie name.
+  return Boolean(
+    request.cookies.get(STUDENT_SESSION_COOKIE_NAME)?.value?.trim() ||
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value?.trim(),
+  );
 }
 
-async function resolveAdminRole(request: NextRequest): Promise<string | null> {
+async function resolveSessionAccess(request: NextRequest): Promise<{
+  role: string | null;
+  capabilities: string[];
+  isStaff: boolean;
+}> {
   const token = request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
+  if (!token) return { role: null, capabilities: [], isStaff: false };
   const verifyUrl = new URL("/api/admin/verify-session", request.nextUrl.origin);
   try {
     const res = await fetch(verifyUrl, {
@@ -105,11 +113,25 @@ async function resolveAdminRole(request: NextRequest): Promise<string | null> {
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return null;
-    const body = (await res.json().catch(() => null)) as { role?: string } | null;
-    return typeof body?.role === "string" ? body.role : null;
+    if (!res.ok) return { role: null, capabilities: [], isStaff: false };
+    const body = (await res.json().catch(() => null)) as {
+      role?: string;
+      capabilities?: string[];
+    } | null;
+    const capabilities = Array.isArray(body?.capabilities) ? body.capabilities : [];
+    const role = typeof body?.role === "string" ? body.role : null;
+    const isStaff =
+      capabilities.includes("admin.manage") ||
+      capabilities.includes("forms.admin") ||
+      capabilities.includes("forms.coordinator") ||
+      capabilities.includes("forms.approver") ||
+      role === "owner" ||
+      role === "admin" ||
+      role === "programs_team" ||
+      role === "coordinator";
+    return { role, capabilities, isStaff };
   } catch {
-    return null;
+    return { role: null, capabilities: [], isStaff: false };
   }
 }
 
@@ -136,14 +158,13 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.next();
   }
 
-  const adminOk = await hasAdminSession(request);
+  const signedIn = await hasAdminSession(request);
   const approverOk = hasApproverSession(request);
-  const studentOk = hasStudentSession(request);
+  const studentCookie = hasStudentSession(request);
 
   // Student portal: allow page without session (login UI); APIs need student/staff cookie.
-  // Contributor cookie must not grant student API access.
   if (isStudentPortalPath(pathname)) {
-    if (adminOk || approverOk || studentOk) {
+    if (signedIn || approverOk || studentCookie) {
       return NextResponse.next();
     }
     if (!pathname.startsWith("/api/")) {
@@ -152,9 +173,14 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.json({ message: "Sign in required." }, { status: 401 });
   }
 
+  const access = signedIn
+    ? await resolveSessionAccess(request)
+    : { role: null, capabilities: [] as string[], isStaff: false };
+  const staffOk = access.isStaff || approverOk;
+
   // Sheet picker needs GET /api/forms/registry; coordinators share this with admins/approvers.
   if (isFormsRegistryListPath(pathname) && request.method === "GET") {
-    if (adminOk || approverOk) {
+    if (staffOk) {
       return NextResponse.next();
     }
     return NextResponse.json({ message: "Sign in required." }, { status: 401 });
@@ -162,7 +188,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
 
   // Coordinators can author workflows; approvers cannot.
   if (isWorkflowsPath(pathname)) {
-    if (!adminOk) {
+    if (!signedIn) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ message: "Sign in required." }, { status: 401 });
       }
@@ -170,8 +196,15 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
       signInUrl.searchParams.set("next", normalizeFormsNextPath(pathname, search));
       return NextResponse.redirect(signInUrl);
     }
-    const role = await resolveAdminRole(request);
-    if (role === "owner" || role === "admin" || role === "programs_team" || role === "coordinator") {
+    const role = access.role;
+    const canAuthor =
+      access.capabilities.includes("admin.manage") ||
+      access.capabilities.includes("forms.coordinator") ||
+      role === "owner" ||
+      role === "admin" ||
+      role === "programs_team" ||
+      role === "coordinator";
+    if (canAuthor) {
       return NextResponse.next();
     }
     if (pathname.startsWith("/api/")) {
@@ -181,9 +214,14 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
   }
 
   if (isFormsAdminPath(pathname)) {
-    if (adminOk) {
-      const role = await resolveAdminRole(request);
-      if (role === "owner" || role === "admin" || role === "programs_team") {
+    if (signedIn) {
+      const canManageForms =
+        access.capabilities.includes("admin.manage") ||
+        access.capabilities.includes("forms.admin") ||
+        access.role === "owner" ||
+        access.role === "admin" ||
+        access.role === "programs_team";
+      if (canManageForms) {
         return NextResponse.next();
       }
       if (pathname.startsWith("/api/")) {
@@ -199,8 +237,8 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.redirect(signInUrl);
   }
 
-  // Staff forms routes: admin/approver only — contributor cookie must not grant access.
-  if (adminOk || approverOk) {
+  // Staff forms routes: admin/approver only — contributor/student must not grant access.
+  if (staffOk) {
     return NextResponse.next();
   }
 

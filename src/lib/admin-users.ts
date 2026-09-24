@@ -850,20 +850,46 @@ export async function getManagedAdminUserById(id: string) {
 
 export async function authenticateAdminCredentials(username: string, password: string): Promise<AdminAuthResult> {
   const configurationError = getAdminConfigurationError();
-  if (configurationError) {
+  // Bootstrap owner can always sign in when configured; platform users only need a session secret.
+  const bootstrap = getBootstrapCredentials();
+  const normalizedUsername = normalizeUsername(username);
+  if (bootstrap && normalizeUsername(bootstrap.username) === normalizedUsername && constantTimeEqualString(password, bootstrap.password)) {
+    if (configurationError) {
+      return { ok: false, status: 503, message: configurationError };
+    }
+    return {
+      ok: true,
+      principal: getBootstrapAdminPrincipal() ?? undefined,
+    };
+  }
+
+  // Prefer unified users table when DATABASE_URL is set.
+  if (getDatabaseUrl()) {
+    const { authenticatePlatformUser, primaryStaffRole, userHasStaffRole } = await import("@/lib/platform-users");
+    const platformUser = await authenticatePlatformUser(normalizedUsername, password);
+    if (platformUser && userHasStaffRole(platformUser.roles)) {
+      const staffRole = primaryStaffRole(platformUser.roles);
+      if (staffRole) {
+        return {
+          ok: true,
+          principal: {
+            id: platformUser.id,
+            username: platformUser.email,
+            displayName: platformUser.displayName,
+            role: staffRole,
+            source: "managed",
+            version: platformUser.updatedAt,
+          },
+        };
+      }
+    }
+  }
+
+  if (configurationError && !getDatabaseUrl()) {
     return {
       ok: false,
       status: 503,
       message: configurationError,
-    };
-  }
-
-  const bootstrap = getBootstrapCredentials();
-  const normalizedUsername = normalizeUsername(username);
-  if (bootstrap && normalizeUsername(bootstrap.username) === normalizedUsername && constantTimeEqualString(password, bootstrap.password)) {
-    return {
-      ok: true,
-      principal: getBootstrapAdminPrincipal() ?? undefined,
     };
   }
 
@@ -907,10 +933,41 @@ function invalidSessionResult(status: number, message: string): AdminAuthResult 
 }
 
 export async function resolveAdminPrincipalFromSession(sessionToken: string | undefined | null): Promise<AdminAuthResult> {
-  const tokenResult = await readAdminSessionToken(sessionToken);
-  if (!tokenResult.ok || !tokenResult.payload) {
-    return invalidSessionResult(tokenResult.status ?? 401, tokenResult.message ?? "Authentication required.");
+  const { readUnifiedSessionToken, isPlatformSessionPayload } = await import("@/lib/platform-session");
+  const unified = await readUnifiedSessionToken(sessionToken);
+  if (!unified.ok) {
+    return invalidSessionResult(unified.status, unified.message);
   }
+
+  if (isPlatformSessionPayload(unified.payload)) {
+    const { getPlatformUserById, primaryStaffRole, userHasStaffRole } = await import("@/lib/platform-users");
+    const platformUser = await getPlatformUserById(unified.payload.userId);
+    if (
+      !platformUser ||
+      !platformUser.isActive ||
+      platformUser.updatedAt !== unified.payload.credentialsVersion ||
+      !userHasStaffRole(platformUser.roles)
+    ) {
+      return invalidSessionResult(401, "Authentication required.");
+    }
+    const staffRole = primaryStaffRole(platformUser.roles);
+    if (!staffRole) {
+      return invalidSessionResult(401, "Authentication required.");
+    }
+    return {
+      ok: true,
+      principal: {
+        id: platformUser.id,
+        username: platformUser.email,
+        displayName: platformUser.displayName,
+        role: staffRole,
+        source: "managed",
+        version: platformUser.updatedAt,
+      },
+    };
+  }
+
+  const tokenResult = { ok: true as const, payload: unified.payload };
 
   if (tokenResult.payload.source === "env") {
     const principal = getBootstrapAdminPrincipal();
@@ -927,6 +984,30 @@ export async function resolveAdminPrincipalFromSession(sessionToken: string | un
       ok: true,
       principal,
     };
+  }
+
+  // Prefer platform users by id when present.
+  if (getDatabaseUrl()) {
+    const { getPlatformUserById, primaryStaffRole, userHasStaffRole } = await import("@/lib/platform-users");
+    const platformUser = await getPlatformUserById(tokenResult.payload.userId);
+    if (platformUser && platformUser.isActive && userHasStaffRole(platformUser.roles)) {
+      if (platformUser.updatedAt === tokenResult.payload.version || platformUser.email === tokenResult.payload.username) {
+        const staffRole = primaryStaffRole(platformUser.roles) ?? tokenResult.payload.role;
+        if (platformUser.updatedAt === tokenResult.payload.version) {
+          return {
+            ok: true,
+            principal: {
+              id: platformUser.id,
+              username: platformUser.email,
+              displayName: platformUser.displayName,
+              role: staffRole,
+              source: "managed",
+              version: platformUser.updatedAt,
+            },
+          };
+        }
+      }
+    }
   }
 
   const user = await getManagedAdminUserRecordById(tokenResult.payload.userId);
@@ -988,6 +1069,18 @@ export function adminAuthenticationErrorResponse(error: AdminAuthenticationError
 }
 
 export async function createAdminSessionForPrincipal(principal: AdminPrincipal) {
+  if (principal.source === "managed" && getDatabaseUrl()) {
+    const { getPlatformUserById } = await import("@/lib/platform-users");
+    const { createPlatformUserSessionToken } = await import("@/lib/platform-session");
+    const platformUser = await getPlatformUserById(principal.id);
+    if (platformUser) {
+      return createPlatformUserSessionToken({
+        id: platformUser.id,
+        email: platformUser.email,
+        updatedAt: platformUser.updatedAt,
+      });
+    }
+  }
   return createAdminSessionToken({
     userId: principal.id,
     username: principal.username,
@@ -1099,7 +1192,55 @@ export async function saveManagedAdminUser(
     }
   }
 
+  await syncManagedAdminToPlatformUsers(record);
   return toManagedSummary(record);
+}
+
+async function syncManagedAdminToPlatformUsers(record: ManagedAdminUserRecord) {
+  if (!getDatabaseUrl()) return;
+  try {
+    const { getPlatformUserByEmail, savePlatformUser, setUserRoles } = await import("@/lib/platform-users");
+    const existing = await getPlatformUserByEmail(record.username);
+    const role = record.role as "admin" | "coordinator" | "programs_team";
+    if (existing) {
+      const otherRoles = existing.roles.filter(
+        (r) => r !== "admin" && r !== "coordinator" && r !== "programs_team",
+      ) as import("@/lib/platform-users").AssignablePlatformRole[];
+      await setUserRoles(existing.id, [...otherRoles, role]);
+      if (record.passwordHash && record.passwordSalt) {
+        const { queryConfigDb } = await import("@/lib/config/config-db");
+        await queryConfigDb(
+          `UPDATE users SET display_name = $1, password_hash = $2, password_salt = $3, is_active = $4, updated_at = now() WHERE id = $5`,
+          [
+            record.displayName ?? null,
+            record.passwordHash,
+            record.passwordSalt,
+            record.isActive,
+            existing.id,
+          ],
+        );
+      }
+      return;
+    }
+    await savePlatformUser({
+      email: record.username,
+      displayName: record.displayName ?? null,
+      roles: [role],
+      isActive: record.isActive,
+    });
+    if (record.passwordHash && record.passwordSalt) {
+      const created = await getPlatformUserByEmail(record.username);
+      if (created) {
+        const { queryConfigDb } = await import("@/lib/config/config-db");
+        await queryConfigDb(
+          `UPDATE users SET password_hash = $1, password_salt = $2, updated_at = now() WHERE id = $3`,
+          [record.passwordHash, record.passwordSalt, created.id],
+        );
+      }
+    }
+  } catch {
+    /* dual-write best effort during transition */
+  }
 }
 
 export async function deleteManagedAdminUser(id: string) {
