@@ -9,7 +9,6 @@ import { ensureBootstrapped } from "@/lib/forms/init";
 import { isStudentEligibleAnywhere } from "@/lib/forms/student-access";
 import {
   getStudentConfigurationError,
-  getStudentUserByEmail,
 } from "@/lib/forms/student-users";
 import { contributorAuthRateLimitKey } from "@/lib/request-ip";
 
@@ -49,8 +48,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const existingUser = await getStudentUserByEmail(email);
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const existingUser = await getPlatformUserByEmail(email);
+  const hasPassword = Boolean(existingUser?.passwordHash?.trim() && existingUser?.passwordSalt?.trim());
   return NextResponse.json({
-    mode: existingUser ? "sign_in" : "claim",
+    mode: hasPassword ? "sign_in" : "claim",
   });
 }

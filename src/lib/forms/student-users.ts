@@ -75,8 +75,11 @@ export function getStudentConfigurationError() {
   if (!isDatabaseConfigEnabled()) {
     return "Student sign-in requires DATABASE_URL.";
   }
-  if (!getStudentSessionSecret()) {
-    return `${STUDENT_SESSION_SECRET_ENV_VAR} or ${CONTRIBUTOR_SESSION_SECRET_ENV_VAR} is required for student sign-in.`;
+  if (
+    !getStudentSessionSecret() &&
+    !process.env.SMARTSHEETS_VIEW_ADMIN_SESSION_SECRET?.trim()
+  ) {
+    return `${STUDENT_SESSION_SECRET_ENV_VAR}, ${CONTRIBUTOR_SESSION_SECRET_ENV_VAR}, or SMARTSHEETS_VIEW_ADMIN_SESSION_SECRET is required for student sign-in.`;
   }
   return null;
 }
@@ -170,19 +173,17 @@ export async function createStudentSessionToken(
     throw new Error(configurationError);
   }
 
-  const user = await getStudentUserByEmail(email);
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const user = await getPlatformUserByEmail(email);
   if (!user) {
     throw new Error("Student account not found.");
   }
 
-  const payload = encodePayload({
-    email: normalizeContributorEmail(email),
-    issuedAt: Date.now(),
+  const { createPlatformUserSessionToken } = await import("@/lib/platform-session");
+  return createPlatformUserSessionToken(
+    { id: user.id, email: user.email, updatedAt: user.updatedAt },
     expiresAt,
-    credentialsVersion: user.updatedAt,
-  });
-
-  return `${payload}.${signPayload(payload)}`;
+  );
 }
 
 export async function readStudentSessionToken(
@@ -259,14 +260,21 @@ export function getStudentSessionCookieSettings() {
 export async function getStudentUserByEmail(email: string) {
   await ensureStudentAuthStorage();
   const normalizedEmail = normalizeContributorEmail(email);
-  const { rows } = await queryConfigDb<StudentUserDbRow>(
-    `SELECT id, email, password_hash, password_salt, created_at, updated_at
-     FROM student_users
-     WHERE lower(email) = $1
-     LIMIT 1`,
-    [normalizedEmail],
-  );
-  return rows[0] ? toStudentUserRecord(rows[0]) : null;
+  const {
+    getPlatformUserByEmail,
+  } = await import("@/lib/platform-users");
+  const platformUser = await getPlatformUserByEmail(normalizedEmail);
+  if (platformUser?.roles.includes("student")) {
+    return {
+      id: platformUser.id,
+      email: platformUser.email,
+      passwordHash: platformUser.passwordHash,
+      passwordSalt: platformUser.passwordSalt,
+      createdAt: platformUser.createdAt,
+      updatedAt: platformUser.updatedAt,
+    } satisfies StudentUserRecord;
+  }
+  return null;
 }
 
 export async function createStudentUser(email: string, password: string) {
@@ -281,15 +289,25 @@ export async function createStudentUser(email: string, password: string) {
     throw new Error(passwordError);
   }
 
-  const { passwordHash, passwordSalt } = hashStudentPassword(password);
-  const { rows } = await queryConfigDb<StudentUserDbRow>(
-    `INSERT INTO student_users (email, password_hash, password_salt)
-     VALUES ($1, $2, $3)
-     RETURNING id, email, password_hash, password_salt, created_at, updated_at`,
-    [normalizedEmail, passwordHash, passwordSalt],
-  );
-
-  return toStudentUserRecord(rows[0]!);
+  const { createOrUpdateUserWithRole } = await import("@/lib/platform-users");
+  try {
+    const user = await createOrUpdateUserWithRole(normalizedEmail, password, "student");
+    return {
+      id: user.id,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      passwordSalt: user.passwordSalt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    } satisfies StudentUserRecord;
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCOUNT_EXISTS") {
+      const err = new Error("ACCOUNT_EXISTS") as Error & { code?: string };
+      err.code = "23505";
+      throw err;
+    }
+    throw error;
+  }
 }
 
 export const STUDENT_RESET_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -304,82 +322,69 @@ interface StudentResetTokenPayload {
 export async function createStudentResetToken(email: string): Promise<string> {
   await ensureStudentAuthStorage();
   const normalizedEmail = normalizeContributorEmail(email);
-  const nonce = randomBytes(16).toString("hex");
-  const expiresAt = Date.now() + STUDENT_RESET_TOKEN_TTL_MS;
-  await queryConfigDb(`UPDATE student_users SET reset_nonce = $1 WHERE lower(email) = $2`, [
-    nonce,
-    normalizedEmail,
-  ]);
-  const payload = Buffer.from(
-    JSON.stringify({ email: normalizedEmail, nonce, issuedAt: Date.now(), expiresAt }),
-  ).toString("base64url");
-  return `${payload}.${signPayload(payload)}`;
+  const { getPlatformUserByEmail, createPlatformResetToken } = await import("@/lib/platform-users");
+  const user = await getPlatformUserByEmail(normalizedEmail);
+  if (!user?.roles.includes("student")) {
+    throw new Error("Student account not found.");
+  }
+  return createPlatformResetToken(user.id);
 }
 
 export async function verifyStudentResetToken(token: string): Promise<string | null> {
   const configError = getStudentConfigurationError();
   if (configError) return null;
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature) return null;
-  const expectedSig = Buffer.from(signPayload(payload));
-  const receivedSig = Buffer.from(signature);
-  if (expectedSig.length !== receivedSig.length || !timingSafeEqual(expectedSig, receivedSig)) {
-    return null;
-  }
-  let decoded: Partial<StudentResetTokenPayload>;
+  // Platform reset tokens are consumed on password set; peek via parse for email.
+  const [payloadPart] = token.split(".");
+  if (!payloadPart) return null;
   try {
-    decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Partial<StudentResetTokenPayload>;
+    const parsed = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8")) as {
+      email?: string;
+      userId?: string;
+      nonce?: string;
+    };
+    if (!parsed.email || !parsed.userId || !parsed.nonce) return null;
+    const { getPlatformUserById } = await import("@/lib/platform-users");
+    const user = await getPlatformUserById(parsed.userId);
+    if (!user || user.resetNonce !== parsed.nonce) return null;
+    return normalizeContributorEmail(parsed.email);
   } catch {
     return null;
   }
-  if (
-    typeof decoded.email !== "string" ||
-    typeof decoded.nonce !== "string" ||
-    typeof decoded.expiresAt !== "number" ||
-    decoded.expiresAt <= Date.now()
-  ) {
-    return null;
-  }
-  await ensureStudentAuthStorage();
-  const { rows } = await queryConfigDb<{ reset_nonce: string | null }>(
-    `SELECT reset_nonce FROM student_users WHERE lower(email) = $1 LIMIT 1`,
-    [normalizeContributorEmail(decoded.email)],
-  );
-  const stored = rows[0]?.reset_nonce;
-  if (!stored || stored !== decoded.nonce) return null;
-  return normalizeContributorEmail(decoded.email);
 }
 
 export async function resetStudentPassword(email: string, newPassword: string): Promise<void> {
   await ensureStudentAuthStorage();
   const passwordError = validateStudentPassword(newPassword);
   if (passwordError) throw new Error(passwordError);
-  const { passwordHash, passwordSalt } = hashStudentPassword(newPassword);
-  await queryConfigDb(
-    `UPDATE student_users SET password_hash = $1, password_salt = $2, reset_nonce = NULL, updated_at = now() WHERE lower(email) = $3`,
-    [passwordHash, passwordSalt, normalizeContributorEmail(email)],
-  );
+  const { getPlatformUserByEmail, updatePlatformUserPassword } = await import("@/lib/platform-users");
+  const user = await getPlatformUserByEmail(normalizeContributorEmail(email));
+  if (!user) throw new Error("Student account not found.");
+  await updatePlatformUserPassword(user.id, newPassword);
 }
 
 export async function listStudentUsers() {
   await ensureStudentAuthStorage();
-  const { rows } = await queryConfigDb<{
-    id: string;
-    email: string;
-    created_at: string | Date;
-    updated_at: string | Date;
-  }>(`SELECT id, email, created_at, updated_at FROM student_users ORDER BY email`);
-  return rows.map((row) => ({
+  const { listPlatformUsers } = await import("@/lib/platform-users");
+  const users = await listPlatformUsers({ role: "student" });
+  return users.map((row) => ({
     id: row.id,
     email: normalizeContributorEmail(row.email),
-    createdAt: toIsoTimestamp(row.created_at),
-    updatedAt: toIsoTimestamp(row.updated_at),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }));
 }
 
 export async function deleteStudentUser(id: string): Promise<void> {
   await ensureStudentAuthStorage();
-  await queryConfigDb(`DELETE FROM student_users WHERE id = $1`, [id]);
+  const { getPlatformUserById, setUserRoles, deletePlatformUser } = await import("@/lib/platform-users");
+  const user = await getPlatformUserById(id);
+  if (!user) return;
+  const remaining = user.roles.filter((r) => r !== "student") as import("@/lib/platform-users").AssignablePlatformRole[];
+  if (remaining.length === 0) {
+    await deletePlatformUser(id);
+  } else {
+    await setUserRoles(id, remaining);
+  }
 }
 
 export async function insertStudentUserFromHashes(input: {
@@ -391,14 +396,16 @@ export async function insertStudentUserFromHashes(input: {
 }): Promise<StudentUserRecord | null> {
   await ensureStudentAuthStorage({ skipMigration: true });
   const normalizedEmail = normalizeContributorEmail(input.email);
-  const existing = await getStudentUserByEmailSkippingEnsure(normalizedEmail);
+  const existing = await getStudentUserByEmail(normalizedEmail);
   if (existing) return existing;
 
-  const { rows } = await queryConfigDb<StudentUserDbRow>(
-    `INSERT INTO student_users (email, password_hash, password_salt, created_at, updated_at)
+  const { ensureConfigTables, queryConfigDb } = await import("@/lib/config/config-db");
+  await ensureConfigTables();
+  const { rows } = await queryConfigDb<{ id: string }>(
+    `INSERT INTO users (email, password_hash, password_salt, created_at, updated_at)
      VALUES ($1, $2, $3, COALESCE($4::timestamptz, now()), COALESCE($5::timestamptz, now()))
      ON CONFLICT (email) DO NOTHING
-     RETURNING id, email, password_hash, password_salt, created_at, updated_at`,
+     RETURNING id`,
     [
       normalizedEmail,
       input.passwordHash,
@@ -407,17 +414,11 @@ export async function insertStudentUserFromHashes(input: {
       input.updatedAt ?? null,
     ],
   );
-  return rows[0] ? toStudentUserRecord(rows[0]) : getStudentUserByEmailSkippingEnsure(normalizedEmail);
-}
-
-async function getStudentUserByEmailSkippingEnsure(email: string) {
-  const normalizedEmail = normalizeContributorEmail(email);
-  const { rows } = await queryConfigDb<StudentUserDbRow>(
-    `SELECT id, email, password_hash, password_salt, created_at, updated_at
-     FROM student_users
-     WHERE lower(email) = $1
-     LIMIT 1`,
-    [normalizedEmail],
-  );
-  return rows[0] ? toStudentUserRecord(rows[0]) : null;
+  const id = rows[0]?.id;
+  if (id) {
+    await queryConfigDb(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, 'student') ON CONFLICT DO NOTHING`, [
+      id,
+    ]);
+  }
+  return getStudentUserByEmail(normalizedEmail);
 }

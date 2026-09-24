@@ -1,10 +1,17 @@
 import {
   getFormApproverConfigurationError,
   getFormApproverUserByEmail,
-  hashFormApproverPassword,
   validateFormApproverPassword,
 } from "@/lib/forms/approver-auth";
-import { ensureFormsTables, queryFormsDb } from "@/lib/forms/db";
+import {
+  createOrUpdateUserWithRole,
+  deletePlatformUser,
+  getPlatformUserById,
+  listPlatformUsers,
+  setUserRoles,
+  updatePlatformUserPassword,
+  type AssignablePlatformRole,
+} from "@/lib/platform-users";
 
 export interface FormApproverSummary {
   id: string;
@@ -13,30 +20,16 @@ export interface FormApproverSummary {
   updatedAt: string;
 }
 
-interface FormApproverUserDbRow {
-  id: string;
-  email: string;
-  created_at: string | Date;
-  updated_at: string | Date;
-}
-
-function toSummary(row: FormApproverUserDbRow): FormApproverSummary {
-  return {
-    id: row.id,
-    email: row.email,
-    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : new Date(row.created_at).toISOString(),
-    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : new Date(row.updated_at).toISOString(),
-  };
-}
-
 export async function listFormApprovers(): Promise<FormApproverSummary[]> {
   const configurationError = getFormApproverConfigurationError();
   if (configurationError) throw new Error(configurationError);
-  await ensureFormsTables();
-  const { rows } = await queryFormsDb<FormApproverUserDbRow>(
-    `SELECT id, email, created_at, updated_at FROM form_approver_users ORDER BY email`,
-  );
-  return rows.map(toSummary);
+  const users = await listPlatformUsers({ role: "approver" });
+  return users.map((u) => ({
+    id: u.id,
+    email: u.email,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
+  }));
 }
 
 export async function createFormApproverAccount(email: string, password: string) {
@@ -52,23 +45,33 @@ export async function createFormApproverAccount(email: string, password: string)
   const existing = await getFormApproverUserByEmail(normalizedEmail);
   if (existing) throw new Error("An approver account already exists for this email.");
 
-  const { passwordHash, passwordSalt } = hashFormApproverPassword(password);
-  await ensureFormsTables();
-  const { rows } = await queryFormsDb<FormApproverUserDbRow>(
-    `INSERT INTO form_approver_users (email, password_hash, password_salt)
-     VALUES ($1, $2, $3)
-     RETURNING id, email, created_at, updated_at`,
-    [normalizedEmail, passwordHash, passwordSalt],
-  );
-  return toSummary(rows[0]!);
+  try {
+    const user = await createOrUpdateUserWithRole(normalizedEmail, password, "approver");
+    return {
+      id: user.id,
+      email: user.email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCOUNT_EXISTS") {
+      throw new Error("An approver account already exists for this email.");
+    }
+    throw error;
+  }
 }
 
 export async function deleteFormApproverAccount(id: string) {
   const configurationError = getFormApproverConfigurationError();
   if (configurationError) throw new Error(configurationError);
-  await ensureFormsTables();
-  const { rowCount } = await queryFormsDb(`DELETE FROM form_approver_users WHERE id = $1`, [id]);
-  if (!rowCount) throw new Error("Approver account not found.");
+  const user = await getPlatformUserById(id);
+  if (!user) throw new Error("Approver account not found.");
+  const remaining = user.roles.filter((r) => r !== "approver") as AssignablePlatformRole[];
+  if (remaining.length === 0) {
+    await deletePlatformUser(id);
+  } else {
+    await setUserRoles(id, remaining);
+  }
 }
 
 export async function resetFormApproverPassword(id: string, password: string) {
@@ -78,13 +81,7 @@ export async function resetFormApproverPassword(id: string, password: string) {
   const passwordError = validateFormApproverPassword(password);
   if (passwordError) throw new Error(passwordError);
 
-  const { passwordHash, passwordSalt } = hashFormApproverPassword(password);
-  await ensureFormsTables();
-  const { rowCount } = await queryFormsDb(
-    `UPDATE form_approver_users
-     SET password_hash = $2, password_salt = $3, updated_at = now()
-     WHERE id = $1`,
-    [id, passwordHash, passwordSalt],
-  );
-  if (!rowCount) throw new Error("Approver account not found.");
+  const user = await getPlatformUserById(id);
+  if (!user) throw new Error("Approver account not found.");
+  await updatePlatformUserPassword(id, password);
 }

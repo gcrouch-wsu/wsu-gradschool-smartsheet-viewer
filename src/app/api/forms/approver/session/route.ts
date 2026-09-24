@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE_NAME, getAdminSessionCookieSettings } from "@/lib/admin-auth";
 import {
   FORM_APPROVER_SESSION_COOKIE_NAME,
   authenticateFormApprover,
   getFormApproverConfigurationError,
-  getFormApproverSessionCookieSettings,
   getTrustedIpFromRequest,
 } from "@/lib/forms/approver-auth";
 
@@ -31,9 +31,15 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ ok: true, email: result.email });
   response.cookies.set({
-    ...getFormApproverSessionCookieSettings(),
-    name: FORM_APPROVER_SESSION_COOKIE_NAME,
+    ...getAdminSessionCookieSettings(),
+    name: ADMIN_SESSION_COOKIE_NAME,
     value: result.token,
+  });
+  response.cookies.set({
+    name: FORM_APPROVER_SESSION_COOKIE_NAME,
+    value: "",
+    maxAge: 0,
+    path: "/",
   });
   return response;
 }
@@ -41,10 +47,16 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set({
-    ...getFormApproverSessionCookieSettings(),
+    ...getAdminSessionCookieSettings(),
+    name: ADMIN_SESSION_COOKIE_NAME,
+    value: "",
+    maxAge: 0,
+  });
+  response.cookies.set({
     name: FORM_APPROVER_SESSION_COOKIE_NAME,
     value: "",
     maxAge: 0,
+    path: "/",
   });
   return response;
 }

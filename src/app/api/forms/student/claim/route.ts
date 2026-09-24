@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE_NAME, getAdminSessionCookieSettings } from "@/lib/admin-auth";
 import {
   CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR,
   isContributorRateLimited,
@@ -14,7 +15,6 @@ import {
   createStudentSessionToken,
   createStudentUser,
   getStudentConfigurationError,
-  getStudentSessionCookieSettings,
   getStudentUserByEmail,
   validateStudentPassword,
 } from "@/lib/forms/student-users";
@@ -24,7 +24,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function isUniqueViolation(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "23505";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "23505"
+  );
 }
 
 export async function POST(request: Request) {
@@ -60,6 +65,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
   }
 
+  // Also block claim when any platform account already has a password for this email.
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const platformUser = await getPlatformUserByEmail(email);
+  if (platformUser?.passwordHash?.trim() && platformUser?.passwordSalt?.trim()) {
+    return NextResponse.json({ error: STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
+  }
+
   const eligible = await isStudentEligibleAnywhere(email);
   if (!eligible) {
     await recordContributorFailedAttempt(rateLimitKey);
@@ -69,17 +81,23 @@ export async function POST(request: Request) {
   try {
     await createStudentUser(email, password);
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (isUniqueViolation(error) || (error instanceof Error && error.message === "ACCOUNT_EXISTS")) {
       return NextResponse.json({ error: STUDENT_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
     }
     throw error;
   }
 
+  const token = await createStudentSessionToken(email);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(
-    STUDENT_SESSION_COOKIE_NAME,
-    await createStudentSessionToken(email),
-    getStudentSessionCookieSettings(),
-  );
+  response.cookies.set({
+    ...getAdminSessionCookieSettings(),
+    name: ADMIN_SESSION_COOKIE_NAME,
+    value: token,
+  });
+  response.cookies.set(STUDENT_SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+  });
   return response;
 }

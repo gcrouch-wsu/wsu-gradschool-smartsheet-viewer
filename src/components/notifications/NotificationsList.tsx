@@ -127,16 +127,6 @@ export function NotificationsList() {
                 </div>
                 <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">{formatWhen(item.createdAt)}</p>
                 {item.body ? <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">{item.body}</p> : null}
-                {item.payload?.fields?.length ? (
-                  <dl className="mt-3 space-y-1 text-sm">
-                    {item.payload.fields.map((field) => (
-                      <div key={field.title} className="grid grid-cols-[minmax(0,140px)_1fr] gap-2">
-                        <dt className="text-[color:var(--wsu-muted)]">{field.title}</dt>
-                        <dd className="text-[color:var(--wsu-ink)]">{field.value || "—"}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : null}
               </div>
 
               <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:justify-end">

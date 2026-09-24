@@ -30,6 +30,10 @@ const RLS_TABLES = [
   "workflows",
   "workflow_runs",
   "user_notifications",
+  "users",
+  "roles",
+  "role_permissions",
+  "user_roles",
 ] as const;
 
 let migratePromise: Promise<void> | null = null;

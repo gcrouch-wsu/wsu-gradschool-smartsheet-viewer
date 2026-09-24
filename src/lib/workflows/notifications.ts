@@ -99,13 +99,9 @@ export async function listKnownEmails(limit = 200): Promise<string[]> {
   await ensureFormsTables();
   const { rows } = await queryFormsDb(
     `SELECT email FROM (
+       SELECT email FROM users WHERE is_active = true AND email LIKE '%@%'
+       UNION
        SELECT lower(username) AS email FROM admin_users WHERE username LIKE '%@%' AND is_active = true
-       UNION
-       SELECT lower(email) AS email FROM contributor_users
-       UNION
-       SELECT lower(email) AS email FROM student_users
-       UNION
-       SELECT lower(email) AS email FROM form_approver_users
      ) people
      WHERE email LIKE '%@%'
      ORDER BY email

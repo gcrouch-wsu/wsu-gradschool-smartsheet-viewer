@@ -30,12 +30,26 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const onNotifications =
     pathname === "/admin/notifications" || pathname.startsWith("/admin/notifications/");
 
-  if (principal.role === "coordinator" && !onNotifications) {
+  let canAccessAdminWorkspace = principal.role !== "coordinator";
+  if (principal.source === "managed") {
+    try {
+      const { getPlatformUserById, capabilitiesForUserRoles } = await import("@/lib/platform-users");
+      const platformUser = await getPlatformUserById(principal.id);
+      if (platformUser) {
+        const caps = await capabilitiesForUserRoles(platformUser.roles);
+        canAccessAdminWorkspace = caps.includes("admin.manage");
+      }
+    } catch {
+      /* keep role-based fallback */
+    }
+  }
+
+  if (!canAccessAdminWorkspace && !onNotifications) {
     redirect("/forms/sheet");
   }
 
   const principalLabel = principal.displayName ?? principal.username;
-  const showFullNav = principal.role !== "coordinator";
+  const showFullNav = canAccessAdminWorkspace;
   const coordinatorNav = [
     { href: "/forms/sheet", label: "Sheet", icon: "grid" as const },
     { href: "/forms/workflows", label: "Workflows", icon: "manage" as const },
