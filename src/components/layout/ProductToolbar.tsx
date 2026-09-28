@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export type ProductToolbarVariant = "admin" | "forms";
@@ -12,7 +12,6 @@ interface ProductToolbarProps {
   displayName?: string;
   roleLabel?: string;
   showAdminGuide?: boolean;
-  search?: ReactNode;
   /** Forms: clear admin session when true; otherwise clear approver session. */
   isStaffSession?: boolean;
   loading?: boolean;
@@ -70,7 +69,6 @@ export function ProductToolbar({
   displayName = "",
   roleLabel = "",
   showAdminGuide = false,
-  search,
   isStaffSession = false,
   loading = false,
 }: ProductToolbarProps) {
@@ -115,7 +113,6 @@ export function ProductToolbar({
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
-      {search}
       <div
         className="flex max-w-[11rem] min-w-0 items-center gap-2 rounded-full border border-line-strong bg-white py-1.5 pl-1.5 pr-3"
         title={identityTooltip}
