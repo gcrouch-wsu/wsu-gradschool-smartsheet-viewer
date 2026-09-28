@@ -7,8 +7,7 @@ interface ProductShellProps {
   children: ReactNode;
   globalNav: ProductNavItem[];
   contextNav?: ProductNavItem[];
-  actions?: ReactNode;
-  identity?: ReactNode;
+  toolbar?: ReactNode;
   eyebrow?: string;
   title?: string;
   description?: string;
@@ -18,8 +17,7 @@ export function ProductShell({
   children,
   globalNav,
   contextNav,
-  actions,
-  identity,
+  toolbar,
   eyebrow = "Washington State University",
   title = "Smartsheet Workspace",
   description = "Manage sources, views, submissions, and approval workflows.",
@@ -44,14 +42,9 @@ export function ProductShell({
                 </div>
               </div>
 
-              {identity || actions ? (
-                <div className="flex w-full min-w-0 flex-col gap-2 lg:max-w-sm xl:ml-auto xl:w-auto xl:max-w-none xl:flex-row xl:items-center xl:justify-end">
-                  {identity ? <div className="min-w-0 w-full xl:w-auto xl:shrink-0">{identity}</div> : null}
-                  {actions ? (
-                    <div className="flex w-full min-w-0 items-stretch gap-2 xl:w-auto xl:flex-none xl:items-center xl:justify-end">
-                      {actions}
-                    </div>
-                  ) : null}
+              {toolbar ? (
+                <div className="flex w-full min-w-0 xl:ml-auto xl:w-auto xl:max-w-none xl:justify-end">
+                  {toolbar}
                 </div>
               ) : null}
             </div>
