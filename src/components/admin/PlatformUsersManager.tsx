@@ -33,8 +33,46 @@ const ROLE_LABELS: Record<AssignablePlatformRole, string> = {
   student: "Student",
 };
 
+type StatusFilter = "all" | "active" | "inactive" | "pending_password";
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "pending_password", label: "Pending password" },
+];
+
 const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson";
+
+const selectClass = `${inputClass} max-w-[12rem]`;
+
+export function filterPlatformUsers(
+  users: PlatformUserSummary[],
+  query: string,
+  roleFilter: AssignablePlatformRole | "all",
+  statusFilter: StatusFilter,
+): PlatformUserSummary[] {
+  const q = query.trim().toLowerCase();
+  return users.filter((u) => {
+    if (roleFilter !== "all" && !u.roles.includes(roleFilter)) {
+      return false;
+    }
+    if (statusFilter === "active" && !u.isActive) return false;
+    if (statusFilter === "inactive" && u.isActive) return false;
+    if (statusFilter === "pending_password" && u.hasPassword) return false;
+    if (!q) return true;
+    return (
+      u.email.includes(q) ||
+      (u.displayName ?? "").toLowerCase().includes(q) ||
+      u.roles.some(
+        (r) =>
+          r.includes(q) ||
+          ROLE_LABELS[r as AssignablePlatformRole]?.toLowerCase().includes(q),
+      )
+    );
+  });
+}
 
 function emptyForm(): UserFormState {
   return {
@@ -61,26 +99,21 @@ export function PlatformUsersManager({
   const { addToast } = useToast();
   const [users, setUsers] = useState(initialUsers);
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<AssignablePlatformRole | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [busy, setBusy] = useState(false);
   const [resetUrl, setResetUrl] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(
-      (u) =>
-        u.email.includes(q) ||
-        (u.displayName ?? "").toLowerCase().includes(q) ||
-        u.roles.some(
-          (r) =>
-            r.includes(q) ||
-            ROLE_LABELS[r as AssignablePlatformRole]?.toLowerCase().includes(q),
-        ),
-    );
-  }, [users, query]);
+  const hasActiveFilters =
+    Boolean(query.trim()) || roleFilter !== "all" || statusFilter !== "all";
+
+  const filtered = useMemo(
+    () => filterPlatformUsers(users, query, roleFilter, statusFilter),
+    [users, query, roleFilter, statusFilter],
+  );
 
   function openCreate() {
     setEditingId(null);
@@ -202,12 +235,51 @@ export function PlatformUsersManager({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          className={`${inputClass} max-w-sm`}
-          placeholder="Search users…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <label className="block min-w-[14rem] max-w-sm flex-1">
+          <span className="sr-only">Search users</span>
+          <input
+            type="search"
+            className={inputClass}
+            placeholder="Search users…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter by role</span>
+          <select
+            className={selectClass}
+            value={roleFilter}
+            onChange={(e) =>
+              setRoleFilter(
+                e.target.value === "all"
+                  ? "all"
+                  : (e.target.value as AssignablePlatformRole),
+              )
+            }
+          >
+            <option value="all">All roles</option>
+            {ASSIGNABLE_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {ROLE_LABELS[role]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="sr-only">Filter by status</span>
+          <select
+            className={selectClass}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          >
+            {STATUS_FILTER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <Button type="button" onClick={openCreate}>
           Add user
         </Button>
@@ -283,7 +355,9 @@ export function PlatformUsersManager({
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-mist">
-                  No users match this search.
+                  {hasActiveFilters
+                    ? "No users match this search or filter."
+                    : "No managed users yet."}
                 </td>
               </tr>
             ) : null}
