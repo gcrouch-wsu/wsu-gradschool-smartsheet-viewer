@@ -5,6 +5,7 @@ import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import {
+  ADMIN_MANAGED_ROLES,
   ASSIGNABLE_ROLES,
   type AssignablePlatformRole,
   type PlatformUserSummary,
@@ -140,7 +141,12 @@ export function PlatformUsersManager({
       addToast("Email is required.", "error");
       return;
     }
-    if (!form.roles.length) {
+    const managedRoles = form.roles.filter((role) => ADMIN_MANAGED_ROLES.includes(role));
+    const keepContributor = form.roles.includes("contributor");
+    const roles: AssignablePlatformRole[] = keepContributor
+      ? [...managedRoles, "contributor"]
+      : managedRoles;
+    if (!roles.length) {
       addToast("Select at least one role.", "error");
       return;
     }
@@ -149,7 +155,7 @@ export function PlatformUsersManager({
       const payload = {
         email: form.email.trim().toLowerCase(),
         displayName: form.displayName.trim() || undefined,
-        roles: form.roles,
+        roles,
         isActive: form.isActive,
         ...(form.password ? { password: form.password } : {}),
       };
@@ -215,6 +221,7 @@ export function PlatformUsersManager({
   }
 
   function toggleRole(role: AssignablePlatformRole) {
+    if (!ADMIN_MANAGED_ROLES.includes(role)) return;
     setForm((prev) => ({
       ...prev,
       roles: prev.roles.includes(role)
@@ -398,7 +405,7 @@ export function PlatformUsersManager({
           <fieldset>
             <legend className="mb-2 text-sm text-mist">Roles</legend>
             <div className="grid grid-cols-2 gap-2">
-              {ASSIGNABLE_ROLES.map((role) => (
+              {ADMIN_MANAGED_ROLES.map((role) => (
                 <label key={role} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -408,7 +415,22 @@ export function PlatformUsersManager({
                   {ROLE_LABELS[role]}
                 </label>
               ))}
+              {form.roles.includes("contributor") ? (
+                <label className="flex items-center gap-2 text-sm text-mist">
+                  <input type="checkbox" checked disabled readOnly />
+                  Contributor
+                </label>
+              ) : null}
             </div>
+            {form.roles.includes("contributor") ? (
+              <p className="mt-2 text-xs text-mist">
+                Contributor is set when someone claims from a view contact column. It cannot be assigned here.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-mist">
+                Contributors come from sheet contact columns on public views, not from this form.
+              </p>
+            )}
           </fieldset>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -422,7 +444,16 @@ export function PlatformUsersManager({
             <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={saveUser} disabled={busy || !form.email || form.roles.length === 0}>
+            <Button
+              type="button"
+              onClick={saveUser}
+              disabled={
+                busy ||
+                !form.email ||
+                (form.roles.filter((role) => ADMIN_MANAGED_ROLES.includes(role)).length === 0 &&
+                  !form.roles.includes("contributor"))
+              }
+            >
               Save
             </Button>
           </div>

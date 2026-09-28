@@ -26,6 +26,7 @@ export type {
 } from "@/lib/platform-user-types";
 export {
   ALL_CAPABILITIES,
+  ADMIN_MANAGED_ROLES,
   ASSIGNABLE_ROLES,
   OWNER_LOCKED_CAPABILITIES,
   PLATFORM_ROLES,

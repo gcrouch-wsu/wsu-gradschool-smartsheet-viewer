@@ -25,6 +25,15 @@ export const ASSIGNABLE_ROLES: readonly AssignablePlatformRole[] = [
   "student",
 ];
 
+/** Roles an admin may grant from Users → Add/Edit. Contributor is sheet-derived (claim). */
+export const ADMIN_MANAGED_ROLES: readonly AssignablePlatformRole[] = [
+  "admin",
+  "programs_team",
+  "coordinator",
+  "approver",
+  "student",
+];
+
 export const ALL_CAPABILITIES: readonly PrincipalCapability[] = [
   "admin.manage",
   "admin.owner",

@@ -96,7 +96,7 @@ export function AttachmentPreviewDialog({
 
   return (
     <Modal open={open} onClose={onClose} title={attachment?.name || "Attachment"} size="xl" zClass="z-[10050]">
-      <div className="flex flex-col gap-4 p-5">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-[color:var(--wsu-muted)]">
             {loadingMeta ? "Loading preview…" : kind === "other" ? "Preview not available for this file type." : "In-app preview"}

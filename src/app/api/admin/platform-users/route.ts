@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { canManageUsers } from "@/lib/admin-users";
 import {
-  ASSIGNABLE_ROLES,
+  ADMIN_MANAGED_ROLES,
   type AssignablePlatformRole,
   deletePlatformUser,
   listPlatformUsers,
@@ -11,6 +11,14 @@ import {
 import { validateAdminPassword } from "@/lib/admin-auth";
 
 export const runtime = "nodejs";
+
+function managedRolesFromBody(roles: unknown): AssignablePlatformRole[] {
+  if (!Array.isArray(roles)) return [];
+  return roles.filter(
+    (r): r is AssignablePlatformRole =>
+      typeof r === "string" && ADMIN_MANAGED_ROLES.includes(r as AssignablePlatformRole),
+  );
+}
 
 export async function GET() {
   const auth = await requireAdminApiAccess({ usersOnly: true });
@@ -38,9 +46,7 @@ export async function POST(request: Request) {
   const displayName = typeof body?.displayName === "string" ? body.displayName.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
   const isActive = body?.isActive !== false;
-  const roles = Array.isArray(body?.roles)
-    ? body.roles.filter((r): r is AssignablePlatformRole => typeof r === "string" && ASSIGNABLE_ROLES.includes(r as AssignablePlatformRole))
-    : [];
+  const roles = managedRolesFromBody(body?.roles);
 
   if (!email) {
     return NextResponse.json({ message: "Email is required." }, { status: 400 });

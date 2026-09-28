@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { validateAdminPassword } from "@/lib/admin-auth";
 import {
-  ASSIGNABLE_ROLES,
+  ADMIN_MANAGED_ROLES,
   type AssignablePlatformRole,
   deletePlatformUser,
   getPlatformUserById,
@@ -10,6 +10,14 @@ import {
 } from "@/lib/platform-users";
 
 export const runtime = "nodejs";
+
+function managedRolesFromBody(roles: unknown): AssignablePlatformRole[] {
+  if (!Array.isArray(roles)) return [];
+  return roles.filter(
+    (r): r is AssignablePlatformRole =>
+      typeof r === "string" && ADMIN_MANAGED_ROLES.includes(r as AssignablePlatformRole),
+  );
+}
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdminApiAccess({ usersOnly: true });
@@ -56,11 +64,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     typeof body?.displayName === "string" ? body.displayName.trim() : existing.displayName ?? "";
   const password = typeof body?.password === "string" ? body.password : "";
   const isActive = typeof body?.isActive === "boolean" ? body.isActive : existing.isActive;
-  const roles = Array.isArray(body?.roles)
-    ? body.roles.filter((r): r is AssignablePlatformRole =>
-        typeof r === "string" && ASSIGNABLE_ROLES.includes(r as AssignablePlatformRole),
-      )
-    : (existing.roles.filter((r) => ASSIGNABLE_ROLES.includes(r as AssignablePlatformRole)) as AssignablePlatformRole[]);
+  const requestedManaged = Array.isArray(body?.roles)
+    ? managedRolesFromBody(body.roles)
+    : (existing.roles.filter((r) =>
+        ADMIN_MANAGED_ROLES.includes(r as AssignablePlatformRole),
+      ) as AssignablePlatformRole[]);
+  const hadContributor = existing.roles.includes("contributor");
+  const roles: AssignablePlatformRole[] = hadContributor
+    ? [...requestedManaged, "contributor"]
+    : requestedManaged;
 
   if (!roles.length) {
     return NextResponse.json({ message: "At least one role is required." }, { status: 400 });
