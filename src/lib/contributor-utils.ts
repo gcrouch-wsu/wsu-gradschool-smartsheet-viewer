@@ -14,7 +14,7 @@ import type {
 } from "@/lib/config/types";
 import { applyViewFilters } from "@/lib/filters";
 import { isRoleGroupFieldSource, isUnsafeDelimitedRoleGroup } from "@/lib/role-groups";
-import { normalizeColumnKey } from "@/lib/smartsheet";
+import { normalizeColumnKey } from "@/lib/smartsheet-column-key";
 import { normalizeSourceValue, toContactList } from "@/lib/transforms";
 
 const CONTRIBUTOR_CONTACT_COLUMN_TYPES = new Set(["CONTACT_LIST", "MULTI_CONTACT_LIST"]);

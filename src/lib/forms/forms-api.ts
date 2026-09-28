@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
-import { config as formsConfig } from "@/lib/forms/config";
 import { isFullAdminRole } from "@/lib/admin-users";
 import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 import { isWorkflowAuthorRole } from "@/lib/workflows/access";
@@ -86,7 +85,6 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
 export async function getFormsSessionPayload() {
   const user = await getFormsSessionUserFromRequest();
   return {
-    demo: formsConfig.demo,
     user,
     roles: user?.roles ?? [],
     isAdmin: user?.isAdmin ?? false,

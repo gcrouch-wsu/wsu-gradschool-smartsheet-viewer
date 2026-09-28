@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -18,7 +17,7 @@ export async function GET(
 
   try {
     const shares = await ss.listShares(sheetId);
-    return Response.json({ shares, demo: config.demo });
+    return Response.json({ shares });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -41,7 +40,7 @@ export async function POST(
 
   try {
     const result = await ss.shareSheet(sheetId, email, accessLevel);
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

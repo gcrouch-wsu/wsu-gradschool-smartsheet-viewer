@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button, EmptyState, RecentCard, StatCard } from "@/components/admin/WorkspacePrimitives";
+import { SmartsheetApiKillSwitchCard } from "@/components/admin/SmartsheetApiKillSwitchCard";
 import {
   ADMIN_DASHBOARD_TOUR_STEPS,
   ADMIN_DASHBOARD_TOUR_STORAGE_KEY,
@@ -59,6 +60,8 @@ export default async function AdminDashboardPage() {
           icon={<DataIcon kind="forms" />}
         />
       </section>
+
+      <SmartsheetApiKillSwitchCard />
 
       <section className="grid gap-3 lg:grid-cols-2">
         <div data-tour="ad-sources">

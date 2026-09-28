@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { getSyncState, setLastEventId } from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
@@ -19,7 +18,7 @@ export async function GET(request: Request) {
   try {
     const events = (await ss.listEvents(since ?? undefined)) as { lastEventId?: string | number };
     if (events.lastEventId) await setLastEventId(String(events.lastEventId));
-    return Response.json({ events, demo: config.demo });
+    return Response.json({ events });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

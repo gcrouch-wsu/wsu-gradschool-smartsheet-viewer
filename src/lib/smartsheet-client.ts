@@ -125,6 +125,25 @@ export interface SmartsheetRequestOptions {
   body?: BodyInit | null;
 }
 
+/** Throws SmartsheetRequestError(503) when the admin kill switch is off. */
+export async function ensureSmartsheetApiAllowed(): Promise<void> {
+  // Kill switch is server-only; avoid pulling pg into client bundles.
+  if (typeof window !== "undefined") {
+    return;
+  }
+  const { assertSmartsheetApiEnabled, SmartsheetApiDisabledError } = await import(
+    "@/lib/smartsheet-api-gate"
+  );
+  try {
+    await assertSmartsheetApiEnabled();
+  } catch (error) {
+    if (error instanceof SmartsheetApiDisabledError) {
+      throw new SmartsheetRequestError(error.status, error.message);
+    }
+    throw error;
+  }
+}
+
 /**
  * Low-level Smartsheet API call. Returns parsed JSON (or empty object for empty body).
  * Throws SmartsheetRequestError on non-OK responses / invalid JSON.
@@ -133,6 +152,7 @@ export async function smartsheetRequest(
   path: string,
   options: SmartsheetRequestOptions = {},
 ): Promise<unknown> {
+  await ensureSmartsheetApiAllowed();
   const connection =
     options.connection ?? resolveConnection(options.connectionKey, options.apiBaseUrl);
   const method = options.method ?? "GET";

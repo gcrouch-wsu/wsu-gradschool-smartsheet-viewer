@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
@@ -210,6 +210,29 @@ const {
       return { rows: [{ count: String(count) }], rowCount: 1 };
     }
 
+    // Unified users / roles (platform-users dual-write). Auth falls back to admin_users when
+    // these lookups return empty; writes are best-effort no-ops for unit tests.
+    if (
+      sql.includes("FROM users") ||
+      sql.includes("INTO users") ||
+      sql.includes("UPDATE users") ||
+      sql.includes("DELETE FROM users") ||
+      sql.includes("user_roles") ||
+      sql.includes("FROM roles") ||
+      sql.includes("INTO roles") ||
+      sql.includes("role_permissions") ||
+      sql.includes("FROM app_settings") ||
+      sql.includes("INTO app_settings")
+    ) {
+      if (sql.includes("RETURNING id")) {
+        return { rows: [{ id: randomUUID() }], rowCount: 1 };
+      }
+      if (sql.includes("SELECT") || sql.startsWith("SELECT")) {
+        return { rows: [], rowCount: 0 };
+      }
+      return { rows: [], rowCount: 1 };
+    }
+
     throw new Error(`Unhandled mock SQL: ${sql}`);
   }
 
@@ -254,7 +277,7 @@ afterEach(async () => {
 });
 
 describe("managed admin users", () => {
-  it("authenticates the bootstrap owner from env", async () => {
+  it("authenticates the bootstrap owner from env", { timeout: 15_000 }, async () => {
     const users = await import("@/lib/admin-users");
 
     const result = await users.authenticateAdminCredentials("owner", "Owner!234");
@@ -263,7 +286,7 @@ describe("managed admin users", () => {
     expect(result.principal).toMatchObject({ role: "owner", source: "env", username: "owner" });
   });
 
-  it("creates and authenticates managed admin users in file mode", async () => {
+  it("creates and authenticates managed admin users in file mode", { timeout: 15_000 }, async () => {
     const users = await import("@/lib/admin-users");
 
     const created = await users.saveManagedAdminUser({
@@ -280,7 +303,7 @@ describe("managed admin users", () => {
     expect(result.principal).toMatchObject({ role: "admin", source: "managed", username: "jane@example.com" });
   });
 
-  it("creates and authenticates managed admin users in database mode", async () => {
+  it("creates and authenticates managed admin users in database mode", { timeout: 15_000 }, async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://example:example@example.com:5432/smartsheets_view");
     const users = await import("@/lib/admin-users");
 

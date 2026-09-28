@@ -9,7 +9,6 @@ interface SheetOption {
 }
 
 interface AddSheetCardProps {
-  sheetsLive: boolean;
   addableCount: number;
   sheets: SheetOption[];
   addId: string;
@@ -22,7 +21,6 @@ interface AddSheetCardProps {
 }
 
 export function AddSheetCard({
-  sheetsLive,
   addableCount,
   sheets,
   addId,
@@ -76,9 +74,7 @@ export function AddSheetCard({
       <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
         {sheetsLoading
           ? "Loading sheets from Smartsheet…"
-          : sheetsLive
-            ? `${addableCount} sheet${addableCount === 1 ? "" : "s"} available. Adds to the shared Sources catalog and activates Forms.`
-            : "Demo mode — showing sample sheets only."}
+          : `${addableCount} sheet${addableCount === 1 ? "" : "s"} available. Adds to the shared Sources catalog and activates Forms.`}
       </p>
 
       <div className="mt-4 flex flex-1 flex-col gap-3">

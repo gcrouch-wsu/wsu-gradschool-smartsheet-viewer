@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -18,7 +17,7 @@ export async function GET(
 
   try {
     const pathResult = (await ss.getSheetPath(sheetId)) as { path?: unknown };
-    return Response.json({ path: pathResult.path ?? pathResult, demo: config.demo });
+    return Response.json({ path: pathResult.path ?? pathResult });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

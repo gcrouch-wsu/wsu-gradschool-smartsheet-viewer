@@ -1,5 +1,4 @@
 import { auditFromPrincipal } from "@/lib/audit";
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import {
@@ -101,7 +100,6 @@ export async function GET() {
       webhooks,
       active,
       state: adminStateView(state),
-      demo: config.demo,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);
@@ -161,7 +159,6 @@ export async function POST(request: Request) {
       sheetName: registered.name,
       callbackUrl: maskCallbackUrl(callbackUrl),
       state: adminStateView(state),
-      demo: config.demo,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);

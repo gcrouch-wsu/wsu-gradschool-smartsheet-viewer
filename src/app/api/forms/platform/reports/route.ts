@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -14,7 +13,7 @@ export async function GET() {
 
   try {
     const reports = await ss.listReports();
-    return Response.json({ reports, demo: config.demo });
+    return Response.json({ reports });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   try {
     const result = await ss.createReport(body);
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

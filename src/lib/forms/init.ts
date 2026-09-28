@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { config, defaultWorkflow } from "@/lib/forms/config";
+import { defaultWorkflow } from "@/lib/forms/config";
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
 import * as registry from "@/lib/forms/registry";
 import { saveConditionalRules } from "@/lib/forms/store/conditional-rules";
@@ -67,10 +67,6 @@ async function seedDefaultConfigFromPrototype(): Promise<void> {
 }
 
 async function seedRegistryFromEnv(): Promise<void> {
-  if (config.demo) {
-    return;
-  }
-
   const envId = process.env.SMARTSHEET_SHEET_ID?.trim();
   if (!envId) {
     return;

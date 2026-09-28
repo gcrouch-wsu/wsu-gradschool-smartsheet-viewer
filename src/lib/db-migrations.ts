@@ -34,6 +34,7 @@ const RLS_TABLES = [
   "roles",
   "role_permissions",
   "user_roles",
+  "app_settings",
 ] as const;
 
 let migratePromise: Promise<void> | null = null;

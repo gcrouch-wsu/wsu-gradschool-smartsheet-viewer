@@ -50,7 +50,6 @@ export interface BuilderState {
   publicUrl: string | null;
   attachmentsEnabled: boolean;
   envAttachmentsEnabled: boolean;
-  demo: boolean;
 }
 
 async function parseJson(r: Response): Promise<Record<string, unknown>> {
@@ -167,7 +166,6 @@ export function useFormBuilder() {
         publicUrl: typeof d.publicUrl === "string" ? d.publicUrl : null,
         attachmentsEnabled: d.attachmentsEnabled !== false,
         envAttachmentsEnabled: d.envAttachmentsEnabled !== false,
-        demo: Boolean(d.demo),
       };
       setState(next);
       setSelectedTitle((prev) => {
@@ -476,7 +474,6 @@ export function useFormBuilder() {
       fieldMeta: fieldMetaFromConfig(config),
       conditionalLogic: state.conditionalLogic,
       allowedDomains: state.allowedDomains,
-      demo: state.demo,
       attachmentsEnabled: state.attachmentsEnabled,
     };
   }, [state]);

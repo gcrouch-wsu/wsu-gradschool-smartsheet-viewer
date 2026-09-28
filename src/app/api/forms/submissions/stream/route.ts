@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as registry from "@/lib/forms/registry";
 import { buildSubmissions } from "@/lib/forms/tracker";
 import * as ss from "@/lib/forms/smartsheet-api";
@@ -30,7 +29,6 @@ export async function GET(request: Request) {
       recentEvents: since
         ? state.recentEvents.filter((e) => e.at > since)
         : state.recentEvents.slice(0, 5),
-      demo: config.demo,
       at: new Date().toISOString(),
     };
     return Response.json(payload);

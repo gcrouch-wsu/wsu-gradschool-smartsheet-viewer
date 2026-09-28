@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { buildSheetView } from "@/lib/forms/sheet-view";
 import { buildSubmissions } from "@/lib/forms/tracker";
@@ -37,7 +36,6 @@ export async function GET(request: Request) {
     return Response.json({
       sheetId,
       sheetName: sheet.name,
-      demo: config.demo,
       totalRowCount: sheet.totalRowCount ?? view.rows.length,
       formColumnIds,
       formColumnSource,

@@ -1,5 +1,4 @@
 import { auditFromPrincipal } from "@/lib/audit";
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { findCurrentStage } from "@/lib/forms/submission-actions";
 import {
@@ -158,7 +157,6 @@ export async function POST(
 
     return Response.json({
       ok: true,
-      demo: config.demo,
       stage: stageLabel || null,
       resendColumn: resendCol.title,
       resendColumnType: resendCol.type ?? null,

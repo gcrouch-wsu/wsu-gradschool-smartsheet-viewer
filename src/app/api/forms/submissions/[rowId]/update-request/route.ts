@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { stageColumns } from "@/lib/forms/tracker";
 import { ensureBootstrapped } from "@/lib/forms/init";
@@ -39,7 +38,7 @@ export async function POST(
       message,
       sendTo: [{ email }],
     });
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

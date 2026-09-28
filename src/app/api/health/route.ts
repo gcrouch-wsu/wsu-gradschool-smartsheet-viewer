@@ -6,7 +6,7 @@ import { hasConfiguredConnection } from "@/lib/smartsheet-client";
 export const dynamic = "force-dynamic";
 
 /**
- * Readiness probe: reports DB, Smartsheet token/demo, and app version.
+ * Readiness probe: reports DB, Smartsheet token, and app version.
  * Does not require authentication.
  */
 export async function GET() {
@@ -24,10 +24,9 @@ export async function GET() {
   }
 
   const smartsheetConfigured = hasConfiguredConnection() || Boolean(formsConfig.smartsheetToken);
-  const demo = formsConfig.demo;
 
   const ready =
-    (databaseConfigured ? databaseReachable === true : true) && (smartsheetConfigured || demo);
+    (databaseConfigured ? databaseReachable === true : true) && smartsheetConfigured;
 
   return NextResponse.json(
     {
@@ -39,7 +38,6 @@ export async function GET() {
       },
       smartsheet: {
         configured: smartsheetConfigured,
-        demo,
       },
       checkedAt: new Date().toISOString(),
     },

@@ -8,7 +8,6 @@ import { IconSearch } from "@/components/forms/icons";
 import { productNav } from "@/lib/product-navigation";
 
 interface FormsSessionInfo {
-  demo: boolean;
   user: { email: string; name: string; roles: string[] } | null;
   roles: string[];
   isAdmin: boolean;
@@ -56,7 +55,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
 
   const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
   const onWorkflows = pathname.startsWith("/forms/workflows");
-  const canSearch = !onWorkflows && (session?.isAdmin || session?.isApprover || session?.demo);
+  const canSearch = !onWorkflows && (session?.isAdmin || session?.isApprover);
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
     if (session.isProgramsTeam) return "Programs Team";

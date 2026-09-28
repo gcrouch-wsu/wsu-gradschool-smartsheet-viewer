@@ -551,10 +551,7 @@ export function SubmissionFormView({
           {!hasDescription && schema.allowedDomains.length ? (
             <p className="mt-5 text-sm leading-relaxed text-[color:var(--wsu-muted)]">
               Open to @{schema.allowedDomains.join(", @")} email addresses.
-              {schema.demo ? " Demo mode." : ""}
             </p>
-          ) : schema.demo && !hasDescription ? (
-            <p className="mt-5 text-sm text-[color:var(--wsu-muted)]">Demo mode.</p>
           ) : null}
         </aside>
 

@@ -4,7 +4,9 @@ import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { ProductToolbar } from "@/components/layout/ProductToolbar";
 import { canManageUsers, getCurrentAdminAuthResult } from "@/lib/admin-users";
+import { isDatabaseConfigEnabled } from "@/lib/config/config-db";
 import { productNav } from "@/lib/product-navigation";
+import { isSmartsheetApiEnabled } from "@/lib/smartsheet-api-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/notifications", label: "Notifications", icon: "notifications" as const },
   ];
 
+  const smartsheetApiEnabled =
+    !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
+
   return (
     <ProductShell
       globalNav={showFullNav ? productNav(true, { canManageUsers: canManageUsers(principal.role) }) : coordinatorNav}
@@ -66,6 +71,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         />
       }
     >
+      {!smartsheetApiEnabled && showFullNav ? (
+        <div
+          className="mb-4 rounded-lg border border-[var(--crimson-line)] bg-[var(--crimson-soft)] px-4 py-2.5 text-sm text-crimson"
+          role="status"
+        >
+          Smartsheet API is off. Views and forms cannot call Smartsheet until an admin turns it back on
+          from the workspace overview.
+        </div>
+      ) : null}
       <AdminToastWrapper>{children}</AdminToastWrapper>
     </ProductShell>
   );

@@ -173,7 +173,6 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
     ok: true,
     sheet: { id: sheet.id, name: sheet.name },
     note: noteParts.join("; ") + ".",
-    demo: config.demo,
     importedRows,
   });
 }
@@ -264,7 +263,7 @@ export async function POST(request: Request) {
       mode: mode === "template" ? "template" : "scratch",
     });
 
-    return Response.json({ ok: true, sheet: { id: sheet.id, name: sheet.name }, note, demo: config.demo });
+    return Response.json({ ok: true, sheet: { id: sheet.id, name: sheet.name }, note });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

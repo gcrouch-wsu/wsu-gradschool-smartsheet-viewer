@@ -43,7 +43,6 @@ function SheetViewPageContent() {
   const [rows, setRows] = useState<SheetGridRow[]>([]);
   const [workflow, setWorkflow] = useState<SheetGridWorkflow | null>(null);
   const [totalRowCount, setTotalRowCount] = useState<number | null>(null);
-  const [demo, setDemo] = useState(false);
   const [approvedValues, setApprovedValues] = useState<string[]>([]);
   const [declinedValues, setDeclinedValues] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -111,7 +110,6 @@ function SheetViewPageContent() {
           setRows(d.rows ?? []);
           setWorkflow(d.workflow ?? null);
           setTotalRowCount(d.totalRowCount ?? d.rows?.length ?? null);
-          setDemo(d.demo);
           setApprovedValues(d.workflow?.approvedValues ?? []);
           setDeclinedValues(d.workflow?.declinedValues ?? []);
           setError("");
@@ -230,7 +228,6 @@ function SheetViewPageContent() {
       ) : null}
       <SheetGridView
         sheetName={sheetName}
-        demo={demo}
         columns={columns}
         rows={rows}
         workflow={workflow}

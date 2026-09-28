@@ -7,7 +7,6 @@ import { saveSourceConfig } from "@/lib/config/admin-store";
 import { getSourceConfigById, listSourceConfigs } from "@/lib/config/store";
 import type { FormProvenance, SourceConfig } from "@/lib/config/types";
 import { validateSourceConfig } from "@/lib/config/validation";
-import { config } from "@/lib/forms/config";
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
 import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
 import {
@@ -22,8 +21,6 @@ export type { FormEntry };
 
 const REGISTRY_ROW_ID = "registry";
 
-let demoPreference: RegistryShape = { activeSheetId: "", forms: [], activeSourceId: "" };
-let demoLoaded = false;
 let migratePromise: Promise<void> | null = null;
 
 function sourceIsFormsSheet(source: SourceConfig): boolean {
@@ -59,13 +56,6 @@ function ensureFormEntryDefaults(form: FormEntry): FormEntry {
 }
 
 async function readPreferenceRaw(): Promise<RegistryShape> {
-  if (config.demo) {
-    if (!demoLoaded) {
-      demoPreference = await readRegistry();
-      demoLoaded = true;
-    }
-    return demoPreference;
-  }
   if (isFormsDatabaseEnabled()) {
     await ensureFormsTables();
     const { rows } = await queryFormsDb<{ data: RegistryShape }>(
@@ -93,10 +83,6 @@ async function writePreference(preference: RegistryShape): Promise<void> {
     forms: preference.forms ?? [],
     migratedToSourcesAt: preference.migratedToSourcesAt,
   };
-  if (config.demo) {
-    demoPreference = next;
-    return;
-  }
   if (isFormsDatabaseEnabled()) {
     await ensureFormsTables();
     await queryFormsDb(

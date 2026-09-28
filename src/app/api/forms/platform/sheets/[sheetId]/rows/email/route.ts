@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -26,7 +25,7 @@ export async function POST(
 
   try {
     const result = await ss.sendRowEmail(sheetId, rowIds, columnIds, recipients, body.message);
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

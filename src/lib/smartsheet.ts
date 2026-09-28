@@ -8,10 +8,12 @@ import type {
 import {
   type ConnectionConfig,
   SmartsheetRequestError,
+  ensureSmartsheetApiAllowed,
   hasConfiguredConnection,
   listConfiguredConnectionKeys,
   resolveConnection,
 } from "@/lib/smartsheet-client";
+import { normalizeColumnKey } from "@/lib/smartsheet-column-key";
 
 export type { ConnectionConfig };
 export {
@@ -20,6 +22,7 @@ export {
   listConfiguredConnectionKeys,
   resolveConnection,
 };
+export { normalizeColumnKey };
 
 interface SmartsheetApiColumn {
   id: number;
@@ -169,10 +172,6 @@ export function httpStatusForSmartsheetContributorError(smartsheetStatus: number
   return 502;
 }
 
-export function normalizeColumnKey(value: string) {
-  return value.trim().toLowerCase();
-}
-
 function resolveFetchOptions(source: SourceConfig, options?: FetchBehaviorOptions): EffectiveFetchOptions {
   return {
     includeObjectValue: options?.fetchOptionsOverride?.includeObjectValue ?? source.fetchOptions?.includeObjectValue,
@@ -276,6 +275,7 @@ async function fetchSmartsheetSource<T>(
   revalidateSeconds: number,
   options?: FetchBehaviorOptions,
 ) {
+  await ensureSmartsheetApiAllowed();
   const { token, apiBaseUrl } = resolveConnection(source.connectionKey, source.apiBaseUrl);
   const url = new URL(`${apiBaseUrl.replace(/\/$/, "")}/${endpointPath.replace(/^\//, "")}`);
   const fetchOptions = resolveFetchOptions(source, options);
@@ -303,6 +303,7 @@ async function fetchSmartsheetSource<T>(
 }
 
 async function fetchCurrentUser(connection: ConnectionConfig) {
+  await ensureSmartsheetApiAllowed();
   return fetch(`${connection.apiBaseUrl.replace(/\/$/, "")}/users/me`, {
     headers: { Authorization: `Bearer ${connection.token}` },
     signal: AbortSignal.timeout(5000),
@@ -620,6 +621,7 @@ export async function updateSmartsheetRow(
   console.log(
     `[updateSmartsheetRow] PUT sheet=${sheetId} row=${rowId} cellCount=${outgoingCells.length}`,
   );
+  await ensureSmartsheetApiAllowed();
   const putBody = JSON.stringify([{ id: rowId, cells: outgoingCells }]);
   const response = await fetch(url, {
     method: "PUT",
@@ -664,6 +666,7 @@ export async function listSmartsheetCatalog(
   options?: { connectionKey?: string; apiBaseUrl?: string },
 ): Promise<SmartsheetCatalogItem[]> {
   const { token, apiBaseUrl } = resolveConnection(options?.connectionKey, options?.apiBaseUrl);
+  await ensureSmartsheetApiAllowed();
   const base = apiBaseUrl.replace(/\/$/, "");
   const path = kind === "report" ? "reports" : "sheets";
   const items: SmartsheetCatalogItem[] = [];

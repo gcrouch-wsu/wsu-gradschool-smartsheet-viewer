@@ -41,7 +41,6 @@ export interface SheetGridWorkflow {
 
 interface SheetGridViewProps {
   sheetName: string;
-  demo: boolean;
   columns: SheetGridColumn[];
   rows: SheetGridRow[];
   workflow: SheetGridWorkflow | null;
@@ -148,7 +147,6 @@ function StatusStat({
 
 export function SheetGridView({
   sheetName,
-  demo,
   columns,
   rows,
   workflow,
@@ -240,13 +238,6 @@ export function SheetGridView({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0" data-tour="fs-heading">
           <h1 className="truncate text-xl font-medium text-[color:var(--wsu-ink)]">{sheetName}</h1>
-          <p className="mt-1 text-sm">
-            {demo ? (
-              <span className="font-medium text-[color:var(--wsu-muted)]">Demo</span>
-            ) : (
-              <span className="font-medium text-emerald-700">Live</span>
-            )}
-          </p>
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
           <TourHowToButton onClick={tour.startTour} />

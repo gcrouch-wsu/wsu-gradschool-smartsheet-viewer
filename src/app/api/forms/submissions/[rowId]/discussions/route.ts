@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import {
@@ -32,7 +31,7 @@ export async function GET(
 
   try {
     const discussions = await ss.listDiscussions(sheetId, rowId);
-    return Response.json({ sheetId, discussions, demo: config.demo });
+    return Response.json({ sheetId, discussions });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -60,7 +59,7 @@ export async function POST(
 
   try {
     const result = await ss.addDiscussion(sheetId, rowId, text);
-    return Response.json({ ok: true, sheetId, result, demo: config.demo });
+    return Response.json({ ok: true, sheetId, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

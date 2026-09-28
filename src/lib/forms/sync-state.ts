@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
 import { readWebhookState, writeWebhookState, type WebhookState } from "@/lib/forms/store/file-store";
 import { publishWebhookEvent } from "@/lib/forms/webhook-bus";
@@ -40,10 +39,6 @@ async function saveStateToDb(sheetKey: string, state: SyncState): Promise<void> 
 }
 
 async function loadState(sheetId?: string | number): Promise<SyncState> {
-  if (config.demo) {
-    return { recentEvents: [] };
-  }
-
   const sheetKey = normalizeSheetKey(sheetId);
   if (isFormsDatabaseEnabled()) {
     return loadStateFromDb(sheetKey);
@@ -52,8 +47,6 @@ async function loadState(sheetId?: string | number): Promise<SyncState> {
 }
 
 async function saveState(sheetId: string | number | undefined, state: SyncState): Promise<void> {
-  if (config.demo) return;
-
   const sheetKey = normalizeSheetKey(sheetId);
   if (isFormsDatabaseEnabled()) {
     await saveStateToDb(sheetKey, state);
@@ -92,7 +85,7 @@ export async function recordWebhookEvent(sheetId: number, eventType: string, obj
     ].slice(0, MAX_RECENT_EVENTS),
   };
 
-  if (isFormsDatabaseEnabled() && !config.demo) {
+  if (isFormsDatabaseEnabled()) {
     await insertWebhookEvent(sheetKey, eventType, objectId);
   }
 
