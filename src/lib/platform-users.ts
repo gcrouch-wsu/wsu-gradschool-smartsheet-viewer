@@ -471,7 +471,7 @@ export async function saveRolePermissionMatrix(
   await ensureTables();
   for (const [roleId, caps] of Object.entries(updates)) {
     if (!(PLATFORM_ROLES as readonly string[]).includes(roleId)) continue;
-    let nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
+    const nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
     if (roleId === "owner") {
       for (const locked of OWNER_LOCKED_CAPABILITIES) {
         if (!nextCaps.includes(locked)) nextCaps.push(locked);
