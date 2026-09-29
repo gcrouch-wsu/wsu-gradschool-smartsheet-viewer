@@ -2,8 +2,8 @@ import Link from "next/link";
 import {
   FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
   FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
-  FormBrandHeader,
-} from "@/components/forms/submission/FormBrandHeader";
+  AppBrandHeader,
+} from "@/components/layout/AppBrandHeader";
 import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
@@ -29,7 +29,7 @@ export default async function HomePage() {
         Skip to main content
       </a>
 
-      <FormBrandHeader
+      <AppBrandHeader
         actionsLabel="Workspace administration"
         actions={
           <>

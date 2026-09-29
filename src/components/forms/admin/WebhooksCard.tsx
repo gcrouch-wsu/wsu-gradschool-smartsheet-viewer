@@ -33,7 +33,6 @@ export interface WebhookInfo {
   webhooks?: WebhookListItem[];
   active?: WebhookActiveSheet | null;
   state?: WebhookAdminState;
-  demo?: boolean;
 }
 
 interface WebhooksCardProps {
@@ -269,10 +268,6 @@ export function WebhooksCard({
             {otherWebhooks.length} other Smartsheet webhook
             {otherWebhooks.length === 1 ? "" : "s"} on this account (not managed by Forms).
           </p>
-        ) : null}
-
-        {webhookInfo?.demo ? (
-          <p className="text-xs text-[color:var(--wsu-muted)]">Demo mode: registration is simulated.</p>
         ) : null}
       </div>
     </Card>

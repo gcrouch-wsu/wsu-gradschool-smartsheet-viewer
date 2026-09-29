@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE_NAME, getAdminSessionCookieSettings } from "@/lib/admin-auth";
 import {
   CONTRIBUTOR_GENERIC_LOGIN_ERROR,
   CONTRIBUTOR_SESSION_COOKIE_NAME,
   CONTRIBUTOR_TOO_MANY_ATTEMPTS_ERROR,
   createContributorSessionToken,
   getContributorConfigurationError,
-  getContributorSessionCookieSettings,
-  getContributorUserByEmail,
   isContributorRateLimited,
   recordContributorFailedAttempt,
   verifyContributorPassword,
@@ -48,21 +47,37 @@ export async function POST(
   }
 
   const dataset = await loadContributorDataset(context.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
-  const user = email ? await getContributorUserByEmail(email) : null;
+  const { getPlatformUserByEmail, addUserRole } = await import("@/lib/platform-users");
+  const user = email ? await getPlatformUserByEmail(email) : null;
   const isEligible =
     isWsuEmail(email) &&
     isContributorStillInSheet(dataset.rows, email, context.activeView.editing.contactColumnIds);
 
-  if (!isEligible || !user || !verifyContributorPassword(password, user)) {
+  if (
+    !isEligible ||
+    !user ||
+    !verifyContributorPassword(password, {
+      passwordHash: user.passwordHash,
+      passwordSalt: user.passwordSalt,
+    })
+  ) {
     await recordContributorFailedAttempt(rateLimitKey);
     return NextResponse.json({ error: CONTRIBUTOR_GENERIC_LOGIN_ERROR }, { status: 401 });
   }
 
+  await addUserRole(user.id, "contributor");
+
+  const token = await createContributorSessionToken(email);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(
-    CONTRIBUTOR_SESSION_COOKIE_NAME,
-    await createContributorSessionToken(email),
-    getContributorSessionCookieSettings(),
-  );
+  response.cookies.set({
+    ...getAdminSessionCookieSettings(),
+    name: ADMIN_SESSION_COOKIE_NAME,
+    value: token,
+  });
+  response.cookies.set(CONTRIBUTOR_SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+  });
   return response;
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert, inputClass, primaryBtnClass, secondaryBtnClass } from "@/components/forms/admin/AdminCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
+import { Modal } from "@/components/ui/Modal";
 import { WorkflowTemplateDetailsModal } from "@/components/workflows/WorkflowTemplateDetailsModal";
 import { FILTER_OPERATOR_OPTIONS } from "@/lib/config/options";
 import type { ViewFilterConfig } from "@/lib/config/types";
@@ -210,19 +211,16 @@ export function WorkflowsWorkspace() {
 
       <WorkflowTemplateDetailsModal template={details} onClose={() => setDetails(null)} onUse={startFromTemplate} />
 
-      {draft ? (
-        <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/30 p-4 sm:items-center">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-xl">
-            <div className="flex items-start justify-between border-b border-[color:var(--wsu-border)] px-5 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
-                  {["Trigger", "Conditions", "Action"][step]}
-                </p>
-                <h2 className="mt-1 text-base font-medium text-[color:var(--wsu-ink)]">{draft.name}</h2>
-              </div>
-              <button type="button" className={secondaryBtnClass} onClick={() => setDraft(null)}>Close</button>
-            </div>
-            <div className="space-y-4 p-5">
+      <Modal
+        open={Boolean(draft)}
+        onClose={() => setDraft(null)}
+        title={draft?.name ?? "Workflow"}
+        description={["Trigger", "Conditions", "Action"][step]}
+        size="3xl"
+      >
+        {draft ? (
+          <>
+            <div className="space-y-4">
               {step === 0 ? (
                 <TriggerStep
                   name={draft.name}
@@ -252,11 +250,15 @@ export function WorkflowsWorkspace() {
                 />
               ) : null}
             </div>
-            <div className="flex flex-wrap justify-between gap-2 border-t border-[color:var(--wsu-border)] px-5 py-4">
-              <button type="button" className={secondaryBtnClass} disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
+            <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-[color:var(--wsu-border)] pt-4">
+              <button type="button" className={secondaryBtnClass} disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
+                Back
+              </button>
               <div className="flex gap-2">
                 {step < 2 ? (
-                  <button type="button" className={primaryBtnClass} onClick={() => setStep((s) => s + 1)}>Next</button>
+                  <button type="button" className={primaryBtnClass} onClick={() => setStep((s) => s + 1)}>
+                    Next
+                  </button>
                 ) : (
                   <>
                     <button type="button" className={secondaryBtnClass} disabled={saving} onClick={() => void save(false)}>
@@ -271,9 +273,9 @@ export function WorkflowsWorkspace() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </Modal>
     </FormsWorkspaceChrome>
   );
 }

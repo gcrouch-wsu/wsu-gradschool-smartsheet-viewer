@@ -1,5 +1,5 @@
 /**
- * Resolve Principal from cookies / request. Wraps existing auth libs without changing cookie format.
+ * Resolve Principal from the unified platform session cookie (and legacy cookies during transition).
  */
 import { cookies } from "next/headers";
 import {
@@ -24,21 +24,47 @@ import {
 import {
   type Principal,
   type PrincipalCapability,
+  kindFromCapabilities,
   principalHasAnyCapability,
 } from "@/lib/identity/principal";
+import {
+  isPlatformSessionPayload,
+  readUnifiedSessionToken,
+} from "@/lib/platform-session";
+import {
+  capabilitiesForUserRoles,
+  getPlatformUserById,
+  primaryStaffRole,
+} from "@/lib/platform-users";
+import type { PlatformRole } from "@/lib/identity/roles";
+import { capabilitiesForRoles } from "@/lib/identity/roles";
 
 export function adminPrincipalToPrincipal(
   admin: AdminPrincipal,
   session?: { issuedAt: number; expiresAt: number; version?: string },
+  roles?: PlatformRole[],
+  capabilities?: PrincipalCapability[],
 ): Principal {
-  const capabilities: PrincipalCapability[] =
-    admin.role === "coordinator"
+  const resolvedRoles =
+    roles ??
+    (admin.role === "owner"
+      ? (["owner", "admin"] as PlatformRole[])
+      : admin.role === "coordinator"
+        ? (["coordinator"] as PlatformRole[])
+        : admin.role === "programs_team"
+          ? (["programs_team"] as PlatformRole[])
+          : (["admin"] as PlatformRole[]));
+
+  const resolvedCapabilities: PrincipalCapability[] =
+    capabilities ??
+    (admin.role === "coordinator"
       ? ["forms.coordinator", "forms.approver", "viewer"]
-      : ["admin.manage", "forms.admin", "forms.approver", "contributor.edit", "viewer"];
-  if (admin.role === "owner") {
-    capabilities.push("admin.owner");
+      : capabilitiesForRoles(resolvedRoles));
+
+  if (admin.role === "owner" && !resolvedCapabilities.includes("admin.owner")) {
+    resolvedCapabilities.push("admin.owner");
   }
-  // Programs Team has full admin workspace access; user invite is gated separately.
+
   return {
     kind: "admin",
     id: admin.id,
@@ -46,8 +72,9 @@ export function adminPrincipalToPrincipal(
     displayName: admin.displayName ?? admin.username,
     email: admin.username.includes("@") ? admin.username : undefined,
     role: admin.role,
+    roles: resolvedRoles,
     source: admin.source,
-    capabilities,
+    capabilities: resolvedCapabilities,
     session: {
       issuedAt: session?.issuedAt ?? Date.now(),
       expiresAt: session?.expiresAt ?? Date.now() + 12 * 60 * 60 * 1000,
@@ -56,26 +83,94 @@ export function adminPrincipalToPrincipal(
   };
 }
 
-export async function resolveAdminPrincipal(): Promise<Principal | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  const auth = await resolveAdminPrincipalFromSession(token);
-  if (!auth.ok || !auth.principal) return null;
-  const sessionRead = await readAdminSessionToken(token);
-  return adminPrincipalToPrincipal(
-    auth.principal,
-    sessionRead.ok && sessionRead.payload
-      ? {
-          issuedAt: sessionRead.payload.issuedAt,
-          expiresAt: sessionRead.payload.expiresAt,
-          version: sessionRead.payload.version,
-        }
-      : undefined,
-  );
+async function principalFromPlatformUser(
+  userId: string,
+  session: { issuedAt: number; expiresAt: number; credentialsVersion: string },
+): Promise<Principal | null> {
+  const user = await getPlatformUserById(userId);
+  if (!user || !user.isActive) return null;
+  if (user.updatedAt !== session.credentialsVersion) return null;
+
+  const capabilities = await capabilitiesForUserRoles(user.roles);
+  const staffRole = primaryStaffRole(user.roles);
+  const kind = kindFromCapabilities(capabilities);
+
+  return {
+    kind: kind === "platform" ? "admin" : kind,
+    id: user.id,
+    identifier: user.email,
+    displayName: user.displayName ?? user.email,
+    email: user.email,
+    role: staffRole ?? undefined,
+    roles: user.roles,
+    source: "managed",
+    capabilities,
+    session: {
+      issuedAt: session.issuedAt,
+      expiresAt: session.expiresAt,
+      credentialsVersion: session.credentialsVersion,
+      version: user.updatedAt,
+    },
+  };
 }
 
-export async function resolveApproverPrincipal(request?: Request): Promise<Principal | null> {
+async function resolveFromUnifiedCookie(): Promise<Principal | null> {
+  const cookieStore = await cookies();
+  const unifiedToken = cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+  if (!unifiedToken) return null;
+
+  const unified = await readUnifiedSessionToken(unifiedToken);
+  if (!unified.ok) return null;
+
+  if (isPlatformSessionPayload(unified.payload)) {
+    return principalFromPlatformUser(unified.payload.userId, {
+      issuedAt: unified.payload.issuedAt,
+      expiresAt: unified.payload.expiresAt,
+      credentialsVersion: unified.payload.credentialsVersion,
+    });
+  }
+
+  const auth = await resolveAdminPrincipalFromSession(unifiedToken);
+  if (auth.ok && auth.principal) {
+    return adminPrincipalToPrincipal(auth.principal, {
+      issuedAt: unified.payload.issuedAt,
+      expiresAt: unified.payload.expiresAt,
+      version: unified.payload.version,
+    });
+  }
+  return null;
+}
+
+/**
+ * Highest-privilege principal among cookies present.
+ * Prefer unified session, then legacy approver / contributor / student cookies.
+ */
+export async function resolvePrincipal(request?: Request): Promise<Principal | null> {
+  const fromUnified = await resolveFromUnifiedCookie();
+  if (fromUnified) return fromUnified;
+
+  const approver = await resolveLegacyApproverPrincipal(request);
+  if (approver) return approver;
+  const contributor = await resolveLegacyContributorPrincipal();
+  if (contributor) return contributor;
+  return resolveLegacyStudentPrincipal();
+}
+
+export async function resolveAdminPrincipal(): Promise<Principal | null> {
+  const principal = await resolveFromUnifiedCookie();
+  if (!principal) return null;
+  if (
+    principal.capabilities.includes("admin.manage") ||
+    principal.capabilities.includes("forms.coordinator") ||
+    principal.capabilities.includes("forms.admin") ||
+    principal.role
+  ) {
+    return principal;
+  }
+  return null;
+}
+
+async function resolveLegacyApproverPrincipal(request?: Request): Promise<Principal | null> {
   let payload: { email: string; issuedAt: number; expiresAt: number; credentialsVersion: string } | null =
     null;
 
@@ -101,6 +196,7 @@ export async function resolveApproverPrincipal(request?: Request): Promise<Princ
     identifier: payload.email,
     displayName: payload.email,
     email: payload.email,
+    roles: ["approver"],
     capabilities: ["forms.approver", "viewer"],
     session: {
       issuedAt: payload.issuedAt,
@@ -110,7 +206,15 @@ export async function resolveApproverPrincipal(request?: Request): Promise<Princ
   };
 }
 
-export async function resolveContributorPrincipal(): Promise<Principal | null> {
+export async function resolveApproverPrincipal(request?: Request): Promise<Principal | null> {
+  const fromUnified = await resolveFromUnifiedCookie();
+  if (fromUnified?.capabilities.includes("forms.approver")) {
+    return fromUnified;
+  }
+  return resolveLegacyApproverPrincipal(request);
+}
+
+async function resolveLegacyContributorPrincipal(): Promise<Principal | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -123,6 +227,7 @@ export async function resolveContributorPrincipal(): Promise<Principal | null> {
     identifier: payload.email,
     displayName: payload.email,
     email: payload.email,
+    roles: ["contributor"],
     capabilities: ["contributor.edit"],
     session: {
       issuedAt: payload.issuedAt,
@@ -132,7 +237,15 @@ export async function resolveContributorPrincipal(): Promise<Principal | null> {
   };
 }
 
-export async function resolveStudentPrincipal(): Promise<Principal | null> {
+export async function resolveContributorPrincipal(): Promise<Principal | null> {
+  const fromUnified = await resolveFromUnifiedCookie();
+  if (fromUnified?.capabilities.includes("contributor.edit")) {
+    return fromUnified;
+  }
+  return resolveLegacyContributorPrincipal();
+}
+
+async function resolveLegacyStudentPrincipal(): Promise<Principal | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(STUDENT_SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -145,6 +258,7 @@ export async function resolveStudentPrincipal(): Promise<Principal | null> {
     identifier: payload.email,
     displayName: payload.email,
     email: payload.email,
+    roles: ["student"],
     capabilities: ["forms.student", "viewer"],
     session: {
       issuedAt: payload.issuedAt,
@@ -154,18 +268,12 @@ export async function resolveStudentPrincipal(): Promise<Principal | null> {
   };
 }
 
-/**
- * Highest-privilege principal among cookies present.
- * Prefer admin over approver over contributor over student.
- */
-export async function resolvePrincipal(request?: Request): Promise<Principal | null> {
-  const admin = await resolveAdminPrincipal();
-  if (admin) return admin;
-  const approver = await resolveApproverPrincipal(request);
-  if (approver) return approver;
-  const contributor = await resolveContributorPrincipal();
-  if (contributor) return contributor;
-  return resolveStudentPrincipal();
+export async function resolveStudentPrincipal(): Promise<Principal | null> {
+  const fromUnified = await resolveFromUnifiedCookie();
+  if (fromUnified?.capabilities.includes("forms.student")) {
+    return fromUnified;
+  }
+  return resolveLegacyStudentPrincipal();
 }
 
 export async function requirePrincipalCapabilities(
@@ -194,3 +302,5 @@ export async function hasApproverSessionToken(token: string | undefined | null):
   const result = await readFormApproverSessionToken(token);
   return result.ok;
 }
+
+export { readAdminSessionToken };

@@ -5,7 +5,7 @@
   ViewFilterConfig,
   ViewSortConfig,
 } from "@/lib/config/types";
-import { normalizeColumnKey } from "@/lib/smartsheet";
+import { normalizeColumnKey } from "@/lib/smartsheet-column-key";
 
 function normalizeComparable(value: unknown): string[] {
   if (value === null || value === undefined) {

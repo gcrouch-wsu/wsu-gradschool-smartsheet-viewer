@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import * as registry from "@/lib/forms/registry";
 import { buildSubmissions } from "@/lib/forms/tracker";
@@ -26,7 +25,6 @@ export async function GET(request: Request) {
       workflowSource: wf.source,
       overallColumn: wf.overallColumn,
       submissions: await buildSubmissions(sheet),
-      demo: config.demo,
       roles: access.user.roles,
     });
   } catch (e) {

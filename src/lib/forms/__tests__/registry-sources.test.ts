@@ -14,7 +14,6 @@ describe("forms sources unification", () => {
     await mkdir(path.join(tempDir, "config", "forms"), { recursive: true });
     await mkdir(path.join(tempDir, "config", "views"), { recursive: true });
     vi.resetModules();
-    vi.stubEnv("DEMO", "false");
     delete process.env.DATABASE_URL;
   });
 

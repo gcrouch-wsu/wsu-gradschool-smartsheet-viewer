@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ResolvedFieldValue, ResolvedViewRow, SmartsheetCell, SmartsheetRow } from "@/lib/config/types";
 import { applyViewFilters, sortResolvedRows } from "@/lib/filters";
-import { normalizeColumnKey } from "@/lib/smartsheet";
+import { normalizeColumnKey } from "@/lib/smartsheet-column-key";
 
 function createCell(columnId: number, columnTitle: string, value: unknown): SmartsheetCell {
   return {

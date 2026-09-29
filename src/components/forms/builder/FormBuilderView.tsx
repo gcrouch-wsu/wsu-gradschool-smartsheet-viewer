@@ -1208,7 +1208,6 @@ export function FormBuilderView() {
           <h1 className="font-serif text-2xl font-medium tracking-[-0.02em] text-ink">Form builder</h1>
           <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
             {builder.state.sheetName}
-            {builder.state.demo ? " · Demo mode" : ""}
             {builder.dirty ? " · Unsaved changes" : ""}
           </p>
         </div>

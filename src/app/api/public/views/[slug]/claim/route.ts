@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE_NAME, getAdminSessionCookieSettings } from "@/lib/admin-auth";
 import {
   CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR,
   CONTRIBUTOR_CLAIM_NOT_ELIGIBLE_ERROR,
@@ -7,7 +8,6 @@ import {
   createContributorSessionToken,
   createContributorUser,
   getContributorConfigurationError,
-  getContributorSessionCookieSettings,
   getContributorUserByEmail,
   isContributorRateLimited,
   recordContributorFailedAttempt,
@@ -79,17 +79,23 @@ export async function POST(
   try {
     await createContributorUser(email, password);
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (isUniqueViolation(error) || (error instanceof Error && error.message === "ACCOUNT_EXISTS")) {
       return NextResponse.json({ error: CONTRIBUTOR_CLAIM_ACCOUNT_EXISTS_ERROR }, { status: 409 });
     }
     throw error;
   }
 
+  const token = await createContributorSessionToken(email);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(
-    CONTRIBUTOR_SESSION_COOKIE_NAME,
-    await createContributorSessionToken(email),
-    getContributorSessionCookieSettings(),
-  );
+  response.cookies.set({
+    ...getAdminSessionCookieSettings(),
+    name: ADMIN_SESSION_COOKIE_NAME,
+    value: token,
+  });
+  response.cookies.set(CONTRIBUTOR_SESSION_COOKIE_NAME, "", {
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+  });
   return response;
 }

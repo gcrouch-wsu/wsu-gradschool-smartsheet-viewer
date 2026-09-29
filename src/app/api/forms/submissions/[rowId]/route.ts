@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { buildSubmissions } from "@/lib/forms/tracker";
 import { validateWorkflowValue } from "@/lib/forms/submission-actions";
@@ -55,7 +54,6 @@ export async function GET(
       sheetId,
       submission,
       row,
-      demo: config.demo,
       roles: access.user.roles,
       resend: {
         available: Boolean(resendCol),
@@ -123,7 +121,7 @@ export async function PATCH(
     const cells: { columnId: number; value: string }[] = [{ columnId: col.id, value }];
 
     await ss.updateRows(sheetId, [{ id: rowIdNum, cells }]);
-    return Response.json({ ok: true, sheetId, columnTitle: targetColumn, value, demo: config.demo });
+    return Response.json({ ok: true, sheetId, columnTitle: targetColumn, value });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

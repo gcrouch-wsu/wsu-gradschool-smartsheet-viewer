@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -19,7 +18,7 @@ export async function PUT(
   const body = await request.json().catch(() => ({}));
   try {
     const result = await ss.updateColumn(sheetId, Number(columnId), body);
-    return Response.json({ ok: true, result, demo: config.demo });
+    return Response.json({ ok: true, result });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }
@@ -37,7 +36,7 @@ export async function DELETE(
 
   try {
     await ss.deleteColumn(sheetId, Number(columnId));
-    return Response.json({ ok: true, demo: config.demo });
+    return Response.json({ ok: true });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

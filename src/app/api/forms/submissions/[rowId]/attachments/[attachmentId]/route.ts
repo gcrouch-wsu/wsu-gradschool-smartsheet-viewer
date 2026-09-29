@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAccess } from "@/lib/forms/forms-api";
@@ -64,16 +63,11 @@ export async function GET(
       });
     }
 
-    if (config.demo || !remoteUrl || remoteUrl.includes("demo.local")) {
-      const body = `Demo attachment: ${name}\n`;
-      return new NextResponse(body, {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "Content-Disposition": contentDisposition(disposition, name.endsWith(".txt") ? name : `${name}.txt`),
-          "Cache-Control": "private, no-store",
-        },
-      });
+    if (!remoteUrl) {
+      return Response.json(
+        { error: "Could not download attachment from Smartsheet." },
+        { status: 502 },
+      );
     }
 
     const upstream = await fetch(remoteUrl, { cache: "no-store" });

@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -18,7 +17,7 @@ export async function GET(
 
   try {
     const dashboard = await ss.getSight(sightId);
-    return Response.json({ dashboard, demo: config.demo });
+    return Response.json({ dashboard });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

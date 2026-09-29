@@ -39,7 +39,7 @@ export function WorkflowTemplateDetailsModal({
   return (
     <Modal open={Boolean(template)} onClose={onClose} title={template?.title} size="xl">
       {template ? (
-        <div className="space-y-5 px-5 py-4">
+        <div className="space-y-5">
           <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <Diagram kind={template.kind} />
             <div className="space-y-4">

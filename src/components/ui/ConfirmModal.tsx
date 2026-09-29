@@ -35,7 +35,7 @@ export function ConfirmModal({
 
   return (
     <Modal open={open} onClose={handleClose} title={title} size="md">
-      <div className="space-y-4 px-5 py-4">
+      <div className="space-y-4">
         <p className="text-sm text-[color:var(--wsu-muted)]">{message}</p>
         <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--wsu-border)] pt-4">
           <button type="button" className={secondaryBtnClass} disabled={busy} onClick={handleClose}>

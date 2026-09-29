@@ -1,5 +1,4 @@
 import { auditFromPrincipal } from "@/lib/audit";
-import { config } from "@/lib/forms/config";
 import { duplicateForm } from "@/lib/forms/duplicate-form";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -39,7 +38,6 @@ export async function POST(
         sheet: result.sheet,
         note: result.note || undefined,
         copied: result.copied,
-        demo: config.demo,
       },
       { status: 201 },
     );

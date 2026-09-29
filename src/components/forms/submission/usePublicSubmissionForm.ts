@@ -57,7 +57,6 @@ export function usePublicSubmissionForm(slug: string) {
         fieldMeta: (d.fieldMeta as FormSchema["fieldMeta"]) ?? {},
         conditionalLogic: (d.conditionalLogic as FormSchema["conditionalLogic"]) ?? [],
         allowedDomains: Array.isArray(d.allowedDomains) ? (d.allowedDomains as string[]) : [],
-        demo: Boolean(d.demo),
         attachmentsEnabled: d.attachmentsEnabled !== false,
         headerLogoDataUrl: typeof d.headerLogoDataUrl === "string" ? d.headerLogoDataUrl : undefined,
         headerLogoAlt: typeof d.headerLogoAlt === "string" ? d.headerLogoAlt : undefined,

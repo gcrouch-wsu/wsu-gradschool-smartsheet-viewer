@@ -29,7 +29,6 @@ export interface FormSchema {
   fieldMeta?: Record<string, FormFieldMeta>;
   conditionalLogic: ConditionalRule[];
   allowedDomains: string[];
-  demo: boolean;
   attachmentsEnabled?: boolean;
   /** Optional custom header logo (PNG/JPEG data URL). */
   headerLogoDataUrl?: string;

@@ -26,7 +26,6 @@ export interface FormSchemaPayload {
   fieldMeta: ReturnType<typeof fieldMetaFromConfig>;
   conditionalLogic: Awaited<ReturnType<typeof loadConditionalLogic>>;
   allowedDomains: string[];
-  demo: boolean;
   attachmentsEnabled: boolean;
   headerLogoDataUrl?: string;
   headerLogoAlt?: string;
@@ -54,7 +53,6 @@ export async function buildFormSchemaPayload(sheetId: string): Promise<FormSchem
     fieldMeta,
     conditionalLogic,
     allowedDomains,
-    demo: config.demo,
     attachmentsEnabled,
     headerLogoDataUrl: headerLogo.src,
     headerLogoAlt: headerLogo.alt,

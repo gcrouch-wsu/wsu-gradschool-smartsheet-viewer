@@ -70,8 +70,12 @@ export function getContributorConfigurationError() {
     return "Contributor editing requires DATABASE_URL.";
   }
 
-  if (!getContributorSessionSecret()) {
-    return `${CONTRIBUTOR_SESSION_SECRET_ENV_VAR} is required for contributor editing.`;
+  if (
+    !getContributorSessionSecret() &&
+    !process.env.SMARTSHEETS_VIEW_ADMIN_SESSION_SECRET?.trim() &&
+    !process.env.STUDENT_SESSION_SECRET?.trim()
+  ) {
+    return `${CONTRIBUTOR_SESSION_SECRET_ENV_VAR} or SMARTSHEETS_VIEW_ADMIN_SESSION_SECRET is required for contributor editing.`;
   }
 
   return null;
@@ -125,19 +129,17 @@ export async function createContributorSessionToken(
     throw new Error(configurationError);
   }
 
-  const user = await getContributorUserByEmail(email);
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const user = await getPlatformUserByEmail(email);
   if (!user) {
     throw new Error("Contributor account not found.");
   }
 
-  const payload = encodePayload({
-    email: normalizeContributorEmail(email),
-    issuedAt: Date.now(),
+  const { createPlatformUserSessionToken } = await import("@/lib/platform-session");
+  return createPlatformUserSessionToken(
+    { id: user.id, email: user.email, updatedAt: user.updatedAt },
     expiresAt,
-    credentialsVersion: user.updatedAt,
-  });
-
-  return `${payload}.${signPayload(payload)}`;
+  );
 }
 
 export async function readContributorSessionToken(
@@ -246,14 +248,19 @@ export function getContributorSessionCookieSettings() {
 export async function getContributorUserByEmail(email: string) {
   await ensureContributorAuthStorage();
   const normalizedEmail = normalizeContributorEmail(email);
-  const { rows } = await queryConfigDb<ContributorUserDbRow>(
-    `SELECT id, email, password_hash, password_salt, created_at, updated_at
-     FROM contributor_users
-     WHERE lower(email) = $1
-     LIMIT 1`,
-    [normalizedEmail],
-  );
-  return rows[0] ? toContributorUserRecord(rows[0]) : null;
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const platformUser = await getPlatformUserByEmail(normalizedEmail);
+  if (platformUser?.roles.includes("contributor")) {
+    return {
+      id: platformUser.id,
+      email: platformUser.email,
+      passwordHash: platformUser.passwordHash,
+      passwordSalt: platformUser.passwordSalt,
+      createdAt: platformUser.createdAt,
+      updatedAt: platformUser.updatedAt,
+    } satisfies ContributorUserRecord;
+  }
+  return null;
 }
 
 export function hashContributorPassword(password: string) {
@@ -282,15 +289,25 @@ export async function createContributorUser(email: string, password: string) {
     throw new Error(passwordError);
   }
 
-  const { passwordHash, passwordSalt } = hashContributorPassword(password);
-  const { rows } = await queryConfigDb<ContributorUserDbRow>(
-    `INSERT INTO contributor_users (email, password_hash, password_salt)
-     VALUES ($1, $2, $3)
-     RETURNING id, email, password_hash, password_salt, created_at, updated_at`,
-    [normalizedEmail, passwordHash, passwordSalt],
-  );
-
-  return toContributorUserRecord(rows[0]!);
+  const { createOrUpdateUserWithRole } = await import("@/lib/platform-users");
+  try {
+    const user = await createOrUpdateUserWithRole(normalizedEmail, password, "contributor");
+    return {
+      id: user.id,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      passwordSalt: user.passwordSalt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    } satisfies ContributorUserRecord;
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCOUNT_EXISTS") {
+      const err = new Error("ACCOUNT_EXISTS") as Error & { code?: string };
+      err.code = "23505";
+      throw err;
+    }
+    throw error;
+  }
 }
 
 /** Throttle old-row cleanup so rate-limit checks stay mostly read-only. */
@@ -398,27 +415,33 @@ export async function resetContributorPassword(email: string, newPassword: strin
   await ensureContributorAuthStorage();
   const passwordError = validateContributorPassword(newPassword);
   if (passwordError) throw new Error(passwordError);
-  const { passwordHash, passwordSalt } = hashContributorPassword(newPassword);
-  await queryConfigDb(
-    `UPDATE contributor_users SET password_hash = $1, password_salt = $2, reset_nonce = NULL, updated_at = now() WHERE lower(email) = $3`,
-    [passwordHash, passwordSalt, normalizeContributorEmail(email)],
-  );
+  const { getPlatformUserByEmail, updatePlatformUserPassword } = await import("@/lib/platform-users");
+  const user = await getPlatformUserByEmail(normalizeContributorEmail(email));
+  if (!user) throw new Error("Contributor account not found.");
+  await updatePlatformUserPassword(user.id, newPassword);
 }
 
 export async function listContributorUsers() {
   await ensureContributorAuthStorage();
-  const { rows } = await queryConfigDb<{ id: string; email: string; created_at: string | Date; updated_at: string | Date }>(
-    `SELECT id, email, created_at, updated_at FROM contributor_users ORDER BY email`,
-  );
-  return rows.map((row) => ({
+  const { listPlatformUsers } = await import("@/lib/platform-users");
+  const users = await listPlatformUsers({ role: "contributor" });
+  return users.map((row) => ({
     id: row.id,
     email: normalizeContributorEmail(row.email),
-    createdAt: toIsoTimestamp(row.created_at),
-    updatedAt: toIsoTimestamp(row.updated_at),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }));
 }
 
 export async function deleteContributorUser(id: string): Promise<void> {
   await ensureContributorAuthStorage();
-  await queryConfigDb(`DELETE FROM contributor_users WHERE id = $1`, [id]);
+  const { getPlatformUserById, setUserRoles, deletePlatformUser } = await import("@/lib/platform-users");
+  const user = await getPlatformUserById(id);
+  if (!user) return;
+  const remaining = user.roles.filter((r) => r !== "contributor") as import("@/lib/platform-users").AssignablePlatformRole[];
+  if (remaining.length === 0) {
+    await deletePlatformUser(id);
+  } else {
+    await setUserRoles(id, remaining);
+  }
 }

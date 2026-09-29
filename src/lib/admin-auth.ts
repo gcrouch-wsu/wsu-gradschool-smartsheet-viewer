@@ -285,15 +285,55 @@ export async function readAdminSessionToken(sessionToken: string | undefined | n
 
 export async function authorizeAdminSession(sessionToken: string | undefined | null): Promise<AdminAuthorizationResult> {
   const result = await readAdminSessionToken(sessionToken);
-  if (!result.ok) {
-    return {
-      ok: false,
-      status: result.status,
-      message: result.message,
-    };
+  if (result.ok) {
+    return { ok: true };
   }
 
-  return { ok: true };
+  // Unified platform sessions reuse this cookie; signature + expiry only on Edge.
+  if (sessionToken) {
+    const platformOk = await authorizePlatformSessionToken(sessionToken);
+    if (platformOk) {
+      return { ok: true };
+    }
+  }
+
+  return {
+    ok: false,
+    status: result.status,
+    message: result.message,
+  };
+}
+
+async function authorizePlatformSessionToken(sessionToken: string): Promise<boolean> {
+  const secret = getSessionSecret();
+  if (!secret) return false;
+  const [payload, signature] = sessionToken.split(".");
+  if (!payload || !signature) return false;
+  const expectedSignature = await signValue(payload, secret);
+  if (!timingSafeEqual(signature, expectedSignature)) return false;
+  try {
+    const decoded = JSON.parse(decodeBase64Url(payload)) as {
+      kind?: string;
+      userId?: string;
+      email?: string;
+      credentialsVersion?: string;
+      issuedAt?: number;
+      expiresAt?: number;
+    };
+    if (decoded.kind !== "platform") return false;
+    if (
+      typeof decoded.userId !== "string" ||
+      typeof decoded.email !== "string" ||
+      typeof decoded.credentialsVersion !== "string" ||
+      typeof decoded.issuedAt !== "number" ||
+      typeof decoded.expiresAt !== "number"
+    ) {
+      return false;
+    }
+    return decoded.expiresAt > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 export function getAdminSessionCookieSettings() {

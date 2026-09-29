@@ -118,7 +118,6 @@ export async function GET(request: Request) {
       conditionalLogic,
       workflowExclusions,
       lockedTitles: [...lockedTitles],
-      demo: config.demo,
       attachmentsEnabled,
       envAttachmentsEnabled: config.attachmentsEnabled,
       allowedDomains: resolvedDomains,
@@ -269,7 +268,7 @@ export async function PUT(request: Request) {
     const principal = await resolveAdminPrincipal();
     await auditFromPrincipal(principal, "forms.builder.save", "form", sheetId);
 
-    return Response.json({ ok: true, demo: config.demo });
+    return Response.json({ ok: true });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

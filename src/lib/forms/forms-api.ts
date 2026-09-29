@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
-import { config as formsConfig } from "@/lib/forms/config";
 import { isFullAdminRole } from "@/lib/admin-users";
 import { resolveAdminPrincipal, resolveApproverPrincipal } from "@/lib/identity";
 import { isWorkflowAuthorRole } from "@/lib/workflows/access";
@@ -32,18 +31,20 @@ export interface FormsAccessError {
 export async function getFormsSessionUserFromRequest(request?: Request): Promise<FormsSessionUser | null> {
   const admin = await resolveAdminPrincipal();
   if (admin) {
-    if (admin.role === "coordinator") {
+    const roles = (admin.roles ?? []) as FormsRole[];
+    const caps = admin.capabilities;
+    if (caps.includes("forms.coordinator") && !caps.includes("admin.manage")) {
       return {
         email: admin.email ?? admin.identifier,
         name: admin.displayName,
-        roles: ["coordinator", "approver", "viewer"],
+        roles: roles.length ? (roles as FormsRole[]) : ["coordinator", "approver", "viewer"],
         isAdmin: false,
-        isApprover: true,
+        isApprover: caps.includes("forms.approver"),
         isCoordinator: true,
         isProgramsTeam: false,
       };
     }
-    if (admin.role === "programs_team") {
+    if (admin.role === "programs_team" || roles.includes("programs_team")) {
       return {
         email: admin.email ?? admin.identifier,
         name: admin.displayName,
@@ -58,9 +59,9 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
       email: admin.email ?? admin.identifier,
       name: admin.displayName,
       roles: ["admin", "approver", "viewer"],
-      isAdmin: true,
-      isApprover: true,
-      isCoordinator: false,
+      isAdmin: caps.includes("admin.manage") || caps.includes("forms.admin"),
+      isApprover: caps.includes("forms.approver"),
+      isCoordinator: caps.includes("forms.coordinator"),
       isProgramsTeam: false,
     };
   }
@@ -84,7 +85,6 @@ export async function getFormsSessionUserFromRequest(request?: Request): Promise
 export async function getFormsSessionPayload() {
   const user = await getFormsSessionUserFromRequest();
   return {
-    demo: formsConfig.demo,
     user,
     roles: user?.roles ?? [],
     isAdmin: user?.isAdmin ?? false,

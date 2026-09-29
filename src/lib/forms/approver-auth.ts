@@ -114,13 +114,11 @@ export async function createFormApproverSessionToken(
   const user = await getFormApproverUserByEmail(email);
   if (!user) throw new Error("Approver account not found.");
 
-  const payload = encodePayload({
-    email: normalizeApproverEmail(email),
-    issuedAt: Date.now(),
+  const { createPlatformUserSessionToken } = await import("@/lib/platform-session");
+  return createPlatformUserSessionToken(
+    { id: user.id, email: user.email, updatedAt: user.updatedAt },
     expiresAt,
-    credentialsVersion: user.updatedAt,
-  });
-  return `${payload}.${signPayload(payload)}`;
+  );
 }
 
 export async function readFormApproverSessionToken(
@@ -197,14 +195,25 @@ export function getFormApproverSessionCookieSettings() {
 export async function getFormApproverUserByEmail(email: string) {
   await ensureApproverAuthStorage();
   const normalizedEmail = normalizeApproverEmail(email);
-  const { rows } = await queryFormsDb<FormApproverUserDbRow>(
-    `SELECT id, email, password_hash, password_salt, created_at, updated_at
-     FROM form_approver_users
-     WHERE lower(email) = $1
-     LIMIT 1`,
-    [normalizedEmail],
-  );
-  return rows[0] ? toApproverUserRecord(rows[0]) : null;
+  const { getPlatformUserByEmail } = await import("@/lib/platform-users");
+  const platformUser = await getPlatformUserByEmail(normalizedEmail);
+  if (
+    platformUser &&
+    (platformUser.roles.includes("approver") ||
+      platformUser.roles.includes("coordinator") ||
+      platformUser.roles.includes("admin") ||
+      platformUser.roles.includes("programs_team"))
+  ) {
+    return {
+      id: platformUser.id,
+      email: platformUser.email,
+      passwordHash: platformUser.passwordHash,
+      passwordSalt: platformUser.passwordSalt,
+      createdAt: platformUser.createdAt,
+      updatedAt: platformUser.updatedAt,
+    } satisfies FormApproverUserRecord;
+  }
+  return null;
 }
 
 export function hashFormApproverPassword(password: string) {

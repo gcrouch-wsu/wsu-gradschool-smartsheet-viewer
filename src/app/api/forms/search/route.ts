@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsApproverAccess } from "@/lib/forms/forms-api";
@@ -17,7 +16,7 @@ export async function GET(request: Request) {
 
   try {
     const results = await ss.searchAll(q);
-    return Response.json({ query: q, results, demo: config.demo });
+    return Response.json({ query: q, results });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

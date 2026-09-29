@@ -1,4 +1,3 @@
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
@@ -14,7 +13,7 @@ export async function GET() {
 
   try {
     const templates = await ss.listTemplates();
-    return Response.json({ templates, demo: config.demo });
+    return Response.json({ templates });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

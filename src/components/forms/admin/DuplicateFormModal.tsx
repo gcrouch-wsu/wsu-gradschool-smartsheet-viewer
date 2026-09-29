@@ -43,7 +43,7 @@ export function DuplicateFormModal({
 
   return (
     <Modal open={open} onClose={handleClose} title="Duplicate form" size="md">
-      <div className="space-y-4 px-5 py-4">
+      <div className="space-y-4">
         <p className="text-sm text-[color:var(--wsu-muted)]">
           Creates a new sheet and copies builder settings (layout, conditional rules, workflow, and PDF
           mapping) from{" "}

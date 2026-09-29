@@ -249,7 +249,7 @@ export function SubmissionDetailModal({
     roles.includes("programs_team");
 
   return (
-    <Modal open={open} onClose={onClose} size="lg">
+    <Modal open={open} onClose={onClose} title="Submission" size="lg" padded={false}>
       <div className="p-1 sm:p-2">
         {loading ? (
           <div className="px-6 py-12 text-center">
@@ -260,7 +260,7 @@ export function SubmissionDetailModal({
             <p className="text-sm text-red-800">{error}</p>
           </div>
         ) : submission ? (
-          <div className="space-y-3 pt-6">
+          <div className="space-y-3">
             {error ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>
             ) : null}

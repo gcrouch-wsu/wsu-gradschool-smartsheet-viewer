@@ -510,7 +510,7 @@ export function AdminUsersManager({
         title={editingUserId ? "Edit user" : "Add user"}
         size="md"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4 sm:px-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-sm text-sub">
             {editingUserId
               ? "Update role, display name, optional password, or whether they can sign in."

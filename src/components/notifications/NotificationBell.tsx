@@ -196,16 +196,6 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                               {item.body ? (
                                 <span className="block text-sm text-[color:var(--wsu-muted)]">{item.body}</span>
                               ) : null}
-                              {item.payload?.fields?.length ? (
-                                <span className="block space-y-1 text-xs">
-                                  {item.payload.fields.map((field) => (
-                                    <span key={field.title} className="flex gap-2">
-                                      <span className="shrink-0 text-[color:var(--wsu-muted)]">{field.title}</span>
-                                      <span className="text-[color:var(--wsu-ink)]">{field.value || "—"}</span>
-                                    </span>
-                                  ))}
-                                </span>
-                              ) : null}
                               {item.payload?.href ? (
                                 <Link
                                   href={item.payload.href}

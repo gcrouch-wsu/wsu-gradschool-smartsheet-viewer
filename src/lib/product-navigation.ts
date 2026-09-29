@@ -28,8 +28,6 @@ export function productNav(isAdmin: boolean, options?: { canManageUsers?: boolea
     { href: "/admin", label: "Dashboard", exact: true, icon: "dashboard" },
     { href: "/admin/sources", label: "Sources", icon: "sources" },
     { href: "/admin/views", label: "Views", icon: "views" },
-    { href: "/admin/contributors", label: "Contributors", icon: "contributors" },
-    { href: "/admin/students", label: "Students", icon: "students" },
     { href: "/admin/activity", label: "Activity", icon: "activity" },
     { href: "/forms/manage", label: "Forms", icon: "forms" },
     { href: "/admin/reroutes", label: "Reroutes", icon: "tracker" },

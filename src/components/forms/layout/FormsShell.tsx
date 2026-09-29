@@ -3,12 +3,10 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ProductShell } from "@/components/layout/ProductShell";
-import { IconChevronDown, IconSearch } from "@/components/forms/icons";
+import { ProductToolbar } from "@/components/layout/ProductToolbar";
 import { productNav } from "@/lib/product-navigation";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 interface FormsSessionInfo {
-  demo: boolean;
   user: { email: string; name: string; roles: string[] } | null;
   roles: string[];
   isAdmin: boolean;
@@ -17,21 +15,11 @@ interface FormsSessionInfo {
   isProgramsTeam?: boolean;
 }
 
-function initialsFromSession(session: FormsSessionInfo | null): string {
-  if (!session?.user) return "—";
-  const source = session.user.name || session.user.email;
-  const parts = source.trim().split(/\s+/);
-  if (parts.length >= 2) return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
-  return source.slice(0, 2).toUpperCase();
-}
-
 export function FormsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<FormsSessionInfo | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [searchQ, setSearchQ] = useState("");
-  const [signingOut, setSigningOut] = useState(false);
 
   const isFormsAdminRoute =
     pathname.startsWith("/forms/manage") || pathname.startsWith("/forms/builder");
@@ -64,8 +52,6 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   }, [sessionLoaded, session, pathname, router]);
 
   const showAdminNav = Boolean(session?.isAdmin) || (!sessionLoaded && isFormsAdminRoute);
-  const onWorkflows = pathname.startsWith("/forms/workflows");
-  const canSearch = !onWorkflows && (session?.isAdmin || session?.isApprover || session?.demo);
   const accountLabel = useMemo(() => {
     if (!session?.user) return "Admin";
     if (session.isProgramsTeam) return "Programs Team";
@@ -74,40 +60,11 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
     return "Approver";
   }, [session]);
 
-  function runSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = searchQ.trim();
-    if (!q) return;
-    router.push(`/forms/search?q=${encodeURIComponent(q)}`);
-  }
-
-  async function handleSignOut() {
-    setSigningOut(true);
-    try {
-      if (session?.isAdmin || session?.isCoordinator) {
-        await fetch("/api/admin/session", { method: "DELETE" });
-      } else {
-        await fetch("/api/forms/approver/session", { method: "DELETE" });
-      }
-      router.replace("/admin/sign-in?next=/forms/sheet");
-      router.refresh();
-    } finally {
-      setSigningOut(false);
-    }
-  }
-
   if (!sessionLoaded || !session?.user) {
     return (
       <ProductShell
         globalNav={productNav(showAdminNav)}
-        title="Smartsheet Workspace"
-        description="Submit forms, track approvals, and manage Smartsheet workflows."
-        identity={
-          <div
-            className="h-11 w-36 animate-pulse rounded-full border border-line-strong bg-[color:var(--wsu-stone)]"
-            aria-hidden
-          />
-        }
+        toolbar={<ProductToolbar variant="forms" loading />}
       >
         <p className="text-sm text-[color:var(--wsu-muted)]">Redirecting to sign in…</p>
       </ProductShell>
@@ -116,44 +73,16 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ProductShell
-      globalNav={productNav(showAdminNav, { canManageUsers: Boolean(session?.isAdmin) && !session?.isProgramsTeam })}
-      title="Smartsheet Workspace"
-      description="Submit forms, track approvals, and manage Smartsheet workflows."
-      identity={
-        <div className="flex items-center justify-end gap-2">
-          <NotificationBell />
-          <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="flex items-center gap-2.5 rounded-full border border-line-strong bg-white py-2 pl-2 pr-4 text-left transition hover:border-mist disabled:opacity-60"
-          aria-label="Account menu — sign out"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--crimson-soft)] font-mono text-xs font-semibold text-crimson">
-            {initialsFromSession(session)}
-          </span>
-          <span>
-            <span className="block text-[13.5px] font-semibold leading-none text-ink">{session.user.name || session.user.email}</span>
-            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-mist">{accountLabel}</span>
-          </span>
-          <IconChevronDown className="ml-1 h-3.5 w-3.5 text-mist" />
-        </button>
-        </div>
-      }
-      actions={
-        canSearch ? (
-          <form onSubmit={runSearch} className="relative w-full sm:w-56" data-tour="fse-shell-search">
-            <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mist" />
-            <input
-              type="search"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="Search…"
-              aria-label="Global search"
-              className="w-full rounded-full border border-line-strong bg-white py-2 pl-9 pr-3 text-[13.5px] text-ink placeholder:text-mist focus:border-crimson focus:outline-none focus:ring-1 focus:ring-crimson"
-            />
-          </form>
-        ) : undefined
+      globalNav={productNav(showAdminNav, {
+        canManageUsers: Boolean(session?.isAdmin) && !session?.isProgramsTeam,
+      })}
+      toolbar={
+        <ProductToolbar
+          variant="forms"
+          displayName={session.user.name || session.user.email}
+          roleLabel={accountLabel}
+          isStaffSession={Boolean(session.isAdmin || session.isCoordinator)}
+        />
       }
     >
       {children}

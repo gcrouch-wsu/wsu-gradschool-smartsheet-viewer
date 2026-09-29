@@ -1,5 +1,4 @@
 import { config } from "@/lib/forms/config";
-import * as mock from "@/lib/forms/mock-data";
 import type { SmartsheetColumn } from "@/lib/forms/types";
 import {
   SmartsheetRequestError,
@@ -29,7 +28,7 @@ export const DEFAULT_COLUMNS = [
   { title: "Status", type: "PICKLIST", options: ["New", "In Progress", "Done"] },
 ];
 
-/** Forms connection: prefer config token/base (supports SMARTSHEET_TOKEN alias + demo). */
+/** Forms connection: prefer config token/base (supports SMARTSHEET_TOKEN alias). */
 function formsConnection(): ConnectionConfig {
   return resolveConnection("default", normalizeSmartsheetApiBaseUrl(config.smartsheetBaseUrl));
 }
@@ -80,7 +79,6 @@ export interface SheetSummary {
 
 /** List every sheet the token can access — used to populate the template dropdown. */
 export async function listSheets(): Promise<SheetSummary[]> {
-  if (config.demo) return mock.mockListSheets();
   const rows = await listAllPages("/sheets");
   return rows
     .map((s) => {
@@ -91,8 +89,6 @@ export async function listSheets(): Promise<SheetSummary[]> {
 }
 
 export async function getSheet(sheetId: string | number): Promise<Record<string, unknown>> {
-  if (config.demo) return mock.mockGetSheet(sheetId) as unknown as Record<string, unknown>;
-
   const sheet = (await api(`/sheets/${sheetId}`)) as Record<string, unknown>;
   const pageSize = 5000;
   const rows: unknown[] = [...((sheet.rows as unknown[]) ?? [])];
@@ -146,19 +142,6 @@ export async function addRow(
     | { columnId: number; objectValue: unknown }
   )[],
 ): Promise<unknown> {
-  if (config.demo) {
-    return mock.mockAddRow(
-      sheetId,
-      cells.map((c) =>
-        "value" in c
-          ? c
-          : {
-              columnId: c.columnId,
-              value: JSON.stringify((c as { objectValue: unknown }).objectValue),
-            },
-      ),
-    );
-  }
   return api(`/sheets/${sheetId}/rows`, {
     method: "POST",
     body: JSON.stringify([{ toBottom: true, cells }]),
@@ -170,7 +153,6 @@ export async function copySheet(
   newName: string,
   include: string[],
 ): Promise<unknown> {
-  if (config.demo) return mock.mockCopySheet(templateId, newName);
   const q = include.length ? `?include=${include.join(",")}` : "";
   return api(`/sheets/${templateId}/copy${q}`, {
     method: "POST",
@@ -187,7 +169,6 @@ export type CreateSheetColumn = {
 };
 
 export async function createSheet(name: string, columns: CreateSheetColumn[]): Promise<unknown> {
-  if (config.demo) return mock.mockCreateSheet(name, columns);
   return api("/sheets", {
     method: "POST",
     body: JSON.stringify({ name, columns }),
@@ -207,24 +188,6 @@ export async function addRows(
   const results: unknown[] = [];
   for (let i = 0; i < rows.length; i += batchSize) {
     const chunk = rows.slice(i, i + batchSize);
-    if (config.demo) {
-      for (const row of chunk) {
-        results.push(
-          await addRow(
-            sheetId,
-            row.cells.map((c) =>
-              "value" in c
-                ? c
-                : {
-                    columnId: c.columnId,
-                    objectValue: (c as { objectValue: unknown }).objectValue,
-                  },
-            ),
-          ),
-        );
-      }
-      continue;
-    }
     const payload = chunk.map((row) => ({ toBottom: true, cells: row.cells }));
     results.push(await api(`/sheets/${sheetId}/rows`, { method: "POST", body: JSON.stringify(payload) }));
   }
@@ -232,7 +195,6 @@ export async function addRows(
 }
 
 export async function listAutomationRules(sheetId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListAutomationRules();
   const data = (await api(`/sheets/${sheetId}/automationrules?includeAll=true`)) as { data?: unknown[] };
   return data.data ?? [];
 }
@@ -243,7 +205,6 @@ export async function updateAutomationRule(
   ruleId: string | number,
   enabled: boolean,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockUpdateAutomationRule(ruleId, enabled);
   return api(`/sheets/${sheetId}/automationrules/${ruleId}`, {
     method: "PUT",
     body: JSON.stringify({ enabled }),
@@ -255,7 +216,6 @@ export async function getCellHistory(
   rowId: string | number,
   columnId: string | number,
 ): Promise<unknown[]> {
-  if (config.demo) return mock.mockCellHistory(sheetId, rowId, columnId);
   const data = (await api(`/sheets/${sheetId}/rows/${rowId}/columns/${columnId}/history?includeAll=true`)) as {
     data?: unknown[];
   };
@@ -263,7 +223,6 @@ export async function getCellHistory(
 }
 
 export async function getRow(sheetId: string | number, rowId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetRow(sheetId, rowId);
   return api(`/sheets/${sheetId}/rows/${rowId}`);
 }
 
@@ -272,13 +231,6 @@ export async function getSheetHead(sheetId: string | number): Promise<{
   columns: Array<{ id: number; title?: string; primary?: boolean }>;
   row: { id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> } | null;
 }> {
-  if (config.demo) {
-    const sheet = mock.mockGetSheet(sheetId) as {
-      columns?: Array<{ id: number; title?: string; primary?: boolean }>;
-      rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
-    };
-    return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
-  }
   const sheet = (await api(`/sheets/${sheetId}?pageSize=1`)) as {
     columns?: Array<{ id: number; title?: string; primary?: boolean }>;
     rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
@@ -296,27 +248,10 @@ export async function updateRows(
     >;
   }[],
 ): Promise<unknown> {
-  if (config.demo) {
-    return mock.mockUpdateRows(
-      sheetId,
-      rows.map((row) => ({
-        id: row.id,
-        cells: row.cells.map((c) =>
-          "value" in c
-            ? c
-            : {
-                columnId: c.columnId,
-                value: JSON.stringify((c as { objectValue: unknown }).objectValue),
-              },
-        ),
-      })),
-    );
-  }
   return api(`/sheets/${sheetId}/rows`, { method: "PUT", body: JSON.stringify(rows) });
 }
 
 export async function deleteRows(sheetId: string | number, rowIds: (string | number)[]): Promise<unknown> {
-  if (config.demo) return mock.mockDeleteRows(sheetId, rowIds);
   return api(`/sheets/${sheetId}/rows?ids=${rowIds.join(",")}`, { method: "DELETE" });
 }
 
@@ -324,12 +259,10 @@ export async function sendUpdateRequest(
   sheetId: string | number,
   payload: { rowIds: number[]; columnIds: number[]; message?: string; sendTo?: { email: string }[] },
 ): Promise<unknown> {
-  if (config.demo) return mock.mockSendUpdateRequest(sheetId, payload);
   return api(`/sheets/${sheetId}/updaterequests`, { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function listAttachments(sheetId: string | number, rowId?: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListAttachments(sheetId, rowId);
   const path = rowId ? `/sheets/${sheetId}/rows/${rowId}/attachments` : `/sheets/${sheetId}/attachments`;
   const data = (await api(path)) as { data?: unknown[] };
   return data.data ?? [];
@@ -341,7 +274,6 @@ export async function attachFile(
   file: Blob,
   fileName: string,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockAttachFile(sheetId, rowId, fileName);
   const form = new FormData();
   form.append("file", file, fileName);
   form.append("parentType", "ROW");
@@ -350,12 +282,10 @@ export async function attachFile(
 }
 
 export async function getAttachment(sheetId: string | number, attachmentId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetAttachment(attachmentId);
   return api(`/sheets/${sheetId}/attachments/${attachmentId}`);
 }
 
 export async function listDiscussions(sheetId: string | number, rowId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListDiscussions(sheetId, rowId);
   const data = (await api(`/sheets/${sheetId}/rows/${rowId}/discussions?include=comments`)) as { data?: unknown[] };
   return data.data ?? [];
 }
@@ -365,7 +295,6 @@ export async function addDiscussion(
   rowId: string | number,
   text: string,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockAddDiscussion(sheetId, rowId, text);
   return api(`/sheets/${sheetId}/rows/${rowId}/discussions`, {
     method: "POST",
     body: JSON.stringify({ comment: { text } }),
@@ -373,23 +302,19 @@ export async function addDiscussion(
 }
 
 export async function listWorkspaces(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListWorkspaces();
   return listAllTokenPages("/workspaces");
 }
 
 export async function listFolderChildren(folderId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListFolderChildren(folderId);
   const data = (await api(`/folders/${folderId}/children`)) as { data?: unknown[] };
   return data.data ?? [];
 }
 
 export async function getSheetPath(sheetId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetSheetPath(sheetId);
   return api(`/sheets/${sheetId}/path`);
 }
 
 export async function moveSheet(sheetId: string | number, folderId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockMoveSheet(sheetId, folderId);
   return api(`/sheets/${sheetId}`, {
     method: "PUT",
     body: JSON.stringify({ inPersonalWorkspace: false, parentId: Number(folderId) }),
@@ -401,7 +326,6 @@ export async function shareSheet(
   email: string,
   accessLevel: "VIEWER" | "EDITOR" | "ADMIN" = "EDITOR",
 ): Promise<unknown> {
-  if (config.demo) return mock.mockShareSheet(sheetId, email, accessLevel);
   return api(`/sheets/${sheetId}/shares`, {
     method: "POST",
     body: JSON.stringify([{ email, accessLevel }]),
@@ -409,23 +333,19 @@ export async function shareSheet(
 }
 
 export async function listShares(sheetId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListShares(sheetId);
   const data = (await api(`/sheets/${sheetId}/shares`)) as { data?: unknown[] };
   return data.data ?? [];
 }
 
 export async function listUsers(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListUsers();
   return listAllPages("/users");
 }
 
 export async function listGroups(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListGroups();
   return listAllPages("/groups");
 }
 
 export async function listTemplates(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListTemplates();
   const data = (await api("/templates")) as { data?: unknown[] };
   return data.data ?? [];
 }
@@ -436,7 +356,6 @@ export async function copySheetToFolder(
   include: string[],
   destinationFolderId?: string | number,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockCopySheet(templateId, newName);
   const q = include.length ? `?include=${include.join(",")}` : "";
   const body: Record<string, unknown> = { newName };
   if (destinationFolderId) {
@@ -452,25 +371,21 @@ export async function copySheetToFolder(
 }
 
 export async function searchAll(query: string): Promise<unknown[]> {
-  if (config.demo) return mock.mockSearch(query);
   const data = (await api(`/search?query=${encodeURIComponent(query)}`)) as { results?: unknown[] };
   return data.results ?? [];
 }
 
 export async function listEvents(since?: string): Promise<unknown> {
-  if (config.demo) return mock.mockListEvents(since);
   const q = since ? `?since=${encodeURIComponent(since)}` : "";
   return api(`/events${q}`);
 }
 
 export async function listWebhooks(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListWebhooks();
   const data = (await api("/webhooks")) as { data?: unknown[] };
   return data.data ?? [];
 }
 
 export async function createWebhook(callbackUrl: string, scopeObjectId: number, events: string[]): Promise<unknown> {
-  if (config.demo) return mock.mockCreateWebhook(callbackUrl, scopeObjectId);
   return api("/webhooks", {
     method: "POST",
     body: JSON.stringify({
@@ -485,7 +400,6 @@ export async function createWebhook(callbackUrl: string, scopeObjectId: number, 
 }
 
 export async function updateWebhook(webhookId: number, enabled: boolean): Promise<unknown> {
-  if (config.demo) return mock.mockUpdateWebhook(webhookId, enabled);
   return api(`/webhooks/${webhookId}`, {
     method: "PUT",
     body: JSON.stringify({ enabled }),
@@ -493,19 +407,15 @@ export async function updateWebhook(webhookId: number, enabled: boolean): Promis
 }
 
 export async function deleteWebhook(webhookId: number): Promise<unknown> {
-  if (config.demo) return mock.mockDeleteWebhook(webhookId);
   return api(`/webhooks/${webhookId}`, { method: "DELETE" });
 }
 
 export async function listColumns(sheetId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListColumns(sheetId);
   const data = (await api(`/sheets/${sheetId}/columns`)) as { data?: unknown[] };
   return data.data ?? [];
 }
 
 export async function addColumns(sheetId: string | number, columns: unknown[], index?: number): Promise<unknown> {
-  if (config.demo) return mock.mockAddColumns(sheetId, columns as { title: string; type: string; primary?: boolean; options?: string[] }[]);
-
   // Smartsheet requires `index` on each column object (insert position).
   let startIndex = index;
   if (startIndex === undefined) {
@@ -523,12 +433,10 @@ export async function addColumns(sheetId: string | number, columns: unknown[], i
 }
 
 export async function updateColumn(sheetId: string | number, columnId: number, updates: unknown): Promise<unknown> {
-  if (config.demo) return mock.mockUpdateColumn(sheetId, columnId, updates as Record<string, unknown>);
   return api(`/sheets/${sheetId}/columns/${columnId}`, { method: "PUT", body: JSON.stringify(updates) });
 }
 
 export async function deleteColumn(sheetId: string | number, columnId: number): Promise<unknown> {
-  if (config.demo) return mock.mockDeleteColumn(sheetId, columnId);
   return api(`/sheets/${sheetId}/columns/${columnId}`, { method: "DELETE" });
 }
 
@@ -538,7 +446,6 @@ export async function copyRows(
   toSheetId: number,
   include?: string,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockCopyRows(rowIds, toSheetId);
   const q = include ? `?include=${include}` : "";
   return api(`/sheets/${sheetId}/rows/copy${q}`, {
     method: "POST",
@@ -547,7 +454,6 @@ export async function copyRows(
 }
 
 export async function moveRows(sheetId: string | number, rowIds: number[], toSheetId: number): Promise<unknown> {
-  if (config.demo) return mock.mockMoveRows(sheetId, rowIds, toSheetId);
   return api(`/sheets/${sheetId}/rows/move`, {
     method: "POST",
     body: JSON.stringify({ rowIds, to: { sheetId: toSheetId } }),
@@ -561,7 +467,6 @@ export async function sendRowEmail(
   recipients: { email: string }[],
   message?: string,
 ): Promise<unknown> {
-  if (config.demo) return mock.mockSendRowEmail(sheetId, rowIds);
   return api(`/sheets/${sheetId}/rows/emails`, {
     method: "POST",
     body: JSON.stringify({ rowIds, columnIds, sendTo: recipients, message }),
@@ -569,47 +474,38 @@ export async function sendRowEmail(
 }
 
 export async function listReports(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListReports();
   return listAllPages("/reports");
 }
 
 export async function getReport(reportId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetReport(reportId);
   return api(`/reports/${reportId}`);
 }
 
 export async function createReport(body: unknown): Promise<unknown> {
-  if (config.demo) return mock.mockCreateReport(body as { name?: string });
   return api("/reports", { method: "POST", body: JSON.stringify(body) });
 }
 
 export async function updateReport(reportId: string | number, body: unknown): Promise<unknown> {
-  if (config.demo) return mock.mockUpdateReport(reportId, body as Record<string, unknown>);
   return api(`/reports/${reportId}`, { method: "PUT", body: JSON.stringify(body) });
 }
 
 export async function deleteReport(reportId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockDeleteReport(reportId);
   return api(`/reports/${reportId}`, { method: "DELETE" });
 }
 
 export async function listSights(): Promise<unknown[]> {
-  if (config.demo) return mock.mockListSights();
   return listAllTokenPages("/sights");
 }
 
 export async function getSight(sightId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetSight(sightId);
   return api(`/sights/${sightId}`);
 }
 
 export async function listForms(sheetId: string | number): Promise<unknown[]> {
-  if (config.demo) return mock.mockListForms(sheetId);
   const data = (await api(`/sheets/${sheetId}/forms`)) as { data?: unknown[] };
   return data.data ?? [];
 }
 
 export async function getForm(sheetId: string | number, formId: string | number): Promise<unknown> {
-  if (config.demo) return mock.mockGetForm(sheetId, formId);
   return api(`/sheets/${sheetId}/forms/${formId}`);
 }

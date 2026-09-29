@@ -1,5 +1,4 @@
 import { auditFromPrincipal } from "@/lib/audit";
-import { config } from "@/lib/forms/config";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { clearWebhookRegistration } from "@/lib/forms/sync-state";
 import { ensureBootstrapped } from "@/lib/forms/init";
@@ -39,7 +38,6 @@ export async function PATCH(
       webhookId,
       enabled: body.enabled,
       result,
-      demo: config.demo,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);
@@ -70,7 +68,6 @@ export async function DELETE(
       webhookId,
       deleted: true,
       result,
-      demo: config.demo,
     });
   } catch (e) {
     return formsAuthErrorResponse(e);

@@ -97,7 +97,6 @@ function ManagePageContent() {
   const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [mode, setMode] = useState<CreateFormMode>("template");
   const [sheets, setSheets] = useState<SheetOption[]>([]);
-  const [sheetsLive, setSheetsLive] = useState(false);
   const [sheetsError, setSheetsError] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [newName, setNewName] = useState("");
@@ -254,7 +253,6 @@ function ManagePageContent() {
       const d = await parseJson(r);
       if (!r.ok) throw new Error(String(d.error || d.message || "Could not load sheets from Smartsheet."));
       setSheets((d.sheets as SheetOption[]) ?? []);
-      setSheetsLive(!d.demo);
       setSheetsError("");
     } catch (e: unknown) {
       setSheets([]);
@@ -663,7 +661,6 @@ function ManagePageContent() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <AddSheetCard
-              sheetsLive={sheetsLive}
               addableCount={addableSheets.length}
               sheets={addableSheets}
               addId={addId}
