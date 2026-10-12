@@ -30,7 +30,7 @@ export const ADMIN_DASHBOARD_TOUR_STEPS: ProductTourStep[] = [
   {
     id: "forms",
     target: '[data-tour="ad-forms"]',
-    title: "Manage forms",
-    body: "Open Form administration to create, publish, and maintain public forms that write into Smartsheet.",
+    title: "Manage sources",
+    body: "Open Sources to create forms, publish /f URLs, set the active workspace sheet, and configure views.",
   },
 ];

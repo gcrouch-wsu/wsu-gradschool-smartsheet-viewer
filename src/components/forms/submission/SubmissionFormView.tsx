@@ -698,9 +698,9 @@ export function SubmissionFormEmptyState({
       <p className="text-sm text-red-700">{error}</p>
       {!hideManageLink ? (
         <p className="mt-3 text-sm text-[color:var(--wsu-muted)]">
-          Set up a form on the{" "}
-          <Link href="/forms/manage" className="font-medium text-wsu-crimson hover:underline">
-            admin page
+          Set up a form on{" "}
+          <Link href="/admin/sources" className="font-medium text-wsu-crimson hover:underline">
+            Sources
           </Link>
           .
         </p>

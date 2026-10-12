@@ -10,17 +10,16 @@ import {
   IconWebhook,
 } from "@/components/forms/icons";
 
-export type AdminTab = "forms" | "webhooks";
+export type AdminTab = "webhooks";
 
 type NavItem =
   | { kind: "tab"; id: AdminTab; label: string; icon: ReactNode }
   | { kind: "link"; href: string; label: string; icon: ReactNode };
 
 const SECTIONS: NavItem[] = [
-  { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
+  { kind: "link", href: "/admin/sources", label: "Sources", icon: <IconFile className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/builder", label: "Builder", icon: <IconPencil className="h-3.5 w-3.5" /> },
   { kind: "link", href: "/forms/sheet", label: "Sheet", icon: <IconGrid className="h-3.5 w-3.5" /> },
-  { kind: "link", href: "/forms/workflows", label: "Workflows", icon: <IconWebhook className="h-3.5 w-3.5" /> },
   { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
 ];
 
@@ -34,7 +33,7 @@ function pillClass(isActive: boolean) {
 }
 
 interface AdminSectionNavProps {
-  /** Active manage tab, or null when a link route (Grid / Builder) is current. */
+  /** Active manage tab, or null when a link route is current. */
   active: AdminTab | null;
   onSelect: (tab: AdminTab) => void;
 }

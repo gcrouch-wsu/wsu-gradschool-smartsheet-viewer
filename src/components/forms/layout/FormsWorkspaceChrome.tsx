@@ -30,8 +30,7 @@ export function FormsWorkspaceChrome({
       onSelectTab(tab);
       return;
     }
-    const href = tab === "forms" ? "/forms/manage" : `/forms/manage?tab=${tab}`;
-    router.push(href);
+    router.push(`/forms/manage?tab=${tab}`);
   }
 
   return (
@@ -39,7 +38,7 @@ export function FormsWorkspaceChrome({
       <PageHeader
         eyebrow="Forms workspace"
         title="Form administration"
-        description="Sheet sources from the shared Admin Sources catalog. Use a form in grid/builder; publish for public submit."
+        description="Sources live under Admin → Sources. Use Builder and Sheet for the active workspace; Webhooks for Smartsheet callbacks."
         dataTour="fm-heading"
         actions={actions}
       />

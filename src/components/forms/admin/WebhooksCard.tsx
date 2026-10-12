@@ -124,7 +124,7 @@ export function WebhooksCard({
                 </>
               ) : (
                 <p className="text-sm text-[color:var(--wsu-muted)]">
-                  Select an active form on the Forms tab first.
+                  Select an active source on Admin → Sources first (Workspace → Use).
                 </p>
               )}
             </div>

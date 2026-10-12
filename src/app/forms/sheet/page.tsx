@@ -51,6 +51,7 @@ function SheetViewPageContent() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
   const [resendBusyRowId, setResendBusyRowId] = useState<number | null>(null);
+  const [workflowCount, setWorkflowCount] = useState(0);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -104,7 +105,7 @@ function SheetViewPageContent() {
           if (!r.ok) throw new Error(d.error || d.message || "Could not load sheet.");
           return d;
         })
-        .then((d) => {
+        .then(async (d) => {
           setSheetName(d.sheetName);
           setColumns(d.columns ?? []);
           setRows(d.rows ?? []);
@@ -113,6 +114,16 @@ function SheetViewPageContent() {
           setApprovedValues(d.workflow?.approvedValues ?? []);
           setDeclinedValues(d.workflow?.declinedValues ?? []);
           setError("");
+          try {
+            const wfRes = await fetch(
+              `/api/forms/workflows?sheetId=${encodeURIComponent(selectedSheetId)}`,
+              { cache: "no-store" },
+            );
+            const wfData = (await wfRes.json().catch(() => ({}))) as { workflows?: unknown[] };
+            setWorkflowCount(wfRes.ok ? (wfData.workflows?.length ?? 0) : 0);
+          } catch {
+            setWorkflowCount(0);
+          }
         })
         .catch((e) => setError(e instanceof Error ? e.message : "Could not load sheet."))
         .finally(() => {
@@ -242,6 +253,7 @@ function SheetViewPageContent() {
         resendBusyRowId={resendBusyRowId}
         onRefresh={() => loadSheet(true)}
         refreshing={refreshing}
+        workflowCount={workflowCount}
       />
       <SubmissionDetailModal
         rowId={selectedRowId}

@@ -1,74 +1,19 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AddSheetCard } from "@/components/forms/admin/AddSheetCard";
-import { Alert, primaryBtnClass } from "@/components/forms/admin/AdminCard";
+import { Alert } from "@/components/forms/admin/AdminCard";
 import type { AdminTab } from "@/components/forms/admin/AdminSectionNav";
-import { AutomationsCard } from "@/components/forms/admin/AutomationsCard";
-import { CreateFormModal, excelOverridesFromColumns, type CreateFormMode } from "@/components/forms/admin/CreateFormModal";
-import type { ExcelImportColumn } from "@/lib/forms/excel-import-types";
-import { DuplicateFormModal } from "@/components/forms/admin/DuplicateFormModal";
 import {
   FORMS_MANAGE_TOUR_STEPS,
   FORMS_MANAGE_TOUR_STORAGE_KEY,
 } from "@/components/forms/admin/forms-manage-tour";
-import { FormsTable } from "@/components/forms/admin/FormsTable";
-import { MetricsStrip } from "@/components/forms/admin/MetricsStrip";
 import { WebhooksCard, type WebhookInfo } from "@/components/forms/admin/WebhooksCard";
 import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
-import { IconPlus } from "@/components/forms/icons";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ProductTour } from "@/components/ui/ProductTour";
 import { TourHowToButton } from "@/components/ui/ProductTourHost";
 import { useProductTour } from "@/hooks/useProductTour";
-
-interface FormEntry {
-  id: string;
-  name: string;
-  createdAt: string;
-  source: "template" | "scratch" | "imported" | "sample" | "excel";
-  slug?: string;
-  public?: boolean;
-  publishedAt?: string;
-  sourceConfigId?: string;
-}
-
-interface SheetOption {
-  id: number;
-  name: string;
-}
-
-interface Rule {
-  id?: number | string;
-  name?: string;
-  enabled?: boolean;
-  action?: { type?: string; recipients?: { email?: string; recipientColumnId?: number }[] };
-  actionType?: string;
-  disabledReason?: string;
-  createdBy?: { name?: string };
-}
-
-async function parseJson(r: Response): Promise<Record<string, unknown>> {
-  const text = await r.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    throw new Error(
-      r.ok
-        ? "Invalid response from server."
-        : `Request failed (${r.status}). Sign in again if you were redirected.`,
-    );
-  }
-}
-
-const MANAGE_TABS: AdminTab[] = ["forms", "webhooks"];
-
-function tabFromSearchParam(value: string | null): AdminTab {
-  if (value && MANAGE_TABS.includes(value as AdminTab)) return value as AdminTab;
-  return "forms";
-}
 
 export default function ManagePage() {
   return (
@@ -87,451 +32,28 @@ export default function ManagePage() {
 function ManagePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = tabFromSearchParam(searchParams.get("tab"));
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [forms, setForms] = useState<FormEntry[]>([]);
-  const [activeId, setActiveId] = useState("");
-  const [query, setQuery] = useState("");
+  const tabParam = searchParams.get("tab");
+  const tour = useProductTour(FORMS_MANAGE_TOUR_STORAGE_KEY);
+
   const [formsError, setFormsError] = useState("");
-  const [addId, setAddId] = useState("");
-  const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [mode, setMode] = useState<CreateFormMode>("template");
-  const [sheets, setSheets] = useState<SheetOption[]>([]);
-  const [sheetsError, setSheetsError] = useState("");
-  const [templateId, setTemplateId] = useState("");
-  const [newName, setNewName] = useState("");
-  const [destinationFolderId, setDestinationFolderId] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createMsg, setCreateMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [excelFile, setExcelFile] = useState<File | null>(null);
-  const [excelColumns, setExcelColumns] = useState<ExcelImportColumn[] | null>(null);
-  const [excelRowCount, setExcelRowCount] = useState(0);
-  const [excelPreviewing, setExcelPreviewing] = useState(false);
-  const [excelPreviewError, setExcelPreviewError] = useState("");
-  const [rules, setRules] = useState<Rule[] | null>(null);
-  const [autoNotice, setAutoNotice] = useState("");
-  const [autoLoading, setAutoLoading] = useState(false);
-  const [paths, setPaths] = useState<Record<string, string>>({});
   const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null);
   const [webhookRegistering, setWebhookRegistering] = useState(false);
   const [webhookRefreshing, setWebhookRefreshing] = useState(false);
   const [webhookTogglingId, setWebhookTogglingId] = useState<number | null>(null);
   const [webhookDeletingId, setWebhookDeletingId] = useState<number | null>(null);
   const [deleteWebhookId, setDeleteWebhookId] = useState<number | null>(null);
-  const [publishBusyId, setPublishBusyId] = useState<string | null>(null);
-  const [formsLoading, setFormsLoading] = useState(true);
-  const [sheetsLoading, setSheetsLoading] = useState(true);
-  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
-  const [duplicateSourceId, setDuplicateSourceId] = useState<string | null>(null);
-  const [duplicateName, setDuplicateName] = useState("");
-  const [duplicateError, setDuplicateError] = useState("");
-  const [duplicating, setDuplicating] = useState(false);
-  const tour = useProductTour(FORMS_MANAGE_TOUR_STORAGE_KEY);
 
-  const duplicateSource = useMemo(
-    () => forms.find((f) => String(f.id) === String(duplicateSourceId ?? "")) ?? null,
-    [forms, duplicateSourceId],
-  );
-
-  function defaultDuplicateName(sourceName: string): string {
-    const base = sourceName.trim() || "Form";
-    if (/\(copy\)\s*$/i.test(base)) return `${base} ${Date.now().toString().slice(-4)}`;
-    return `${base} (copy)`;
-  }
-
-  function openDuplicateModal(id: string) {
-    const source = forms.find((f) => String(f.id) === String(id));
-    setDuplicateSourceId(id);
-    setDuplicateName(defaultDuplicateName(source?.name ?? "Form"));
-    setDuplicateError("");
-    setDuplicateModalOpen(true);
-  }
-
-  function closeDuplicateModal() {
-    if (duplicating) return;
-    setDuplicateModalOpen(false);
-    setDuplicateSourceId(null);
-    setDuplicateName("");
-    setDuplicateError("");
-  }
-
-  async function publishForm(id: string) {
-    setPublishBusyId(id);
-    setFormsError("");
-    try {
-      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Publish failed.");
-      await loadForms();
-      if (d.publicUrl) {
-        const absolute = `${window.location.origin}${d.publicUrl}`;
-        void navigator.clipboard.writeText(absolute).catch(() => undefined);
-      }
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Publish failed.");
-    } finally {
-      setPublishBusyId(null);
-    }
-  }
-
-  async function unpublishForm(id: string) {
-    setPublishBusyId(id);
-    setFormsError("");
-    try {
-      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/unpublish`, { method: "POST" });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Unpublish failed.");
-      await loadForms();
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Unpublish failed.");
-    } finally {
-      setPublishBusyId(null);
-    }
-  }
-
-  async function confirmDuplicateForm() {
-    const id = duplicateSourceId;
-    if (!id) return;
-    const newName = duplicateName.trim();
-    if (!newName) {
-      setDuplicateError("Enter a name for the duplicated sheet.");
+  useEffect(() => {
+    // Forms list moved to /admin/sources — this page is webhooks-only.
+    if (tabParam && tabParam !== "webhooks") {
+      router.replace("/admin/sources");
       return;
     }
-
-    setDuplicating(true);
-    setPublishBusyId(id);
-    setDuplicateError("");
-    setFormsError("");
-    try {
-      const r = await fetch(`/api/forms/registry/${encodeURIComponent(id)}/duplicate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newName }),
-      });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Duplicate failed."));
-      setDuplicateModalOpen(false);
-      setDuplicateSourceId(null);
-      setDuplicateName("");
-      await loadForms();
-      await loadSheets();
-      router.push("/forms/builder");
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Duplicate failed.";
-      setDuplicateError(message);
-      setFormsError(message);
-    } finally {
-      setDuplicating(false);
-      setPublishBusyId(null);
-    }
-  }
-
-  async function loadForms() {
-    setFormsLoading(true);
-    try {
-      const r = await fetch("/api/forms/registry");
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load forms."));
-      setForms((d.forms as FormEntry[]) ?? []);
-      setActiveId(String(d.activeSheetId || ""));
-      setFormsError("");
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Could not load forms.");
-    } finally {
-      setFormsLoading(false);
-    }
-  }
-
-  async function loadSheets() {
-    setSheetsLoading(true);
-    try {
-      const r = await fetch("/api/forms/platform/sheets");
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not load sheets from Smartsheet."));
-      setSheets((d.sheets as SheetOption[]) ?? []);
-      setSheetsError("");
-    } catch (e: unknown) {
-      setSheets([]);
-      setSheetsError(e instanceof Error ? e.message : "Could not load sheets.");
-    } finally {
-      setSheetsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadForms();
-    // Smartsheet catalog is slow — load after the forms list so the main table can paint first.
-    const timer = window.setTimeout(() => {
-      void loadSheets();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!activeId) return;
-    fetch(`/api/forms/platform/sheets/${activeId}/path`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.path) {
-          const label = (d.path as { name: string }[]).map((n) => n.name).join(" / ");
-          setPaths((p) => ({ ...p, [activeId]: label }));
-        }
-      })
-      .catch(() => null);
-  }, [activeId]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return forms;
-    return forms.filter(
-      (f) =>
-        f.name.toLowerCase().includes(q) ||
-        String(f.id).includes(q) ||
-        (f.slug ?? "").toLowerCase().includes(q),
-    );
-  }, [forms, query]);
-
-  const registeredIds = useMemo(() => new Set(forms.map((f) => String(f.id))), [forms]);
-  const addableSheets = useMemo(
-    () => sheets.filter((s) => !registeredIds.has(String(s.id))),
-    [sheets, registeredIds],
-  );
+    void loadWebhooks();
+  }, [tabParam, router]);
 
   function handleSectionSelect(id: AdminTab) {
-    const href = id === "forms" ? "/forms/manage" : `/forms/manage?tab=${id}`;
-    router.replace(href);
-  }
-
-  useEffect(() => {
-    if (tab === "webhooks") void loadWebhooks();
-  }, [tab]);
-
-  function openCreateModal() {
-    setCreateMsg(null);
-    setCreateModalOpen(true);
-  }
-
-  function closeCreateModal() {
-    if (creating) return;
-    setCreateModalOpen(false);
-    setCreateMsg(null);
-    setExcelFile(null);
-    setExcelColumns(null);
-    setExcelRowCount(0);
-    setExcelPreviewError("");
-  }
-
-  function handleModeChange(next: CreateFormMode) {
-    setMode(next);
-    setCreateMsg(null);
-    if (next !== "excel") {
-      setExcelPreviewError("");
-    }
-  }
-
-  async function previewExcelFile(file?: File | null) {
-    const f = file === undefined ? excelFile : file;
-    setExcelPreviewError("");
-    setExcelColumns(null);
-    setExcelRowCount(0);
-    if (!f) return;
-    setExcelPreviewing(true);
-    try {
-      const body = new FormData();
-      body.append("file", f);
-      const r = await fetch("/api/forms/registry/excel/preview", { method: "POST", body });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not read that file."));
-      const preview = d.preview as { columns?: ExcelImportColumn[]; rowCount?: number } | undefined;
-      setExcelColumns(preview?.columns ?? []);
-      setExcelRowCount(Number(preview?.rowCount ?? 0));
-      if (!newName.trim() && f.name) {
-        const base = f.name.replace(/\.(xlsx|csv)$/i, "").trim();
-        if (base) setNewName(base);
-      }
-    } catch (e: unknown) {
-      setExcelPreviewError(e instanceof Error ? e.message : "Could not read that file.");
-    } finally {
-      setExcelPreviewing(false);
-    }
-  }
-
-  function handleExcelFileChange(file: File | null) {
-    setExcelFile(file);
-    setExcelColumns(null);
-    setExcelRowCount(0);
-    setExcelPreviewError("");
-  }
-
-  async function useForm(id: string) {
-    try {
-      const r = await fetch("/api/forms/registry/select", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not switch form."));
-      await loadForms();
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Could not switch form.");
-    }
-  }
-
-  async function editForm(id: string) {
-    setFormsError("");
-    try {
-      if (String(id) !== activeId) {
-        const r = await fetch("/api/forms/registry/select", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id }),
-        });
-        const d = await parseJson(r);
-        if (!r.ok) throw new Error(String(d.error || d.message || "Could not open form in builder."));
-      }
-      router.push("/forms/builder");
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Could not open form in builder.");
-    }
-  }
-
-  function viewSheet(id: string) {
-    router.push(`/forms/sheet?sheetId=${encodeURIComponent(id)}`);
-  }
-
-  async function addExisting() {
-    setAddMsg(null);
-    const id = addId.trim();
-    if (!id) return setAddMsg({ ok: false, text: "Select a sheet from the list." });
-    try {
-      const r = await fetch("/api/forms/registry/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not add that sheet."));
-      const sheet = d.sheet as { name?: string } | undefined;
-      setAddId("");
-      setAddMsg({ ok: true, text: `Added "${sheet?.name ?? id}" and set it active.` });
-      await loadForms();
-    } catch (e: unknown) {
-      setAddMsg({ ok: false, text: e instanceof Error ? e.message : "Could not add sheet." });
-    }
-  }
-
-  async function createForm() {
-    setCreateMsg(null);
-    if (mode === "template" && !templateId) return setCreateMsg({ ok: false, text: "Choose a template sheet first." });
-    if (mode === "excel") {
-      if (!excelFile) return setCreateMsg({ ok: false, text: "Choose an Excel or CSV file first." });
-      if (!excelColumns?.some((c) => c.included)) {
-        return setCreateMsg({ ok: false, text: "Include at least one column." });
-      }
-    }
-    setCreating(true);
-    try {
-      let r: Response;
-      if (mode === "excel") {
-        const body = new FormData();
-        body.append("mode", "excel");
-        body.append("file", excelFile!);
-        body.append("newName", newName);
-        if (destinationFolderId.trim()) body.append("destinationFolderId", destinationFolderId.trim());
-        body.append("columnOverrides", JSON.stringify(excelOverridesFromColumns(excelColumns!)));
-        r = await fetch("/api/forms/registry/create", { method: "POST", body });
-      } else {
-        r = await fetch("/api/forms/registry/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode,
-            templateId,
-            newName,
-            destinationFolderId: destinationFolderId || undefined,
-          }),
-        });
-      }
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Create failed."));
-      setNewName("");
-      setExcelFile(null);
-      setExcelColumns(null);
-      setExcelRowCount(0);
-      const sheet = d.sheet as { name?: string } | undefined;
-      setCreateMsg({ ok: true, text: `Created "${sheet?.name ?? "form"}" and set it active.${d.note ? " " + d.note : ""}` });
-      await loadForms();
-      setCreateModalOpen(false);
-    } catch (e: unknown) {
-      setCreateMsg({ ok: false, text: e instanceof Error ? e.message : "Create failed." });
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function loadAutomations() {
-    setAutoLoading(true);
-    setRules(null);
-    setAutoNotice("");
-    try {
-      const r = await fetch("/api/forms/platform/automations");
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not load automations.");
-      setRules(d.rules);
-      setAutoNotice(d.notice || "");
-    } catch (e: unknown) {
-      setAutoNotice("");
-      setRules([]);
-      setFormsError(e instanceof Error ? e.message : "Could not load automations.");
-    } finally {
-      setAutoLoading(false);
-    }
-  }
-
-  async function setAutomationEnabled(ruleId: string, enabled: boolean) {
-    setAutoLoading(true);
-    setFormsError("");
-    try {
-      const r = await fetch(`/api/forms/platform/automations/${ruleId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not update automation.");
-      await loadAutomations();
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Could not update automation.");
-      setAutoLoading(false);
-    }
-  }
-
-  async function setAllAutomations(enabled: boolean) {
-    const message = enabled
-      ? "Turn listed Smartsheet automations back on for this sheet?"
-      : "Turn off listed Smartsheet automations? Smartsheet emails for those rules will stop. In-app workflows and grid Approve/Decline keep running. Rules are disabled, not deleted.";
-    if (!window.confirm(message)) return;
-    setAutoLoading(true);
-    setFormsError("");
-    try {
-      const r = await fetch("/api/forms/platform/automations", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || d.message || "Could not update automations.");
-      if (d.notice) setFormsError(d.notice);
-      await loadAutomations();
-    } catch (e: unknown) {
-      setFormsError(e instanceof Error ? e.message : "Could not update automations.");
-      setAutoLoading(false);
-    }
+    router.replace(`/forms/manage?tab=${id}`);
   }
 
   async function loadWebhooks(opts?: { silent?: boolean }) {
@@ -615,123 +137,32 @@ function ManagePageContent() {
     }
   }
 
+  if (tabParam && tabParam !== "webhooks") {
+    return (
+      <FormsWorkspaceChrome>
+        <p className="text-sm text-[color:var(--wsu-muted)]">Redirecting to Sources…</p>
+      </FormsWorkspaceChrome>
+    );
+  }
+
   return (
     <FormsWorkspaceChrome
-      activeTab={tab}
+      activeTab="webhooks"
       onSelectTab={handleSectionSelect}
-      actions={
-        <>
-          <TourHowToButton onClick={tour.startTour} />
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className={`inline-flex items-center gap-1.5 ${primaryBtnClass}`}
-            data-tour="fm-create"
-          >
-            <IconPlus className="h-4 w-4" />
-            Create form
-          </button>
-        </>
-      }
+      actions={<TourHowToButton onClick={tour.startTour} />}
     >
       {formsError ? <Alert text={formsError} /> : null}
 
-      {tab === "forms" ? (
-        <div className="space-y-4">
-          <MetricsStrip
-            activeForms={formsLoading ? null : forms.length}
-            sheetsAvailable={sheetsLoading ? null : sheets.length}
-          />
-
-          <FormsTable
-            forms={filtered}
-            activeId={activeId}
-            activePath={paths[activeId] ?? ""}
-            query={query}
-            onQueryChange={setQuery}
-            onUseForm={useForm}
-            onEdit={editForm}
-            onViewSheet={viewSheet}
-            onPublish={publishForm}
-            onUnpublish={unpublishForm}
-            onDuplicate={openDuplicateModal}
-            busyId={publishBusyId}
-            loading={formsLoading}
-          />
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <AddSheetCard
-              addableCount={addableSheets.length}
-              sheets={addableSheets}
-              addId={addId}
-              onAddIdChange={setAddId}
-              onAdd={addExisting}
-              sheetsError={sheetsError}
-              sheetsLoading={sheetsLoading}
-              addMsg={addMsg}
-              allSheetsRegistered={!sheetsLoading && !sheetsError && sheets.length > 0 && addableSheets.length === 0}
-            />
-            <AutomationsCard
-              rules={rules}
-              autoNotice={autoNotice}
-              autoLoading={autoLoading}
-              onLoad={loadAutomations}
-              onSetEnabled={(id, enabled) => void setAutomationEnabled(id, enabled)}
-              onSetAll={(enabled) => void setAllAutomations(enabled)}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {tab === "webhooks" ? (
-        <WebhooksCard
-          webhookInfo={webhookInfo}
-          onRegister={registerWebhook}
-          onRefresh={() => void loadWebhooks()}
-          onSetEnabled={(id, enabled) => void setWebhookEnabled(id, enabled)}
-          onDelete={openDeleteWebhookModal}
-          registering={webhookRegistering}
-          refreshing={webhookRefreshing}
-          togglingId={webhookTogglingId}
-          deletingId={webhookDeletingId}
-        />
-      ) : null}
-
-      <CreateFormModal
-        open={createModalOpen}
-        onClose={closeCreateModal}
-        mode={mode}
-        onModeChange={handleModeChange}
-        templateId={templateId}
-        onTemplateIdChange={setTemplateId}
-        sheets={sheets}
-        sheetsError={sheetsError}
-        newName={newName}
-        onNewNameChange={setNewName}
-        destinationFolderId={destinationFolderId}
-        onDestinationFolderIdChange={setDestinationFolderId}
-        creating={creating}
-        onCreate={createForm}
-        createMsg={createMsg}
-        excelFile={excelFile}
-        onExcelFileChange={handleExcelFileChange}
-        excelColumns={excelColumns}
-        onExcelColumnsChange={setExcelColumns}
-        excelRowCount={excelRowCount}
-        excelPreviewing={excelPreviewing}
-        excelPreviewError={excelPreviewError}
-        onExcelPreview={(file) => void previewExcelFile(file)}
-      />
-
-      <DuplicateFormModal
-        open={duplicateModalOpen}
-        onClose={closeDuplicateModal}
-        sourceName={duplicateSource?.name ?? ""}
-        newName={duplicateName}
-        onNewNameChange={setDuplicateName}
-        duplicating={duplicating}
-        onConfirm={() => void confirmDuplicateForm()}
-        error={duplicateError}
+      <WebhooksCard
+        webhookInfo={webhookInfo}
+        onRegister={registerWebhook}
+        onRefresh={() => void loadWebhooks()}
+        onSetEnabled={(id, enabled) => void setWebhookEnabled(id, enabled)}
+        onDelete={openDeleteWebhookModal}
+        registering={webhookRegistering}
+        refreshing={webhookRefreshing}
+        togglingId={webhookTogglingId}
+        deletingId={webhookDeletingId}
       />
 
       <ConfirmModal
