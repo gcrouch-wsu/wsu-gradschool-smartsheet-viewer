@@ -34,21 +34,15 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
 
 interface SourcesCatalogClientProps {
   initialRows: SourceCatalogRow[];
-  initialActiveSheetId: string;
 }
 
-export function SourcesCatalogClient({
-  initialRows,
-  initialActiveSheetId,
-}: SourcesCatalogClientProps) {
+export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps) {
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
-  const [activeSheetId, setActiveSheetId] = useState(initialActiveSheetId);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [paths, setPaths] = useState<Record<string, string>>({});
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [mode, setMode] = useState<CreateFormMode>("template");
@@ -73,21 +67,7 @@ export function SourcesCatalogClient({
 
   useEffect(() => {
     setRows(initialRows);
-    setActiveSheetId(initialActiveSheetId);
-  }, [initialRows, initialActiveSheetId]);
-
-  useEffect(() => {
-    if (!activeSheetId) return;
-    fetch(`/api/forms/platform/sheets/${activeSheetId}/path`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.path) {
-          const label = (d.path as { name: string }[]).map((n) => n.name).join(" / ");
-          setPaths((p) => ({ ...p, [activeSheetId]: label }));
-        }
-      })
-      .catch(() => null);
-  }, [activeSheetId]);
+  }, [initialRows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -110,16 +90,13 @@ export function SourcesCatalogClient({
     setLoading(true);
     setError("");
     try {
-      const [sourcesRes, viewsRes, registryRes] = await Promise.all([
+      const [sourcesRes, viewsRes] = await Promise.all([
         fetch("/api/admin/sources", { credentials: "include" }),
         fetch("/api/admin/views", { credentials: "include" }),
-        fetch("/api/forms/registry", { credentials: "include" }),
       ]);
       const sourcesData = await parseJson(sourcesRes);
       const viewsData = await parseJson(viewsRes);
-      const registryData = await parseJson(registryRes);
       if (!sourcesRes.ok) throw new Error(String(sourcesData.error || "Could not load sources."));
-      if (!registryRes.ok) throw new Error(String(registryData.error || "Could not load forms registry."));
 
       const sources = (sourcesData.sources as Array<Record<string, unknown>>) ?? [];
       const views = (viewsData.views as Array<{ sourceId?: string }>) ?? [];
@@ -147,7 +124,6 @@ export function SourcesCatalogClient({
       });
 
       setRows(nextRows);
-      setActiveSheetId(String(registryData.activeSheetId || ""));
       router.refresh();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not refresh sources.");
@@ -156,41 +132,8 @@ export function SourcesCatalogClient({
     }
   }
 
-  async function useSource(sheetId: string) {
-    setError("");
-    try {
-      const r = await fetch("/api/forms/registry/select", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ id: sheetId }),
-      });
-      const d = await parseJson(r);
-      if (!r.ok) throw new Error(String(d.error || d.message || "Could not switch workspace."));
-      setActiveSheetId(String(d.activeSheetId || sheetId));
-      router.refresh();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Could not switch workspace.");
-    }
-  }
-
-  async function editBuilder(sheetId: string) {
-    setError("");
-    try {
-      if (String(sheetId) !== String(activeSheetId)) {
-        const r = await fetch("/api/forms/registry/select", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ id: sheetId }),
-        });
-        const d = await parseJson(r);
-        if (!r.ok) throw new Error(String(d.error || d.message || "Could not open builder."));
-      }
-      router.push("/forms/builder");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Could not open builder.");
-    }
+  function editBuilder(sourceId: string) {
+    router.push(`/admin/sources/${encodeURIComponent(sourceId)}/builder`);
   }
 
   function viewSheet(sourceId: string) {
@@ -282,7 +225,12 @@ export function SourcesCatalogClient({
       setDuplicateSourceId(null);
       setDuplicateName("");
       await refreshCatalog();
-      router.push("/forms/builder");
+      const form = d.form as { sourceConfigId?: string } | undefined;
+      if (form?.sourceConfigId) {
+        router.push(`/admin/sources/${encodeURIComponent(form.sourceConfigId)}/builder`);
+      } else {
+        router.push("/admin/sources");
+      }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Duplicate failed.";
       setDuplicateError(message);
@@ -432,11 +380,8 @@ export function SourcesCatalogClient({
 
       <SourcesCatalogTable
         rows={filtered}
-        activeSheetId={activeSheetId}
-        activePath={paths[activeSheetId] ?? ""}
         query={query}
         onQueryChange={setQuery}
-        onUse={useSource}
         onEditBuilder={editBuilder}
         onViewSheet={viewSheet}
         onPublish={publishForm}

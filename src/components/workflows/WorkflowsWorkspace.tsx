@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert, inputClass, primaryBtnClass, secondaryBtnClass } from "@/components/forms/admin/AdminCard";
-import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { Modal } from "@/components/ui/Modal";
 import { WorkflowTemplateDetailsModal } from "@/components/workflows/WorkflowTemplateDetailsModal";
 import { FILTER_OPERATOR_OPTIONS } from "@/lib/config/options";
@@ -29,7 +28,15 @@ function emptyFilter(): ViewFilterConfig {
   return { columnId: undefined, columnTitle: "", op: "equals", value: "" };
 }
 
-export function WorkflowsWorkspace({ sheetId }: { sheetId: string }) {
+export function WorkflowsWorkspace({
+  sheetId,
+  sourceId,
+  sourceLabel,
+}: {
+  sheetId: string;
+  sourceId?: string;
+  sourceLabel?: string;
+}) {
   const [payload, setPayload] = useState<WorkflowsPayload | null>(null);
   const [sheetName, setSheetName] = useState("");
   const [error, setError] = useState("");
@@ -131,8 +138,12 @@ export function WorkflowsWorkspace({ sheetId }: { sheetId: string }) {
     setNotice(`Preview sent to ${data.email}. Open Notifications to read it.`);
   }
 
+  const sheetHref = sourceId
+    ? `/admin/sources/${encodeURIComponent(sourceId)}/sheet`
+    : "/admin/sources";
+
   return (
-    <FormsWorkspaceChrome>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -140,13 +151,10 @@ export function WorkflowsWorkspace({ sheetId }: { sheetId: string }) {
               Workflows
             </p>
             <h1 className="mt-1 text-xl font-medium text-[color:var(--wsu-ink)]">
-              {sheetName || `Sheet ${sheetId}`}
+              {sourceLabel || sheetName || `Sheet ${sheetId}`}
             </h1>
           </div>
-          <Link
-            href={`/forms/sheet?sheetId=${encodeURIComponent(sheetId)}`}
-            className={secondaryBtnClass}
-          >
+          <Link href={sheetHref} className={secondaryBtnClass}>
             Back to sheet
           </Link>
         </div>
@@ -293,7 +301,7 @@ export function WorkflowsWorkspace({ sheetId }: { sheetId: string }) {
           </>
         ) : null}
       </Modal>
-    </FormsWorkspaceChrome>
+    </>
   );
 }
 

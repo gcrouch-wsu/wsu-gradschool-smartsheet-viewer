@@ -126,7 +126,17 @@ function isLayoutPaletteType(type: BuilderElementType): type is FormLayoutElemen
   return type === "heading" || type === "description" || type === "divider";
 }
 
-export function useFormBuilder() {
+export function useFormBuilder(options?: { sheetId?: string }) {
+  const sheetIdParam = options?.sheetId?.trim() || "";
+  const builderUrl = useCallback(
+    (path = "/api/forms/builder") => {
+      if (!sheetIdParam) return path;
+      const sep = path.includes("?") ? "&" : "?";
+      return `${path}${sep}sheetId=${encodeURIComponent(sheetIdParam)}`;
+    },
+    [sheetIdParam],
+  );
+
   const [state, setState] = useState<BuilderState | null>(null);
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -139,7 +149,7 @@ export function useFormBuilder() {
     setLoading(true);
     setError("");
     try {
-      const r = await fetch("/api/forms/builder");
+      const r = await fetch(builderUrl());
       const d = await parseJson(r);
       if (!r.ok) {
         throw new Error(
@@ -179,7 +189,7 @@ export function useFormBuilder() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [builderUrl]);
 
   useEffect(() => {
     void load();
@@ -216,7 +226,7 @@ export function useFormBuilder() {
     },
   ) {
     if (!state) return;
-    const r = await fetch("/api/forms/builder", {
+    const r = await fetch(builderUrl(), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

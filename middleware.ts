@@ -136,12 +136,12 @@ export async function middleware(request: NextRequest) {
     if (!canAccessAdmin && !isAdminApiRequest && !onNotifications) {
       const caps = auth.capabilities ?? [];
       if (caps.includes("forms.student")) {
-        return NextResponse.redirect(new URL("/forms/my", request.url));
+        return NextResponse.redirect(new URL("/student", request.url));
       }
       if (caps.includes("contributor.edit")) {
         return NextResponse.redirect(new URL("/", request.url));
       }
-      return NextResponse.redirect(new URL("/forms/sheet", request.url));
+      return NextResponse.redirect(new URL("/admin/sources", request.url));
     }
     if (!canAccessAdmin && isAdminApiRequest) {
       return NextResponse.json({ message: "Full admin access is required." }, { status: 403 });
@@ -171,6 +171,8 @@ export const config = {
     "/f/:path*",
     "/forms",
     "/forms/:path*",
+    "/student",
+    "/student/:path*",
     "/api/forms",
     "/api/forms/:path*",
     "/admin",

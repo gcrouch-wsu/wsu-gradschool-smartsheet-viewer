@@ -45,13 +45,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   if (!canAccessAdminWorkspace && !onNotifications) {
-    redirect("/forms/sheet");
+    redirect("/admin/sources");
   }
 
   const principalLabel = principal.displayName ?? principal.username;
   const showFullNav = canAccessAdminWorkspace;
   const coordinatorNav = [
-    { href: "/forms/sheet", label: "Sheet", icon: "grid" as const },
+    { href: "/admin/sources", label: "Sources", icon: "sources" as const },
     { href: "/admin/notifications", label: "Notifications", icon: "notifications" as const },
   ];
 

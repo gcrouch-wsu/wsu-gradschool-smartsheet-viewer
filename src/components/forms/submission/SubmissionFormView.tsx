@@ -673,7 +673,7 @@ export function SubmissionSuccessView({
         </button>
         {showTrackerLink ? (
           <Link
-            href="/forms/sheet"
+            href="/admin/sources"
             className="rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson/90"
           >
             Open grid

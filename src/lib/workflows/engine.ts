@@ -115,7 +115,7 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
   const columns = await loadColumnIndex(event.sheetId);
   const filterRow = toFilterRow(rowId, raw.cells ?? []);
   const fields = fieldsFromCells(columns, raw.cells ?? []);
-  const href = `/forms/sheet?sheetId=${encodeURIComponent(String(event.sheetId))}&rowId=${rowId}`;
+  const href = `/admin/sources?sheetId=${encodeURIComponent(String(event.sheetId))}&rowId=${rowId}`;
 
   for (const workflow of matching) {
     if (!rowMatchesConditions(filterRow, workflow.conditions)) continue;

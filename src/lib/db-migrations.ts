@@ -5,7 +5,8 @@
  * Only `001_platform_schema.sql` exists; it is always re-applied (idempotent).
  */
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
 import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 
@@ -68,7 +69,10 @@ const RLS_TABLES = [
 let migratePromise: Promise<void> | null = null;
 
 function migrationsDir() {
-  return join(process.cwd(), "migrations");
+  // Resolve from this module so unit tests that chdir() into a temp cwd still find SQL.
+  // Use dirname + join (not `new URL("../..", import.meta.url)`) so Next/webpack does not
+  // try to resolve the parent directory as a module.
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "migrations");
 }
 
 async function ensureMigrationsTable() {

@@ -7,13 +7,13 @@ export const SOURCES_LIST_TOUR_STEPS: ProductTourStep[] = [
     id: "welcome",
     target: '[data-tour="as-heading"]',
     title: "Sources catalog",
-    body: "One catalog for views and forms. Register a sheet or report, then publish layouts or public /f URLs from here.",
+    body: "One catalog for views and forms. Register a sheet or report, then open sheet, builder, or views from the row.",
   },
   {
     id: "create",
     target: '[data-tour="as-create-form"]',
     title: "Create a form",
-    body: "Clone a template, start from scratch, or import Excel. New sheets are registered here and set active.",
+    body: "Clone a template, start from scratch, or import Excel. New sheets are registered here.",
   },
   {
     id: "new",
@@ -25,7 +25,7 @@ export const SOURCES_LIST_TOUR_STEPS: ProductTourStep[] = [
     id: "table",
     target: '[data-tour="as-table"]',
     title: "Browse sources",
-    body: "Each row shows slug, views count, workspace Active/Use, and publication status. Click the views number to open that source’s views.",
+    body: "Each row shows slug, views count, and publication status. Use the eye for sheet and the pencil for builder.",
   },
   {
     id: "edit",

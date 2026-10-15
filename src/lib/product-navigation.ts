@@ -29,7 +29,6 @@ export function productNav(isAdmin: boolean, options?: { canManageUsers?: boolea
     { href: "/admin/sources", label: "Sources", icon: "sources" },
     { href: "/admin/views", label: "Views", icon: "views" },
     { href: "/admin/activity", label: "Activity", icon: "activity" },
-    { href: "/forms/manage", label: "Webhooks", icon: "forms" },
     { href: "/admin/reroutes", label: "Reroutes", icon: "tracker" },
   ];
 

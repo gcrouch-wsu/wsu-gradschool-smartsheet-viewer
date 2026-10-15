@@ -13,13 +13,13 @@ export default async function StudentSheetPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const email = await readStudentSessionEmail();
-  if (!email) redirect("/forms/my");
+  if (!email) redirect("/student");
   const [{ sheetId }, { page }] = await Promise.all([params, searchParams]);
 
   return (
     <StudentPageFrame
       breadcrumbs={[
-        { href: "/forms/my", label: "My submissions" },
+        { href: "/student", label: "My submissions" },
         { href: null, label: "Submission sheet" },
       ]}
       title="Submission sheet"

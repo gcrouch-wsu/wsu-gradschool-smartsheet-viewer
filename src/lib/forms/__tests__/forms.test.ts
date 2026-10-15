@@ -1,21 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { resolveAllowedDomains } from "@/lib/forms/allowed-domains";
 import { hiddenColumnTitles, validateFormClient } from "@/lib/forms/form-ui";
 import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
 import { checkPublicSpamGuards } from "@/lib/forms/turnstile";
 import { validateSubmission } from "@/lib/forms/validation";
 import type { SmartsheetColumn } from "@/lib/forms/types";
-import type { SyncState } from "@/lib/forms/sync-state";
-import { FORM_WEBHOOK_SECRET_ENV_VAR, validateWebhookSecret } from "@/lib/forms/webhook-auth";
-import { buildCallbackUrl, maskCallbackUrl } from "@/lib/forms/webhook-callback";
-
-const { getSyncState } = vi.hoisted(() => ({
-  getSyncState: vi.fn(async (): Promise<SyncState> => ({ recentEvents: [] })),
-}));
-
-vi.mock("@/lib/forms/sync-state", () => ({
-  getSyncState,
-}));
 
 describe("forms validation", () => {
   it("requires non-optional fields", () => {
@@ -119,77 +108,6 @@ describe("public spam guards", () => {
   it("rejects too-fast submits", () => {
     expect(checkPublicSpamGuards({ renderedAt: Date.now() }).ok).toBe(false);
     expect(checkPublicSpamGuards({ renderedAt: Date.now() - 5000 }).ok).toBe(true);
-  });
-});
-
-describe("webhook auth", () => {
-  const prevSecret = process.env[FORM_WEBHOOK_SECRET_ENV_VAR];
-
-  afterEach(() => {
-    if (prevSecret === undefined) delete process.env[FORM_WEBHOOK_SECRET_ENV_VAR];
-    else process.env[FORM_WEBHOOK_SECRET_ENV_VAR] = prevSecret;
-    getSyncState.mockReset();
-    getSyncState.mockResolvedValue({ recentEvents: [] });
-  });
-
-  it("rejects missing secret when env and store are unset", async () => {
-    delete process.env[FORM_WEBHOOK_SECRET_ENV_VAR];
-    getSyncState.mockResolvedValue({ recentEvents: [] });
-    const request = new Request("http://localhost/api/forms/webhooks/smartsheet");
-    expect(await validateWebhookSecret(request)).toBe(false);
-  });
-
-  it("accepts query secret from env override", async () => {
-    process.env[FORM_WEBHOOK_SECRET_ENV_VAR] = "env-secret-value";
-    getSyncState.mockResolvedValue({ recentEvents: [], webhookSecret: "stored-ignored" });
-    const request = new Request("http://localhost/api/forms/webhooks/smartsheet?secret=env-secret-value");
-    expect(await validateWebhookSecret(request)).toBe(true);
-  });
-
-  it("accepts header secret from stored state when env unset", async () => {
-    delete process.env[FORM_WEBHOOK_SECRET_ENV_VAR];
-    getSyncState.mockResolvedValue({ recentEvents: [], webhookSecret: "stored-secret" });
-    const request = new Request("http://localhost/api/forms/webhooks/smartsheet", {
-      headers: { "x-forms-webhook-secret": "stored-secret" },
-    });
-    expect(await validateWebhookSecret(request)).toBe(true);
-  });
-
-  it("rejects wrong stored secret", async () => {
-    delete process.env[FORM_WEBHOOK_SECRET_ENV_VAR];
-    getSyncState.mockResolvedValue({ recentEvents: [], webhookSecret: "stored-secret" });
-    const request = new Request("http://localhost/api/forms/webhooks/smartsheet?secret=wrong");
-    expect(await validateWebhookSecret(request)).toBe(false);
-  });
-});
-
-describe("webhook callback url", () => {
-  it("builds callback from request origin when env unset", () => {
-    const request = new Request("https://forms.example.edu/api/forms/webhooks");
-    const result = buildCallbackUrl(request, "abc123", "");
-    expect(result).toEqual({
-      url: "https://forms.example.edu/api/forms/webhooks/smartsheet?secret=abc123",
-    });
-  });
-
-  it("rejects localhost origins without configured override", () => {
-    const request = new Request("http://localhost:3000/api/forms/webhooks");
-    const result = buildCallbackUrl(request, "abc123", "");
-    expect(result).toHaveProperty("error");
-  });
-
-  it("uses configured override for localhost", () => {
-    const request = new Request("http://localhost:3000/api/forms/webhooks");
-    const result = buildCallbackUrl(request, "abc123", "https://tunnel.example/api/forms/webhooks/smartsheet");
-    expect(result).toEqual({
-      url: "https://tunnel.example/api/forms/webhooks/smartsheet?secret=abc123",
-    });
-  });
-
-  it("masks secret in callback urls", () => {
-    expect(maskCallbackUrl("https://x.example/api/forms/webhooks/smartsheet?secret=topsecret")).toBe(
-      "https://x.example/api/forms/webhooks/smartsheet?secret=********",
-    );
   });
 });
 

@@ -21,8 +21,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<FormsSessionInfo | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
 
-  const isFormsAdminRoute =
-    pathname.startsWith("/forms/manage") || pathname.startsWith("/forms/builder");
+  const isFormsAdminRoute = pathname.startsWith("/forms/workflows");
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +46,7 @@ export function FormsShell({ children }: { children: React.ReactNode }) {
     const next =
       pathname.startsWith("/forms") && pathname !== "/forms/approver/sign-in"
         ? `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`
-        : "/forms/sheet";
+        : "/admin/sources";
     router.replace(`/admin/sign-in?next=${encodeURIComponent(next)}`);
   }, [sessionLoaded, session, pathname, router]);
 

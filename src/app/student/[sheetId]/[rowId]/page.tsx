@@ -11,14 +11,14 @@ export default async function StudentSubmissionDetailPage({
   params: Promise<{ sheetId: string; rowId: string }>;
 }) {
   const email = await readStudentSessionEmail();
-  if (!email) redirect("/forms/my");
+  if (!email) redirect("/student");
   const { sheetId, rowId } = await params;
 
   return (
     <StudentPageFrame
       breadcrumbs={[
-        { href: "/forms/my", label: "My submissions" },
-        { href: `/forms/my/${encodeURIComponent(sheetId)}`, label: "Submission sheet" },
+        { href: "/student", label: "My submissions" },
+        { href: `/student/${encodeURIComponent(sheetId)}`, label: "Submission sheet" },
         { href: null, label: "Submission detail" },
       ]}
       title="Submission detail"

@@ -26,7 +26,7 @@ export async function requireAdminPageAccess(
 
   const canManage = capabilities.includes("admin.manage");
   if (!canManage && !options?.allowCoordinator) {
-    redirect("/forms/sheet");
+    redirect("/admin/sources");
   }
 
   if (options?.ownerOnly && !capabilities.includes("admin.owner") && result.principal.role !== "owner") {
@@ -43,7 +43,7 @@ export async function requireAdminPageAccess(
   }
 
   if (!canManage) {
-    redirect("/forms/sheet");
+    redirect("/admin/sources");
   }
 
   return result.principal;

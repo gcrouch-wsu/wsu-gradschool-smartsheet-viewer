@@ -3,6 +3,22 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Keep build tracing scoped to this extracted app, even when a parent folder also has a lockfile.
   outputFileTracingRoot: process.cwd(),
+  async redirects() {
+    return [
+      { source: "/forms", destination: "/admin/sources", permanent: false },
+      { source: "/forms/manage", destination: "/admin/sources", permanent: false },
+      { source: "/forms/manage/:path*", destination: "/admin/sources", permanent: false },
+      { source: "/forms/builder", destination: "/admin/sources", permanent: false },
+      { source: "/forms/builder/:path*", destination: "/admin/sources", permanent: false },
+      { source: "/forms/sheet", destination: "/admin/sources", permanent: false },
+      { source: "/forms/tracker", destination: "/admin/sources", permanent: false },
+      { source: "/forms/workflows", destination: "/admin/sources", permanent: false },
+      { source: "/forms/search", destination: "/admin/sources", permanent: false },
+      { source: "/forms/approver/sign-in", destination: "/admin/sign-in?next=/admin/sources", permanent: false },
+      { source: "/forms/my", destination: "/student", permanent: false },
+      { source: "/forms/my/:path*", destination: "/student/:path*", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

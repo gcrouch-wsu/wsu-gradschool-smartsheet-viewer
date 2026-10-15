@@ -1078,8 +1078,14 @@ function ModeToggle({
   );
 }
 
-export function FormBuilderView() {
-  const builder = useFormBuilder();
+export function FormBuilderView({
+  sheetId,
+  sourceId,
+}: {
+  sheetId?: string;
+  sourceId?: string;
+} = {}) {
+  const builder = useFormBuilder(sheetId ? { sheetId } : undefined);
   const [mode, setMode] = useState<BuilderMode>("edit");
   const [railTab, setRailTab] = useState<RailTab>("add");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1128,7 +1134,10 @@ export function FormBuilderView() {
         <p className="text-sm text-red-700">{builder.error || "No active form."}</p>
         <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">
           Create or select a form on{" "}
-          <Link href="/admin/sources" className="font-medium text-wsu-crimson hover:underline">
+          <Link
+            href={sourceId ? `/admin/sources/${encodeURIComponent(sourceId)}` : "/admin/sources"}
+            className="font-medium text-wsu-crimson hover:underline"
+          >
             Sources
           </Link>{" "}
           first.

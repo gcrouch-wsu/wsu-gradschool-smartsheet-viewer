@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { IconCheck, IconCopy, IconEye, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
+import { IconCopy, IconEye, IconFile, IconMore, IconPencil, IconSearch } from "@/components/forms/icons";
 import { DataTable, type DataTableColumn } from "@/components/ui/Table";
 import type { FormProvenance } from "@/lib/config/types";
 
@@ -43,12 +43,10 @@ function truncateId(id: string): string {
 
 interface SourcesCatalogTableProps {
   rows: SourceCatalogRow[];
-  activeSheetId: string;
-  activePath: string;
   query: string;
   onQueryChange: (value: string) => void;
-  onUse: (sheetId: string) => void;
-  onEditBuilder: (sheetId: string) => void;
+  /** Open form builder nested under this source. */
+  onEditBuilder: (sourceId: string) => void;
   /** Open sheet grid nested under this source. */
   onViewSheet: (sourceId: string) => void;
   onPublish: (sheetId: string) => void;
@@ -69,7 +67,7 @@ function RowActions({
 }: {
   row: SourceCatalogRow;
   busy: boolean;
-  onEditBuilder: (sheetId: string) => void;
+  onEditBuilder: (sourceId: string) => void;
   onViewSheet: (sourceId: string) => void;
   onPublish: (sheetId: string) => void;
   onUnpublish: (sheetId: string) => void;
@@ -125,7 +123,7 @@ function RowActions({
             type="button"
             className={iconBtnClass}
             disabled={busy}
-            onClick={() => onEditBuilder(row.sheetId)}
+            onClick={() => onEditBuilder(row.id)}
             aria-label={`Edit ${row.name} in builder`}
             title="Edit in builder"
           >
@@ -221,11 +219,8 @@ function RowActions({
 
 export function SourcesCatalogTable({
   rows,
-  activeSheetId,
-  activePath,
   query,
   onQueryChange,
-  onUse,
   onEditBuilder,
   onViewSheet,
   onPublish,
@@ -295,30 +290,6 @@ export function SourcesCatalogTable({
       ),
     },
     {
-      id: "workspace",
-      header: "Workspace",
-      cell: (row) => {
-        if (!(row.sourceType === "sheet" && row.formsEnabled)) {
-          return <span className="text-xs text-mist">—</span>;
-        }
-        const isActive = String(row.sheetId) === String(activeSheetId);
-        return isActive ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-            <IconCheck className="h-3 w-3" />
-            Active
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onUse(row.sheetId)}
-            className="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-ink hover:bg-white"
-          >
-            Use
-          </button>
-        );
-      },
-    },
-    {
       id: "publication",
       header: "Publication",
       cell: (row) => {
@@ -359,9 +330,8 @@ export function SourcesCatalogTable({
         <div>
           <h2 className="text-sm font-medium text-ink">Sources</h2>
           <p className="mt-0.5 text-xs text-sub">
-            Shared catalog for views and forms. Active = Forms workspace. Published = public /f URL.
+            Shared catalog for views and forms. Open sheet or builder from a row. Published = public /f URL.
           </p>
-          <p className="mt-0.5 text-xs text-sub">Active path: {activePath || "—"}</p>
         </div>
         <div className="relative w-full sm:w-56" data-tour="as-search">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />

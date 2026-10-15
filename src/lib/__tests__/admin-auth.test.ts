@@ -107,9 +107,11 @@ describe("admin auth helpers", () => {
     });
     expect(ADMIN_SESSION_COOKIE_NAME).toBe("smartsheets_view_admin_session");
     expect(normalizeAdminNextPath("/admin/views")).toBe("/admin/views");
-    expect(normalizeAdminNextPath("/forms/manage")).toBe("/forms/manage");
+    expect(normalizeAdminNextPath("/admin/sources")).toBe("/admin/sources");
     expect(normalizeAdminNextPath("/admin/sign-in")).toBe("/admin");
-    expect(normalizeAdminNextPath("/forms/approver/sign-in")).toBe("/admin");
+    expect(normalizeAdminNextPath("/forms/approver/sign-in")).toBe("/admin/sources");
+    expect(normalizeAdminNextPath("/forms/manage")).toBe("/admin/sources");
     expect(normalizeAdminNextPath("/view/test")).toBe("/admin");
+    expect(normalizeAdminNextPath("/student")).toBe("/admin");
   });
 });

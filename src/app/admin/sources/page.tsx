@@ -8,16 +8,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
-import { activeSheetId as getActiveSheetId } from "@/lib/forms/registry";
 import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
 
 export default async function SourcesIndexPage() {
   await requireAdminPageAccess("/admin/sources");
-  const [sources, views, activeSheetId] = await Promise.all([
-    listSourceConfigs(),
-    listViewConfigs(),
-    getActiveSheetId().catch(() => ""),
-  ]);
+  const [sources, views] = await Promise.all([listSourceConfigs(), listViewConfigs()]);
 
   const viewsBySource = views.reduce<Map<string, number>>((map, view) => {
     map.set(view.sourceId, (map.get(view.sourceId) ?? 0) + 1);
@@ -49,13 +44,13 @@ export default async function SourcesIndexPage() {
       <PageHeader
         eyebrow="Admin builder"
         title="Sources"
-        description="Shared catalog for public views and forms. Use Workspace to set the active sheet, Views for public layouts, and Publish for /f URLs."
+        description="Shared catalog for public views and forms. Open sheet or builder from a row; publish for /f URLs."
         dataTour="as-heading"
         actions={
           <ProductTourControls storageKey={SOURCES_LIST_TOUR_STORAGE_KEY} steps={SOURCES_LIST_TOUR_STEPS} />
         }
       />
-      <SourcesCatalogClient initialRows={rows} initialActiveSheetId={activeSheetId} />
+      <SourcesCatalogClient initialRows={rows} />
     </section>
   );
 }

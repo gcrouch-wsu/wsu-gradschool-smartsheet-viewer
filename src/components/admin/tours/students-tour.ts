@@ -7,7 +7,7 @@ export const STUDENTS_TOUR_STEPS: ProductTourStep[] = [
     id: "welcome",
     target: '[data-tour="ast-heading"]',
     title: "Student accounts",
-    body: "Password accounts for the student portal (/forms/my). Separate from contributor editing accounts.",
+    body: "Password accounts for the student portal (/student). Separate from contributor editing accounts.",
   },
   {
     id: "search",

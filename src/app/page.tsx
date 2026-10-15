@@ -33,7 +33,7 @@ export default async function HomePage() {
         actionsLabel="Workspace administration"
         actions={
           <>
-            <Link href="/forms/my" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
+            <Link href="/student" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               My submissions
             </Link>
             <Link href="/instructions/admin" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>

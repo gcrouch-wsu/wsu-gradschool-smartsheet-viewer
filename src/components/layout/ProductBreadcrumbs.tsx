@@ -15,15 +15,8 @@ function sourceSlugFromPath(pathname: string): string | null {
 function itemsForPath(pathname: string, sourceSlug: string | null): BreadcrumbItem[] {
   const dashboard: BreadcrumbItem = { href: "/admin", label: "Dashboard" };
 
-  if (pathname.startsWith("/forms")) {
-    const sources: BreadcrumbItem = { href: "/admin/sources", label: "Sources" };
-    if (pathname.startsWith("/forms/sheet")) return [dashboard, sources, { href: null, label: "Sheet" }];
-    if (pathname.startsWith("/forms/tracker")) return [dashboard, sources, { href: null, label: "Sheet" }];
-    if (pathname.startsWith("/forms/manage")) return [dashboard, sources, { href: null, label: "Webhooks" }];
-    if (pathname.startsWith("/forms/builder")) return [dashboard, sources, { href: null, label: "Builder" }];
-    if (pathname.startsWith("/forms/search")) return [dashboard, sources, { href: null, label: "Search" }];
-    if (pathname.startsWith("/forms/workflows")) return [dashboard, sources, { href: null, label: "Workflows" }];
-    return [dashboard, sources];
+  if (pathname.startsWith("/student")) {
+    return [{ href: null, label: pathname === "/student" ? "My submissions" : "Submission" }];
   }
 
   if (pathname.startsWith("/admin/sources")) {
@@ -42,6 +35,12 @@ function itemsForPath(pathname: string, sourceSlug: string | null): BreadcrumbIt
     };
     if (pathname.includes("/sheet")) {
       return [dashboard, sourcesCrumb, sourceCrumb, { href: null, label: "Sheet" }];
+    }
+    if (pathname.includes("/builder")) {
+      return [dashboard, sourcesCrumb, sourceCrumb, { href: null, label: "Builder" }];
+    }
+    if (pathname.includes("/workflows")) {
+      return [dashboard, sourcesCrumb, sourceCrumb, { href: null, label: "Workflows" }];
     }
     return [dashboard, sourcesCrumb, { href: null, label }];
   }

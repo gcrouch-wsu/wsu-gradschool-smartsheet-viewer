@@ -22,7 +22,7 @@ export default async function AdminSignInPage({
 
   if (auth.ok && auth.principal) {
     if (auth.principal.role === "coordinator") {
-      redirect("/forms/sheet");
+      redirect("/admin/sources");
     }
     redirect(nextPath);
   }

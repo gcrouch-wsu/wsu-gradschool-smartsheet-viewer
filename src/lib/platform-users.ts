@@ -504,9 +504,9 @@ export function userHasStaffRole(roles: readonly PlatformRole[]) {
 export function postLoginPath(capabilities: readonly PrincipalCapability[]): string {
   if (capabilities.includes("admin.manage")) return "/admin";
   if (capabilities.includes("forms.coordinator") || capabilities.includes("forms.approver")) {
-    return "/forms/sheet";
+    return "/admin/sources";
   }
-  if (capabilities.includes("forms.student")) return "/forms/my";
+  if (capabilities.includes("forms.student")) return "/student";
   if (capabilities.includes("contributor.edit")) return "/";
   return "/";
 }

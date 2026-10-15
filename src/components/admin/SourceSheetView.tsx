@@ -76,11 +76,6 @@ export function SourceSheetView({ sourceId, sheetId, sourceLabel }: SourceSheetV
     [sheetId],
   );
 
-  const scheduleSheetRefresh = useCallback(() => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = setTimeout(() => loadSheet(true), 400);
-  }, [loadSheet]);
-
   useEffect(() => {
     const rowFromUrl = Number(searchParams.get("rowId") ?? "");
     setSelectedRowId(Number.isFinite(rowFromUrl) && rowFromUrl > 0 ? rowFromUrl : null);
@@ -89,24 +84,10 @@ export function SourceSheetView({ sourceId, sheetId, sourceLabel }: SourceSheetV
   }, [loadSheet, searchParams]);
 
   useEffect(() => {
-    if (!sheetId) return;
-    const source = new EventSource("/api/forms/sync/stream");
-    source.onmessage = (message) => {
-      try {
-        const data = JSON.parse(message.data) as { type?: string; sheetId?: number | string };
-        if (data.type !== "sheet_changed") return;
-        const eventSheetId = data.sheetId != null ? String(data.sheetId) : "";
-        if (eventSheetId && eventSheetId !== sheetId) return;
-        scheduleSheetRefresh();
-      } catch {
-        // ignore malformed frames
-      }
-    };
     return () => {
-      source.close();
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  }, [scheduleSheetRefresh, sheetId]);
+  }, []);
 
   async function handleResend(row: SheetGridRow, column: SheetGridColumn) {
     setResendBusyRowId(row.id);

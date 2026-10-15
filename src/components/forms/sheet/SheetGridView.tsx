@@ -276,7 +276,11 @@ export function SheetGridView({
           ) : null}
           {selectedSheetId ? (
             <Link
-              href={`/forms/workflows?sheetId=${encodeURIComponent(selectedSheetId)}`}
+              href={
+                sourceId
+                  ? `/admin/sources/${encodeURIComponent(sourceId)}/workflows`
+                  : `/admin/sources`
+              }
               className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
             >
               {workflowCount > 0 ? `Workflows (${workflowCount})` : "Create workflow"}
