@@ -9,6 +9,10 @@ import {
   type ConnectionConfig,
 } from "@/lib/smartsheet-client";
 import { normalizeSmartsheetApiBaseUrl } from "@/lib/smartsheet-api-url";
+import { isSmartsheetApiEnabled } from "@/lib/smartsheet-api-gate";
+import { withImportedOrLive } from "@/lib/local-sheets/routing";
+import { SheetNotImportedError } from "@/lib/local-sheets/types";
+import * as sheetStore from "@/lib/local-sheets/store";
 
 /** Columns Smartsheet fills in automatically — never shown on the form or written to. */
 const SYSTEM_COLUMN_TYPES = new Set([
@@ -38,6 +42,11 @@ async function withFormsErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (error) {
+    if (error instanceof SheetNotImportedError) {
+      const err = new Error(error.message) as Error & { status?: number };
+      err.status = error.status;
+      throw err;
+    }
     if (error instanceof SmartsheetRequestError) {
       const err = new Error(`Smartsheet API ${error.status}: ${error.message}`) as Error & {
         status?: number;
@@ -79,36 +88,60 @@ export interface SheetSummary {
 
 /** List every sheet the token can access — used to populate the template dropdown. */
 export async function listSheets(): Promise<SheetSummary[]> {
-  const rows = await listAllPages("/sheets");
-  return rows
-    .map((s) => {
-      const sheet = s as { id: number; name: string };
-      return { id: sheet.id, name: sheet.name };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  if (!(await isSmartsheetApiEnabled())) {
+    return sheetStore.listImportedSheetSummaries();
+  }
+  try {
+    const rows = await listAllPages("/sheets");
+    return rows
+      .map((s) => {
+        const sheet = s as { id: number; name: string };
+        return { id: sheet.id, name: sheet.name };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  } catch {
+    // API unreachable — fall back to imported sheets if any.
+    return sheetStore.listImportedSheetSummaries();
+  }
 }
 
 export async function getSheet(sheetId: string | number): Promise<Record<string, unknown>> {
-  const sheet = (await api(`/sheets/${sheetId}`)) as Record<string, unknown>;
-  const pageSize = 5000;
-  const rows: unknown[] = [...((sheet.rows as unknown[]) ?? [])];
-  const reportedTotal = Math.max((sheet.totalRowCount as number | undefined) ?? 0, rows.length);
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => {
+        const sheet = await sheetStore.getImportedSheet(sheetId);
+        if (!sheet) throw new SheetNotImportedError("sheet", sheetId);
+        return sheet;
+      },
+      fromLive: async () => {
+        const sheet = (await api(`/sheets/${sheetId}`)) as Record<string, unknown>;
+        const pageSize = 5000;
+        const rows: unknown[] = [...((sheet.rows as unknown[]) ?? [])];
+        const reportedTotal = Math.max((sheet.totalRowCount as number | undefined) ?? 0, rows.length);
 
-  if (reportedTotal > rows.length) {
-    let page = rows.length > 0 ? 2 : 1;
-    while (rows.length < reportedTotal) {
-      const next = (await api(`/sheets/${sheetId}?page=${page}&pageSize=${pageSize}`)) as { rows?: unknown[] };
-      const batch = next.rows ?? [];
-      if (!batch.length) break;
-      rows.push(...batch);
-      if (batch.length < pageSize) break;
-      page++;
-    }
-  }
+        if (reportedTotal > rows.length) {
+          let page = rows.length > 0 ? 2 : 1;
+          while (rows.length < reportedTotal) {
+            const next = (await api(`/sheets/${sheetId}?page=${page}&pageSize=${pageSize}`)) as {
+              rows?: unknown[];
+            };
+            const batch = next.rows ?? [];
+            if (!batch.length) break;
+            rows.push(...batch);
+            if (batch.length < pageSize) break;
+            page++;
+          }
+        }
 
-  sheet.rows = rows;
-  sheet.totalRowCount = Math.max(reportedTotal, rows.length);
-  return sheet;
+        sheet.rows = rows;
+        sheet.totalRowCount = Math.max(reportedTotal, rows.length);
+        return sheet;
+      },
+    }),
+  );
 }
 
 export function extractColumns(sheet: { columns?: unknown[] }): SmartsheetColumn[] {
@@ -142,9 +175,9 @@ export async function addRow(
     | { columnId: number; objectValue: unknown }
   )[],
 ): Promise<unknown> {
-  return api(`/sheets/${sheetId}/rows`, {
-    method: "POST",
-    body: JSON.stringify([{ toBottom: true, cells }]),
+  return withFormsErrors(async () => {
+    const result = await addRows(sheetId, [{ cells }]);
+    return result[0];
   });
 }
 
@@ -153,11 +186,21 @@ export async function copySheet(
   newName: string,
   include: string[],
 ): Promise<unknown> {
-  const q = include.length ? `?include=${include.join(",")}` : "";
-  return api(`/sheets/${templateId}/copy${q}`, {
-    method: "POST",
-    body: JSON.stringify({ destinationType: "home", newName }),
-  });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: templateId,
+      hasImported: () => sheetStore.hasImportedSheet(templateId),
+      fromImported: () => sheetStore.copyImportedSheet(templateId, newName),
+      fromLive: async () => {
+        const q = include.length ? `?include=${include.join(",")}` : "";
+        return api(`/sheets/${templateId}/copy${q}`, {
+          method: "POST",
+          body: JSON.stringify({ destinationType: "home", newName }),
+        });
+      },
+    }),
+  );
 }
 
 export type CreateSheetColumn = {
@@ -169,9 +212,14 @@ export type CreateSheetColumn = {
 };
 
 export async function createSheet(name: string, columns: CreateSheetColumn[]): Promise<unknown> {
-  return api("/sheets", {
-    method: "POST",
-    body: JSON.stringify({ name, columns }),
+  return withFormsErrors(async () => {
+    if (!(await isSmartsheetApiEnabled())) {
+      return sheetStore.createImportedSheet(name, columns);
+    }
+    return api("/sheets", {
+      method: "POST",
+      body: JSON.stringify({ name, columns }),
+    });
   });
 }
 
@@ -185,30 +233,36 @@ export async function addRows(
   rows: { cells: AddRowCell[] }[],
   batchSize = 200,
 ): Promise<unknown[]> {
-  const results: unknown[] = [];
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const chunk = rows.slice(i, i + batchSize);
-    const payload = chunk.map((row) => ({ toBottom: true, cells: row.cells }));
-    results.push(await api(`/sheets/${sheetId}/rows`, { method: "POST", body: JSON.stringify(payload) }));
-  }
-  return results;
-}
-
-export async function listAutomationRules(sheetId: string | number): Promise<unknown[]> {
-  const data = (await api(`/sheets/${sheetId}/automationrules?includeAll=true`)) as { data?: unknown[] };
-  return data.data ?? [];
-}
-
-/** Disable or re-enable a Smartsheet automation. Never deletes the rule. */
-export async function updateAutomationRule(
-  sheetId: string | number,
-  ruleId: string | number,
-  enabled: boolean,
-): Promise<unknown> {
-  return api(`/sheets/${sheetId}/automationrules/${ruleId}`, {
-    method: "PUT",
-    body: JSON.stringify({ enabled }),
-  });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => {
+        const created = await sheetStore.addImportedRows(sheetId, rows);
+        for (const row of created) {
+          const id = Number((row as { id?: number }).id);
+          if (Number.isFinite(id)) {
+            await sheetStore.emitLocalRowEvents(sheetId, [
+              { eventType: "created", objectId: id, rowId: id },
+            ]);
+          }
+        }
+        return created;
+      },
+      fromLive: async () => {
+        const results: unknown[] = [];
+        for (let i = 0; i < rows.length; i += batchSize) {
+          const chunk = rows.slice(i, i + batchSize);
+          const payload = chunk.map((row) => ({ toBottom: true, cells: row.cells }));
+          results.push(
+            await api(`/sheets/${sheetId}/rows`, { method: "POST", body: JSON.stringify(payload) }),
+          );
+        }
+        return results;
+      },
+    }),
+  );
 }
 
 export async function getCellHistory(
@@ -216,26 +270,69 @@ export async function getCellHistory(
   rowId: string | number,
   columnId: string | number,
 ): Promise<unknown[]> {
-  const data = (await api(`/sheets/${sheetId}/rows/${rowId}/columns/${columnId}/history?includeAll=true`)) as {
-    data?: unknown[];
-  };
-  return data.data ?? [];
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => [],
+      fromLive: async () => {
+        const data = (await api(
+          `/sheets/${sheetId}/rows/${rowId}/columns/${columnId}/history?includeAll=true`,
+        )) as { data?: unknown[] };
+        return data.data ?? [];
+      },
+    }),
+  );
 }
 
 export async function getRow(sheetId: string | number, rowId: string | number): Promise<unknown> {
-  return api(`/sheets/${sheetId}/rows/${rowId}`);
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => {
+        const row = await sheetStore.getImportedRow(sheetId, rowId);
+        if (!row) throw new Error(`Row ${rowId} not found.`);
+        return row;
+      },
+      fromLive: () => api(`/sheets/${sheetId}/rows/${rowId}`),
+    }),
+  );
 }
 
 /** First row plus columns, for filling {{Primary}} when an alert has no specific row. */
 export async function getSheetHead(sheetId: string | number): Promise<{
   columns: Array<{ id: number; title?: string; primary?: boolean }>;
-  row: { id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> } | null;
+  row: {
+    id: number;
+    cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>;
+  } | null;
 }> {
-  const sheet = (await api(`/sheets/${sheetId}?pageSize=1`)) as {
-    columns?: Array<{ id: number; title?: string; primary?: boolean }>;
-    rows?: Array<{ id: number; cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }> }>;
-  };
-  return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.getImportedSheetHead(sheetId),
+      fromLive: async () => {
+        const sheet = (await api(`/sheets/${sheetId}?pageSize=1`)) as {
+          columns?: Array<{ id: number; title?: string; primary?: boolean }>;
+          rows?: Array<{
+            id: number;
+            cells?: Array<{
+              columnId: number;
+              value?: unknown;
+              displayValue?: unknown;
+              objectValue?: unknown;
+            }>;
+          }>;
+        };
+        return { columns: sheet.columns ?? [], row: sheet.rows?.[0] ?? null };
+      },
+    }),
+  );
 }
 
 export async function updateRows(
@@ -248,24 +345,75 @@ export async function updateRows(
     >;
   }[],
 ): Promise<unknown> {
-  return api(`/sheets/${sheetId}/rows`, { method: "PUT", body: JSON.stringify(rows) });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => {
+        const result = await sheetStore.updateImportedRows(sheetId, rows);
+        await sheetStore.emitLocalRowEvents(
+          sheetId,
+          rows.map((row) => ({
+            eventType: "updated",
+            objectId: row.id,
+            rowId: row.id,
+            columnId: row.cells[0]?.columnId,
+          })),
+        );
+        return result;
+      },
+      fromLive: () => api(`/sheets/${sheetId}/rows`, { method: "PUT", body: JSON.stringify(rows) }),
+    }),
+  );
 }
 
 export async function deleteRows(sheetId: string | number, rowIds: (string | number)[]): Promise<unknown> {
-  return api(`/sheets/${sheetId}/rows?ids=${rowIds.join(",")}`, { method: "DELETE" });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.deleteImportedRows(sheetId, rowIds),
+      fromLive: () =>
+        api(`/sheets/${sheetId}/rows?ids=${rowIds.join(",")}`, { method: "DELETE" }),
+    }),
+  );
 }
 
 export async function sendUpdateRequest(
   sheetId: string | number,
   payload: { rowIds: number[]; columnIds: number[]; message?: string; sendTo?: { email: string }[] },
 ): Promise<unknown> {
-  return api(`/sheets/${sheetId}/updaterequests`, { method: "POST", body: JSON.stringify(payload) });
+  return withFormsErrors(async () => {
+    if (await sheetStore.hasImportedSheet(sheetId)) {
+      throw new Error(
+        "Update requests require Smartsheet. This sheet is running from the imported database copy.",
+      );
+    }
+    if (!(await isSmartsheetApiEnabled())) {
+      throw new SheetNotImportedError("sheet", sheetId);
+    }
+    return api(`/sheets/${sheetId}/updaterequests`, { method: "POST", body: JSON.stringify(payload) });
+  });
 }
 
 export async function listAttachments(sheetId: string | number, rowId?: string | number): Promise<unknown[]> {
-  const path = rowId ? `/sheets/${sheetId}/rows/${rowId}/attachments` : `/sheets/${sheetId}/attachments`;
-  const data = (await api(path)) as { data?: unknown[] };
-  return data.data ?? [];
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.listImportedAttachments(sheetId, rowId),
+      fromLive: async () => {
+        const path = rowId
+          ? `/sheets/${sheetId}/rows/${rowId}/attachments`
+          : `/sheets/${sheetId}/attachments`;
+        const data = (await api(path)) as { data?: unknown[] };
+        return data.data ?? [];
+      },
+    }),
+  );
 }
 
 export async function attachFile(
@@ -274,20 +422,54 @@ export async function attachFile(
   file: Blob,
   fileName: string,
 ): Promise<unknown> {
-  const form = new FormData();
-  form.append("file", file, fileName);
-  form.append("parentType", "ROW");
-  form.append("parentId", String(rowId));
-  return api(`/sheets/${sheetId}/attachments`, { method: "POST", body: form });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.addImportedAttachment(sheetId, rowId, file, fileName),
+      fromLive: async () => {
+        const form = new FormData();
+        form.append("file", file, fileName);
+        form.append("parentType", "ROW");
+        form.append("parentId", String(rowId));
+        return api(`/sheets/${sheetId}/attachments`, { method: "POST", body: form });
+      },
+    }),
+  );
 }
 
 export async function getAttachment(sheetId: string | number, attachmentId: string | number): Promise<unknown> {
-  return api(`/sheets/${sheetId}/attachments/${attachmentId}`);
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: async () => {
+        const attachment = await sheetStore.getImportedAttachment(sheetId, attachmentId);
+        if (!attachment) throw new Error("Attachment not found.");
+        return attachment;
+      },
+      fromLive: () => api(`/sheets/${sheetId}/attachments/${attachmentId}`),
+    }),
+  );
 }
 
 export async function listDiscussions(sheetId: string | number, rowId: string | number): Promise<unknown[]> {
-  const data = (await api(`/sheets/${sheetId}/rows/${rowId}/discussions?include=comments`)) as { data?: unknown[] };
-  return data.data ?? [];
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.listImportedDiscussions(sheetId, rowId),
+      fromLive: async () => {
+        const data = (await api(
+          `/sheets/${sheetId}/rows/${rowId}/discussions?include=comments`,
+        )) as { data?: unknown[] };
+        return data.data ?? [];
+      },
+    }),
+  );
 }
 
 export async function addDiscussion(
@@ -295,10 +477,19 @@ export async function addDiscussion(
   rowId: string | number,
   text: string,
 ): Promise<unknown> {
-  return api(`/sheets/${sheetId}/rows/${rowId}/discussions`, {
-    method: "POST",
-    body: JSON.stringify({ comment: { text } }),
-  });
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.addImportedDiscussion(sheetId, rowId, text),
+      fromLive: () =>
+        api(`/sheets/${sheetId}/rows/${rowId}/discussions`, {
+          method: "POST",
+          body: JSON.stringify({ comment: { text } }),
+        }),
+    }),
+  );
 }
 
 export async function listWorkspaces(): Promise<unknown[]> {
@@ -411,8 +602,18 @@ export async function deleteWebhook(webhookId: number): Promise<unknown> {
 }
 
 export async function listColumns(sheetId: string | number): Promise<unknown[]> {
-  const data = (await api(`/sheets/${sheetId}/columns`)) as { data?: unknown[] };
-  return data.data ?? [];
+  return withFormsErrors(() =>
+    withImportedOrLive({
+      kind: "sheet",
+      id: sheetId,
+      hasImported: () => sheetStore.hasImportedSheet(sheetId),
+      fromImported: () => sheetStore.listImportedColumns(sheetId),
+      fromLive: async () => {
+        const data = (await api(`/sheets/${sheetId}/columns`)) as { data?: unknown[] };
+        return data.data ?? [];
+      },
+    }),
+  );
 }
 
 export async function addColumns(sheetId: string | number, columns: unknown[], index?: number): Promise<unknown> {

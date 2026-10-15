@@ -673,7 +673,7 @@ export function SubmissionSuccessView({
         </button>
         {showTrackerLink ? (
           <Link
-            href="/forms/sheet"
+            href="/admin/sources"
             className="rounded-lg bg-wsu-crimson px-4 py-2 text-sm font-medium text-white hover:bg-wsu-crimson/90"
           >
             Open grid
@@ -698,9 +698,9 @@ export function SubmissionFormEmptyState({
       <p className="text-sm text-red-700">{error}</p>
       {!hideManageLink ? (
         <p className="mt-3 text-sm text-[color:var(--wsu-muted)]">
-          Set up a form on the{" "}
-          <Link href="/forms/manage" className="font-medium text-wsu-crimson hover:underline">
-            admin page
+          Set up a form on{" "}
+          <Link href="/admin/sources" className="font-medium text-wsu-crimson hover:underline">
+            Sources
           </Link>
           .
         </p>

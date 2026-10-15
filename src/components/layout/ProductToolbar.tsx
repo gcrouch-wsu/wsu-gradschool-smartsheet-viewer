@@ -86,7 +86,7 @@ export function ProductToolbar({
       if (variant === "admin") {
         router.replace("/admin/sign-in");
       } else {
-        router.replace("/admin/sign-in?next=/forms/sheet");
+        router.replace("/admin/sign-in?next=/admin/sources");
       }
       router.refresh();
     } finally {

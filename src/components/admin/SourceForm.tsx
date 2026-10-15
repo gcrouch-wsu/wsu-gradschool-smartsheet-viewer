@@ -972,7 +972,7 @@ export function SourceForm({
           <div>
             <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Student portal</h2>
             <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-              Students signed in at <code className="text-xs">/forms/my</code> can discover this sheet when their email
+              Students signed in at <code className="text-xs">/student</code> can discover this sheet when their email
               appears in a Student Email column. Forms-enabled sheets are included by default; use the toggle for
               views-only sheets.
             </p>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button, EmptyState, RecentCard, StatCard } from "@/components/admin/WorkspacePrimitives";
 import { SmartsheetApiKillSwitchCard } from "@/components/admin/SmartsheetApiKillSwitchCard";
+import { SmartsheetImportCard } from "@/components/admin/SmartsheetImportCard";
 import {
   ADMIN_DASHBOARD_TOUR_STEPS,
   ADMIN_DASHBOARD_TOUR_STORAGE_KEY,
@@ -41,8 +42,8 @@ export default async function AdminDashboardPage() {
           <>
             <ProductTourControls storageKey={ADMIN_DASHBOARD_TOUR_STORAGE_KEY} steps={ADMIN_DASHBOARD_TOUR_STEPS} />
             <span data-tour="ad-forms">
-              <Link href="/forms/manage">
-                <Button variant="primary">Manage forms</Button>
+              <Link href="/admin/sources">
+                <Button variant="primary">Manage sources</Button>
               </Link>
             </span>
           </>
@@ -56,12 +57,15 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Forms"
           value={forms.length}
-          description={`${forms.length === 1 ? "1 form" : `${forms.length} forms`} in the registry.`}
+          description={`${forms.length === 1 ? "1 form sheet" : `${forms.length} form sheets`} in Sources.`}
           icon={<DataIcon kind="forms" />}
         />
       </section>
 
-      <SmartsheetApiKillSwitchCard />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <SmartsheetApiKillSwitchCard />
+        <SmartsheetImportCard />
+      </div>
 
       <section className="grid gap-3 lg:grid-cols-2">
         <div data-tour="ad-sources">

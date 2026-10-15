@@ -45,14 +45,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   if (!canAccessAdminWorkspace && !onNotifications) {
-    redirect("/forms/sheet");
+    redirect("/admin/sources");
   }
 
   const principalLabel = principal.displayName ?? principal.username;
   const showFullNav = canAccessAdminWorkspace;
   const coordinatorNav = [
-    { href: "/forms/sheet", label: "Sheet", icon: "grid" as const },
-    { href: "/forms/workflows", label: "Workflows", icon: "manage" as const },
+    { href: "/admin/sources", label: "Sources", icon: "sources" as const },
     { href: "/admin/notifications", label: "Notifications", icon: "notifications" as const },
   ];
 
@@ -76,8 +75,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           className="mb-4 rounded-lg border border-[var(--crimson-line)] bg-[var(--crimson-soft)] px-4 py-2.5 text-sm text-crimson"
           role="status"
         >
-          Smartsheet API is off. Views and forms cannot call Smartsheet until an admin turns it back on
-          from the workspace overview.
+          Smartsheet API is off. Views and forms use the imported database copy. Turn the API on
+          only when you need to import more data from Smartsheet.
         </div>
       ) : null}
       <AdminToastWrapper>{children}</AdminToastWrapper>

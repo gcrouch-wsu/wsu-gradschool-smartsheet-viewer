@@ -81,7 +81,7 @@ export function StudentSheetTable({
   if (!email) {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
-        <StudentLoginForm returnHref="/forms/my" />
+        <StudentLoginForm returnHref="/student" />
       </div>
     );
   }
@@ -121,7 +121,7 @@ export function StudentSheetTable({
             headers={["Sheet", "My rows", "Open"]}
             items={matchingSheets}
             page={currentPage}
-            basePath="/forms/my"
+            basePath="/student"
             pageSize={ADMIN_TABLE_PAGE_SIZE}
             columns={3}
             endAlignLastHeader
@@ -145,7 +145,7 @@ export function StudentSheetTable({
                 </p>
                 <div className="sm:text-right">
                   <Link
-                    href={`/forms/my/${encodeURIComponent(sheet.sheetId)}`}
+                    href={`/student/${encodeURIComponent(sheet.sheetId)}`}
                     data-tour="sm-open"
                     className="inline-flex rounded-lg border border-line-strong bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-mist hover:bg-[#faf7f8]"
                   >

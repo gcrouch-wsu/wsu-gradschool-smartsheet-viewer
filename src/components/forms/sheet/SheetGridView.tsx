@@ -57,6 +57,12 @@ interface SheetGridViewProps {
   resendBusyRowId?: number | null;
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** In-app workflows saved for this sheet (shown on the Workflows control). */
+  workflowCount?: number;
+  /** Nested under Admin Sources — hide form picker / Forms chrome links. */
+  variant?: "workspace" | "source";
+  /** Source config id when `variant="source"` (for back-link). */
+  sourceId?: string;
 }
 
 type ColumnFilter = "all" | "form" | "workflow";
@@ -161,7 +167,11 @@ export function SheetGridView({
   resendBusyRowId,
   onRefresh,
   refreshing = false,
+  workflowCount = 0,
+  variant = "workspace",
+  sourceId,
 }: SheetGridViewProps) {
+  const isSourceView = variant === "source";
   const [query, setQuery] = useState("");
   const [highlightApprovals, setHighlightApprovals] = useState(true);
   const [columnFilter, setColumnFilter] = useState<ColumnFilter>("all");
@@ -241,7 +251,7 @@ export function SheetGridView({
         </div>
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:max-w-xl lg:max-w-none">
           <TourHowToButton onClick={tour.startTour} />
-          {forms && forms.length > 0 && onSheetChange && selectedSheetId ? (
+          {!isSourceView && forms && forms.length > 0 && onSheetChange && selectedSheetId ? (
             <div data-tour="fs-picker" className="min-w-0 flex-1 sm:w-64 sm:flex-none">
               <FormSheetPicker
                 forms={forms}
@@ -264,12 +274,33 @@ export function SheetGridView({
               <IconRefresh className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
           ) : null}
-          <Link
-            href="/forms/manage"
-            className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
-          >
-            Manage forms
-          </Link>
+          {selectedSheetId ? (
+            <Link
+              href={
+                sourceId
+                  ? `/admin/sources/${encodeURIComponent(sourceId)}/workflows`
+                  : `/admin/sources`
+              }
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+            >
+              {workflowCount > 0 ? `Workflows (${workflowCount})` : "Create workflow"}
+            </Link>
+          ) : null}
+          {isSourceView && sourceId ? (
+            <Link
+              href={`/admin/sources/${encodeURIComponent(sourceId)}`}
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+            >
+              Edit source
+            </Link>
+          ) : (
+            <Link
+              href="/admin/sources"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:bg-[color:var(--wsu-stone)]"
+            >
+              Sources
+            </Link>
+          )}
         </div>
       </div>
 

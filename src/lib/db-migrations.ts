@@ -1,11 +1,32 @@
 /**
  * Versioned SQL migrations. Applied on first DB access when DATABASE_URL is set.
  * File-store mode (no DATABASE_URL) skips migrations entirely.
+ *
+ * Only `001_platform_schema.sql` exists; it is always re-applied (idempotent).
  */
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
 import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
+
+const BASELINE = "001_platform_schema.sql";
+
+/** Former incremental migration ids — recorded so history stays consistent. */
+const SUPERSEDED = [
+  "002_admin_reset_nonce.sql",
+  "002_student_users.sql",
+  "003_admin_coordinator_role.sql",
+  "003_workflows.sql",
+  "004_programs_team_contact_changes.sql",
+  "004_unified_users.sql",
+  "005_form_pdf_mapping.sql",
+  "005_deprecate_legacy_accounts.sql",
+  "005_retire_legacy_accounts_deferred.sql",
+  "006_app_settings.sql",
+  "007_local_sheets.sql",
+  "008_rename_local_sheets_to_sheets.sql",
+] as const;
 
 const RLS_TABLES = [
   "config_sources",
@@ -35,21 +56,23 @@ const RLS_TABLES = [
   "role_permissions",
   "user_roles",
   "app_settings",
+  "sheets",
+  "rows",
+  "reports",
+  "report_rows",
+  "attachments",
+  "discussions",
+  "sheet_automations",
+  "id_counters",
 ] as const;
 
 let migratePromise: Promise<void> | null = null;
 
 function migrationsDir() {
-  return join(process.cwd(), "migrations");
-}
-
-async function listMigrationFiles(): Promise<string[]> {
-  try {
-    const entries = await readdir(migrationsDir());
-    return entries.filter((f) => f.endsWith(".sql")).sort();
-  } catch {
-    return [];
-  }
+  // Resolve from this module so unit tests that chdir() into a temp cwd still find SQL.
+  // Use dirname + join (not `new URL("../..", import.meta.url)`) so Next/webpack does not
+  // try to resolve the parent directory as a module.
+  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "migrations");
 }
 
 async function ensureMigrationsTable() {
@@ -61,22 +84,8 @@ async function ensureMigrationsTable() {
   `);
 }
 
-async function appliedMigrationIds(): Promise<Set<string>> {
-  const { rows } = await queryConfigDb<{ id: string }>("SELECT id FROM schema_migrations");
-  return new Set(rows.map((r) => r.id));
-}
-
-async function applyMigrationFile(filename: string) {
-  const sql = await readFile(join(migrationsDir(), filename), "utf8");
-  // Run as a single script; statements are idempotent.
-  await queryConfigDb(sql);
-  await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
-    filename,
-  ]);
-}
-
 /**
- * Apply pending migrations then ensure RLS on known tables.
+ * Apply the baseline schema then ensure RLS on known tables.
  * Safe to call repeatedly; no-op without DATABASE_URL.
  */
 export async function runDatabaseMigrations(): Promise<void> {
@@ -87,11 +96,15 @@ export async function runDatabaseMigrations(): Promise<void> {
   if (!migratePromise) {
     migratePromise = (async () => {
       await ensureMigrationsTable();
-      const applied = await appliedMigrationIds();
-      const files = await listMigrationFiles();
-      for (const file of files) {
-        if (applied.has(file)) continue;
-        await applyMigrationFile(file);
+      const sql = await readFile(join(migrationsDir(), BASELINE), "utf8");
+      await queryConfigDb(sql);
+      await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
+        BASELINE,
+      ]);
+      for (const file of SUPERSEDED) {
+        await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
+          file,
+        ]);
       }
       for (const table of RLS_TABLES) {
         await ensureCurrentAppRoleRls(queryConfigDb, table);

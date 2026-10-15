@@ -28,8 +28,8 @@ function isPublicFormPath(pathname: string) {
 
 function isStudentPortalPath(pathname: string) {
   return (
-    pathname === "/forms/my" ||
-    pathname.startsWith("/forms/my/") ||
+    pathname === "/student" ||
+    pathname.startsWith("/student/") ||
     pathname === "/api/forms/student" ||
     pathname.startsWith("/api/forms/student/")
   );
@@ -38,6 +38,7 @@ function isStudentPortalPath(pathname: string) {
 function isFormsPath(pathname: string) {
   return (
     isPublicFormPath(pathname) ||
+    isStudentPortalPath(pathname) ||
     pathname === "/forms" ||
     pathname.startsWith("/forms/") ||
     pathname === "/api/forms" ||
@@ -62,8 +63,7 @@ function isFormsAdminPath(pathname: string) {
     pathname.startsWith("/forms/builder/") ||
     pathname.startsWith("/api/forms/builder") ||
     pathname.startsWith("/api/forms/registry/") ||
-    pathname.startsWith("/api/forms/platform") ||
-    (pathname.startsWith("/api/forms/webhooks") && !pathname.startsWith("/api/forms/webhooks/smartsheet"))
+    pathname.startsWith("/api/forms/platform")
   );
 }
 
@@ -74,8 +74,11 @@ function isFormsRegistryListPath(pathname: string) {
 
 function normalizeFormsNextPath(pathname: string, search: string) {
   const next = `${pathname}${search}`;
-  if (!next.startsWith("/forms")) return "/forms/sheet";
-  if (next === "/forms" || next === "/forms/") return "/forms/sheet";
+  if (!next.startsWith("/forms")) return "/admin/sources";
+  if (next === "/forms" || next === "/forms/") return "/admin/sources";
+  if (next.startsWith("/forms/sheet") || next.startsWith("/forms/builder") || next.startsWith("/forms/manage")) {
+    return "/admin/sources";
+  }
   return next;
 }
 
@@ -143,14 +146,9 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     return NextResponse.next();
   }
 
-  if (pathname === "/api/forms/webhooks/smartsheet" && request.method === "POST") {
-    // Auth is enforced in the route (env or persisted secret).
-    return NextResponse.next();
-  }
-
   if (pathname === "/forms/approver/sign-in") {
     const dest = new URL("/admin/sign-in", request.url);
-    dest.searchParams.set("next", "/forms/sheet");
+    dest.searchParams.set("next", "/admin/sources");
     return NextResponse.redirect(dest);
   }
 
@@ -210,7 +208,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ message: "You do not have permission to create workflows." }, { status: 403 });
     }
-    return NextResponse.redirect(new URL("/forms/sheet", request.url));
+    return NextResponse.redirect(new URL("/admin/sources", request.url));
   }
 
   if (isFormsAdminPath(pathname)) {
@@ -227,7 +225,7 @@ export async function handleFormsMiddleware(request: NextRequest): Promise<NextR
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ message: "Full admin access is required." }, { status: 403 });
       }
-      return NextResponse.redirect(new URL("/forms/sheet", request.url));
+      return NextResponse.redirect(new URL("/admin/sources", request.url));
     }
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ message: "Admin authentication required." }, { status: 401 });

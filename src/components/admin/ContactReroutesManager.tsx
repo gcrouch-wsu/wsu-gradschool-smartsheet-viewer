@@ -263,7 +263,7 @@ export function ContactReroutesManager({
                     Row {req.rowId}
                   </p>
                   <Link
-                    href={`/forms/sheet?sheetId=${encodeURIComponent(req.sheetId)}&rowId=${req.rowId}`}
+                    href={`/admin/sources?sheetId=${encodeURIComponent(req.sheetId)}&rowId=${req.rowId}`}
                     className="mt-1 inline-block text-xs font-medium text-crimson hover:underline"
                   >
                     Open sheet

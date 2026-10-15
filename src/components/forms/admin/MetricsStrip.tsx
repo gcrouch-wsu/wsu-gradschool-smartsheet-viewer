@@ -1,6 +1,5 @@
 interface MetricsStripProps {
   activeForms: number | null;
-  sheetsAvailable: number | null;
 }
 
 function MetricValue({ value }: { value: number | null }) {
@@ -10,22 +9,15 @@ function MetricValue({ value }: { value: number | null }) {
   return <>{value}</>;
 }
 
-export function MetricsStrip({ activeForms, sheetsAvailable }: MetricsStripProps) {
-  const items = [
-    { label: "Active forms", value: activeForms },
-    { label: "Sheets available", value: sheetsAvailable },
-  ];
-
+export function MetricsStrip({ activeForms }: MetricsStripProps) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-tour="fm-metrics">
-      {items.map((item) => (
-        <div key={item.label} className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-3">
-          <p className="text-xs font-normal text-[color:var(--wsu-muted)]">{item.label}</p>
-          <p className="mt-1 text-[22px] font-medium leading-none text-[color:var(--wsu-ink)]">
-            <MetricValue value={item.value} />
-          </p>
-        </div>
-      ))}
+      <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-3">
+        <p className="text-xs font-normal text-[color:var(--wsu-muted)]">Active forms</p>
+        <p className="mt-1 text-[22px] font-medium leading-none text-[color:var(--wsu-ink)]">
+          <MetricValue value={activeForms} />
+        </p>
+      </div>
     </div>
   );
 }

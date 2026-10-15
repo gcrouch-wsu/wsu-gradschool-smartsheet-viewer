@@ -1,5 +1,4 @@
 import { formsAuthErrorResponse, requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
-import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { WORKFLOW_TEMPLATES, workflowCategories } from "@/lib/workflows/catalog";
@@ -29,9 +28,12 @@ export async function GET(request: Request) {
 
   await ensureBootstrapped();
   const url = new URL(request.url);
-  const sheetId = url.searchParams.get("sheetId")?.trim() || (await registry.activeSheetId());
+  const sheetId = url.searchParams.get("sheetId")?.trim() ?? "";
+  if (!sheetId) {
+    return Response.json({ error: "sheetId is required." }, { status: 400 });
+  }
   try {
-    const workflows = sheetId ? await listWorkflows(sheetId) : [];
+    const workflows = await listWorkflows(sheetId);
     const people = url.searchParams.get("people") === "1" ? await listKnownEmails() : [];
     return Response.json({
       workflows,
@@ -55,10 +57,13 @@ export async function POST(request: Request) {
 
   await ensureBootstrapped();
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const active = await registry.activeSheetId();
+  const sheetId = String(body.sheetId ?? "").trim();
+  if (!sheetId) {
+    return Response.json({ error: "sheetId is required." }, { status: 400 });
+  }
   try {
     const workflow = await createWorkflow(
-      workflowBody(body, active, authorEmail(access.user.email)),
+      workflowBody(body, sheetId, authorEmail(access.user.email)),
     );
     return Response.json({ workflow });
   } catch (error) {

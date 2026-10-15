@@ -1078,8 +1078,14 @@ function ModeToggle({
   );
 }
 
-export function FormBuilderView() {
-  const builder = useFormBuilder();
+export function FormBuilderView({
+  sheetId,
+  sourceId,
+}: {
+  sheetId?: string;
+  sourceId?: string;
+} = {}) {
+  const builder = useFormBuilder(sheetId ? { sheetId } : undefined);
   const [mode, setMode] = useState<BuilderMode>("edit");
   const [railTab, setRailTab] = useState<RailTab>("add");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1127,11 +1133,14 @@ export function FormBuilderView() {
       <div className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-6 py-10 text-center">
         <p className="text-sm text-red-700">{builder.error || "No active form."}</p>
         <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">
-          Create or select a form on the{" "}
-          <Link href="/forms/manage" className="font-medium text-wsu-crimson hover:underline">
-            Manage
+          Create or select a form on{" "}
+          <Link
+            href={sourceId ? `/admin/sources/${encodeURIComponent(sourceId)}` : "/admin/sources"}
+            className="font-medium text-wsu-crimson hover:underline"
+          >
+            Sources
           </Link>{" "}
-          page first.
+          first.
         </p>
         <button type="button" onClick={() => void builder.load()} className={`${secondaryBtn} mt-4`}>
           Retry
