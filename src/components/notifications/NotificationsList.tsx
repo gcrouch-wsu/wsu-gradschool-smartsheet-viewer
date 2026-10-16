@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { IconCheck, IconExternalLink } from "@/components/forms/icons";
+import { AppLoading } from "@/components/ui/AppLoading";
 
 export interface NotificationListItem {
   id: string;
@@ -65,11 +66,7 @@ export function NotificationsList() {
   }
 
   if (loading) {
-    return (
-      <p className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">
-        Loading…
-      </p>
-    );
+    return <AppLoading label="Loading notifications" />;
   }
 
   if (error && !items.length) {
