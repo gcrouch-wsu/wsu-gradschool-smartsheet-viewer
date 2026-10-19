@@ -16,7 +16,7 @@ function itemsForPath(pathname: string, sourceSlug: string | null): BreadcrumbIt
   const dashboard: BreadcrumbItem = { href: "/admin", label: "Dashboard" };
 
   if (pathname.startsWith("/student")) {
-    return [{ href: null, label: pathname === "/student" ? "My submissions" : "Submission" }];
+    return [{ href: null, label: pathname === "/student" ? "Student portal" : "Submission" }];
   }
 
   if (pathname.startsWith("/admin/sources")) {

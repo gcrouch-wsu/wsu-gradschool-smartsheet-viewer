@@ -17,7 +17,7 @@ export default async function StudentSubmissionDetailPage({
   return (
     <StudentPageFrame
       breadcrumbs={[
-        { href: "/student", label: "My submissions" },
+        { href: "/student", label: "Student portal" },
         { href: `/student/${encodeURIComponent(sheetId)}`, label: "Submission sheet" },
         { href: null, label: "Submission detail" },
       ]}

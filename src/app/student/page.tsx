@@ -5,7 +5,7 @@ import { readStudentSessionEmail } from "@/lib/forms/student-auth";
 import { getStudentConfigurationError } from "@/lib/forms/student-users";
 
 export const metadata: Metadata = {
-  title: "My submissions - Graduate School Forms",
+  title: "Graduate School Student Portal",
   description: "View your form submissions and propose contact reroutes for Programs Team review.",
 };
 
@@ -22,8 +22,7 @@ export default async function StudentMySubmissionsPage({
 
   return (
     <StudentPageFrame
-      breadcrumbs={[{ href: null, label: "My submissions" }]}
-      title="My submissions"
+      title="Graduate School Student Portal"
       description="View your submission sheets, track their status, and propose contact reroutes for Programs Team review."
     >
       {configurationError ? (

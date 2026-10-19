@@ -19,7 +19,7 @@ export default async function StudentSheetPage({
   return (
     <StudentPageFrame
       breadcrumbs={[
-        { href: "/student", label: "My submissions" },
+        { href: "/student", label: "Student portal" },
         { href: null, label: "Submission sheet" },
       ]}
       title="Submission sheet"
