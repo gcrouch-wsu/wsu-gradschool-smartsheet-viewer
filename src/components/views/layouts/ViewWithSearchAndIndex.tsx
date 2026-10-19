@@ -252,8 +252,7 @@ export function ViewWithSearchAndIndex({
       return;
     }
 
-    const returnPath = `/view/${encodeURIComponent(slug)}`;
-    window.location.assign(`/api/auth/okta/logout?next=${encodeURIComponent(returnPath)}`);
+    window.location.assign("/api/auth/okta/logout?next=/");
   }
 
   function handleEditRow(rowId: number, triggerElement?: HTMLElement | null) {

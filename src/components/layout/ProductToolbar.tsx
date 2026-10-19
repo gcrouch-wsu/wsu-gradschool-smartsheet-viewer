@@ -78,10 +78,8 @@ export function ProductToolbar({
   async function handleSignOut() {
     setSigningOut(true);
     try {
-      const next =
-        variant === "admin" ? "/admin/sign-in" : "/admin/sign-in?next=/admin/sources";
-      // Clears app cookies and ends the Okta session when Okta is configured.
-      window.location.assign(`/api/auth/okta/logout?next=${encodeURIComponent(next)}`);
+      // Clears app cookies; Okta post-logout returns to site root (ITS-registered URI).
+      window.location.assign("/api/auth/okta/logout?next=/");
     } catch {
       setSigningOut(false);
       if (variant === "admin" || isStaffSession) {

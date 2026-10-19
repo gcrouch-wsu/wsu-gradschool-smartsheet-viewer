@@ -6,10 +6,15 @@ export const OKTA_ISSUER_ENV = "OKTA_ISSUER";
 export const OKTA_CLIENT_ID_ENV = "OKTA_CLIENT_ID";
 export const OKTA_CLIENT_SECRET_ENV = "OKTA_CLIENT_SECRET";
 
-export const OKTA_CALLBACK_PATH = "/api/auth/okta/callback";
+/** Must match the Sign-in redirect URI registered with ITS (WSU Okta). */
+export const OKTA_CALLBACK_PATH = "/authorization-code/callback";
 export const OKTA_START_PATH = "/api/auth/okta/start";
 export const OKTA_LOGOUT_PATH = "/api/auth/okta/logout";
+/** Must match the Sign-out redirect URI registered with ITS (site root). */
+export const OKTA_POST_LOGOUT_PATH = "/";
 export const OKTA_STATE_COOKIE = "smartsheets_view_okta_oidc";
+/** Stores the OIDC ID token so logout can send id_token_hint (required by Okta). */
+export const OKTA_ID_TOKEN_COOKIE = "smartsheets_view_okta_id_token";
 
 export type OktaSignInIntent = "admin" | "student" | "contributor";
 

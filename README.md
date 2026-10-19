@@ -45,7 +45,7 @@ Edit `.env` with your Smartsheet and Admin credentials:
 - `DATABASE_URL` (Optional locally, required for durable production): Connect to Postgres for admin users and config (sources/views). When set, sources and views are stored in Postgres instead of config files, enabling reliable create/edit/delete on Railway and other hosts with non-durable local filesystems.
 - `CONTRIBUTOR_SESSION_SECRET` (Required for contributor editing): Secret used to sign contributor session cookies.
 - `SMARTSHEETS_VIEW_PUBLIC_BASE_URL` (Optional): Explicit external origin used for `{{PUBLIC_URL}}` in custom headers. Recommended if the app sits behind an unusual proxy/load balancer or you do not want host/proto inferred from trusted proxy headers.
-- `OKTA_ISSUER`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET` (Optional): When all three are set, admin, student, and contributor sign-in use **Sign in with WSU** (OIDC). Register `{public origin}/api/auth/okta/callback` with ITS. Without these, local email/password login remains available.
+- `OKTA_ISSUER`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET` (Optional): When all three are set, admin, student, and contributor sign-in use **Sign in with WSU** (OIDC). Local ITS URIs: sign-in `http://localhost:8080/authorization-code/callback`, sign-out `http://localhost:8080`. Set `SMARTSHEETS_VIEW_PUBLIC_BASE_URL=http://localhost:8080` and run `npm run dev` (port 8080). Without Okta vars, local email/password login remains available.
 
 Postgres requirement:
 

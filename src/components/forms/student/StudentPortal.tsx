@@ -197,7 +197,7 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
   }
 
   async function signOut() {
-    window.location.assign(`/api/auth/okta/logout?next=${encodeURIComponent("/student")}`);
+    window.location.assign("/api/auth/okta/logout?next=/");
   }
 
   const selectedStage = stages.find((s) => s.name === stageTitle);

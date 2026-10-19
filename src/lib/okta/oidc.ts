@@ -109,10 +109,14 @@ export async function exchangeAuthorizationCode(input: {
   codeVerifier: string;
   redirectUri: string;
 }): Promise<OktaTokenResponse> {
+  // Okta web apps typically expect client_secret_basic (HTTP Basic), not secret in the body.
+  const basic = Buffer.from(
+    `${input.config.clientId}:${input.config.clientSecret}`,
+    "utf8",
+  ).toString("base64");
+
   const body = new URLSearchParams({
     grant_type: "authorization_code",
-    client_id: input.config.clientId,
-    client_secret: input.config.clientSecret,
     code: input.code,
     redirect_uri: input.redirectUri,
     code_verifier: input.codeVerifier,
@@ -121,6 +125,7 @@ export async function exchangeAuthorizationCode(input: {
   const response = await fetch(input.discovery.token_endpoint, {
     method: "POST",
     headers: {
+      Authorization: `Basic ${basic}`,
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
     },
@@ -129,7 +134,27 @@ export async function exchangeAuthorizationCode(input: {
   });
 
   if (!response.ok) {
-    throw new Error(`Okta token exchange failed (${response.status}).`);
+    let detail = "";
+    try {
+      const failure = (await response.json()) as {
+        error?: string;
+        error_description?: string;
+      };
+      detail = [failure.error, failure.error_description].filter(Boolean).join(": ");
+    } catch {
+      detail = (await response.text().catch(() => "")).slice(0, 200);
+    }
+    console.error("[okta] token exchange failed", {
+      status: response.status,
+      detail,
+      tokenEndpoint: input.discovery.token_endpoint,
+      redirectUri: input.redirectUri,
+    });
+    throw new Error(
+      detail
+        ? `Okta token exchange failed (${response.status}): ${detail}`
+        : `Okta token exchange failed (${response.status}).`,
+    );
   }
 
   const tokens = (await response.json()) as OktaTokenResponse;
@@ -177,18 +202,39 @@ export async function verifyIdToken(input: {
 
 export function buildOktaLogoutUrl(input: {
   discovery: OidcDiscovery;
+  config: OktaConfig;
   postLogoutRedirectUri: string;
   idToken?: string | null;
 }): string | null {
-  if (!input.discovery.end_session_endpoint) {
+  // Okta RP-initiated logout requires id_token_hint; without it /oauth2/v1/logout returns 400.
+  if (input.idToken && input.discovery.end_session_endpoint) {
+    const url = new URL(input.discovery.end_session_endpoint);
+    url.searchParams.set("id_token_hint", input.idToken);
+    url.searchParams.set("post_logout_redirect_uri", input.postLogoutRedirectUri);
+    url.searchParams.set("client_id", input.config.clientId);
+    return url.toString();
+  }
+
+  // Fallback: classic Okta sign-out (no id_token_hint). fromURI must be allow-listed as a sign-out redirect.
+  try {
+    const issuerHost = new URL(input.config.issuer).origin;
+    const url = new URL("/login/signout", issuerHost);
+    url.searchParams.set("fromURI", input.postLogoutRedirectUri);
+    return url.toString();
+  } catch {
     return null;
   }
-  const url = new URL(input.discovery.end_session_endpoint);
-  url.searchParams.set("post_logout_redirect_uri", input.postLogoutRedirectUri);
-  if (input.idToken) {
-    url.searchParams.set("id_token_hint", input.idToken);
-  }
-  return url.toString();
+}
+
+export function getOktaIdTokenCookieSettings() {
+  return {
+    httpOnly: true,
+    // Keep for the same window as the platform session.
+    maxAge: 60 * 60 * 12,
+    path: "/",
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
 }
 
 export function requireOktaConfig(): OktaConfig {
