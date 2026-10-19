@@ -20,6 +20,20 @@ function runMockQuery(text: string, params?: unknown[]) {
 }
 
 export class Pool {
+  /** Marks this stand-in so config DB code does not open a real socket in unit tests. */
+  static readonly isSmartsheetsViewTestMock = true;
+
+  private errorListeners = 0;
+
+  listenerCount(event: string) {
+    return event === "error" ? this.errorListeners : 0;
+  }
+
+  on(event: string, _listener: (...args: unknown[]) => void) {
+    if (event === "error") this.errorListeners += 1;
+    return this;
+  }
+
   async query(text: string, params?: unknown[]) {
     return runMockQuery(text, params);
   }
