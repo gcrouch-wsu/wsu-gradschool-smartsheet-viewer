@@ -41,8 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${plexSans.variable} ${plexSerif.variable} ${plexMono.variable} antialiased`}>
+    // Extensions such as Grammarly and Quillbot write attributes onto these
+    // elements before hydration. Suppression is one level deep, so mismatches
+    // inside the page still surface.
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${plexSans.variable} ${plexSerif.variable} ${plexMono.variable} antialiased`}
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

@@ -15,6 +15,13 @@ describe("database unavailable", () => {
     expect(isDatabaseConnectionFailure(new AggregateError([refused], "connect"))).toBe(true);
     expect(isDatabaseConnectionFailure(new AggregateError([], "connect"))).toBe(true);
     expect(isDatabaseConnectionFailure(new Error("relation does not exist"))).toBe(false);
+    expect(
+      isDatabaseConnectionFailure(
+        new Error("Connection terminated due to connection timeout", {
+          cause: new Error("Connection terminated unexpectedly"),
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("recognizes the message shown when the app cannot reach the database", () => {

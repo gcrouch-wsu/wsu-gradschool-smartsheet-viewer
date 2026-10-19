@@ -10,6 +10,12 @@ const CONNECTION_CODES = new Set([
   "ENETUNREACH",
 ]);
 
+/** node-postgres pool errors often have no `code`; the message is the signal. */
+const CONNECTION_MESSAGE_FRAGMENTS = [
+  "connection terminated",
+  "timeout exceeded when trying to connect",
+];
+
 export class DatabaseUnavailableError extends Error {
   constructor() {
     super(DATABASE_UNAVAILABLE_MESSAGE);
@@ -32,11 +38,16 @@ export function isDatabaseConnectionFailure(error: unknown): boolean {
   const code = "code" in error && typeof error.code === "string" ? error.code : "";
   if (CONNECTION_CODES.has(code)) return true;
 
+  const message = "message" in error && typeof error.message === "string" ? error.message.toLowerCase() : "";
+  if (CONNECTION_MESSAGE_FRAGMENTS.some((fragment) => message.includes(fragment))) return true;
+
   if (error instanceof AggregateError) {
     const nested = Array.isArray(error.errors) ? error.errors : [];
     if (nested.length === 0) return true;
     return nested.some((item) => isDatabaseConnectionFailure(item));
   }
+
+  if ("cause" in error && error.cause) return isDatabaseConnectionFailure(error.cause);
 
   return false;
 }
