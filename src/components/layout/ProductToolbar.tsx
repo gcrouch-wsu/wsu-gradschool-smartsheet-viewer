@@ -78,19 +78,19 @@ export function ProductToolbar({
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      const next =
+        variant === "admin" ? "/admin/sign-in" : "/admin/sign-in?next=/admin/sources";
+      // Clears app cookies and ends the Okta session when Okta is configured.
+      window.location.assign(`/api/auth/okta/logout?next=${encodeURIComponent(next)}`);
+    } catch {
+      setSigningOut(false);
       if (variant === "admin" || isStaffSession) {
         await fetch("/api/admin/session", { method: "DELETE" });
       } else {
         await fetch("/api/forms/approver/session", { method: "DELETE" });
       }
-      if (variant === "admin") {
-        router.replace("/admin/sign-in");
-      } else {
-        router.replace("/admin/sign-in?next=/admin/sources");
-      }
+      router.replace(variant === "admin" ? "/admin/sign-in" : "/admin/sign-in?next=/admin/sources");
       router.refresh();
-    } finally {
-      setSigningOut(false);
     }
   }
 

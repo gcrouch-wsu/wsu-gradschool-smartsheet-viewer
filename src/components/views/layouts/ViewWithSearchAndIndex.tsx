@@ -252,16 +252,8 @@ export function ViewWithSearchAndIndex({
       return;
     }
 
-    const response = await fetch(`/api/public/views/${slug}/sign-out`, { method: "POST" });
-    if (!response.ok) {
-      toast.addToast("Unable to sign out.", "error");
-      return;
-    }
-
-    toast.addToast("Signed out.", "success");
-    startTransition(() => {
-      router.refresh();
-    });
+    const returnPath = `/view/${encodeURIComponent(slug)}`;
+    window.location.assign(`/api/auth/okta/logout?next=${encodeURIComponent(returnPath)}`);
   }
 
   function handleEditRow(rowId: number, triggerElement?: HTMLElement | null) {
