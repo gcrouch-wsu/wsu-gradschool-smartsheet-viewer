@@ -64,8 +64,8 @@ export async function POST(
       sheetId: workflow.sheetId,
       rowId,
       href: rowId
-        ? `/forms/sheet?sheetId=${encodeURIComponent(workflow.sheetId)}&rowId=${rowId}`
-        : `/forms/sheet?sheetId=${encodeURIComponent(workflow.sheetId)}`,
+        ? `/admin/sources?sheetId=${encodeURIComponent(workflow.sheetId)}&rowId=${rowId}`
+        : `/admin/sources?sheetId=${encodeURIComponent(workflow.sheetId)}`,
       fields: rendered.fields,
       templateKind: "alert",
     },

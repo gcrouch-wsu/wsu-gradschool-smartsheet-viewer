@@ -316,21 +316,50 @@ function resolveRevalidateSeconds(source: SourceConfig, options?: FetchBehaviorO
 }
 
 export async function getSmartsheetSchema(source: SourceConfig, options?: FetchBehaviorOptions): Promise<SmartsheetSchemaSummary> {
-  const response = await fetchSmartsheetSource<SmartsheetApiResponse>(
-    `${source.sourceType === "report" ? "reports" : "sheets"}/${source.smartsheetId}`,
-    source,
-    resolveRevalidateSeconds(source, options),
-    options,
-  );
-  const columns = normalizeColumns(response.columns ?? []);
+  const { getImportedDataset, hasImportedReport, hasImportedSheet } = await import("@/lib/local-sheets/store");
+  const { withImportedOrLive } = await import("@/lib/local-sheets/routing");
+  const { SheetNotImportedError } = await import("@/lib/local-sheets/types");
 
-  return {
-    sourceType: source.sourceType,
-    id: response.id,
-    name: response.name,
-    columns,
-    rowCount: response.rows?.length ?? 0,
-  };
+  return withImportedOrLive({
+    kind: source.sourceType === "report" ? "report" : "sheet",
+    id: source.smartsheetId,
+    hasImported: () =>
+      source.sourceType === "report"
+        ? hasImportedReport(source.smartsheetId)
+        : hasImportedSheet(source.smartsheetId),
+    fromImported: async () => {
+      const dataset = await getImportedDataset(source.sourceType, source.smartsheetId);
+      if (!dataset) {
+        throw new SheetNotImportedError(
+          source.sourceType === "report" ? "report" : "sheet",
+          source.smartsheetId,
+        );
+      }
+      return {
+        sourceType: dataset.sourceType,
+        id: dataset.id,
+        name: dataset.name,
+        columns: dataset.columns,
+        rowCount: dataset.rows.length,
+      };
+    },
+    fromLive: async () => {
+      const response = await fetchSmartsheetSource<SmartsheetApiResponse>(
+        `${source.sourceType === "report" ? "reports" : "sheets"}/${source.smartsheetId}`,
+        source,
+        resolveRevalidateSeconds(source, options),
+        options,
+      );
+      const columns = normalizeColumns(response.columns ?? []);
+      return {
+        sourceType: source.sourceType,
+        id: response.id,
+        name: response.name,
+        columns,
+        rowCount: response.rows?.length ?? 0,
+      };
+    },
+  });
 }
 
 export async function getSmartsheetDataset(source: SourceConfig, options?: FetchBehaviorOptions) {
@@ -342,23 +371,46 @@ async function buildDataset(
   revalidateSeconds: number,
   options?: FetchBehaviorOptions,
 ): Promise<SmartsheetDataset> {
-  const response = await fetchSmartsheetSource<SmartsheetApiResponse>(
-    `${source.sourceType === "report" ? "reports" : "sheets"}/${source.smartsheetId}`,
-    source,
-    revalidateSeconds,
-    options,
-  );
-  const columns = normalizeColumns(response.columns ?? []);
-  const rows = normalizeRows(response.rows ?? [], columns);
+  const { getImportedDataset, hasImportedReport, hasImportedSheet } = await import("@/lib/local-sheets/store");
+  const { withImportedOrLive } = await import("@/lib/local-sheets/routing");
+  const { SheetNotImportedError } = await import("@/lib/local-sheets/types");
 
-  return {
-    sourceType: source.sourceType,
-    id: response.id,
-    name: response.name,
-    columns,
-    rows,
-    fetchedAt: new Date().toISOString(),
-  };
+  return withImportedOrLive({
+    kind: source.sourceType === "report" ? "report" : "sheet",
+    id: source.smartsheetId,
+    hasImported: () =>
+      source.sourceType === "report"
+        ? hasImportedReport(source.smartsheetId)
+        : hasImportedSheet(source.smartsheetId),
+    fromImported: async () => {
+      const dataset = await getImportedDataset(source.sourceType, source.smartsheetId);
+      if (!dataset) {
+        throw new SheetNotImportedError(
+          source.sourceType === "report" ? "report" : "sheet",
+          source.smartsheetId,
+        );
+      }
+      return dataset;
+    },
+    fromLive: async () => {
+      const response = await fetchSmartsheetSource<SmartsheetApiResponse>(
+        `${source.sourceType === "report" ? "reports" : "sheets"}/${source.smartsheetId}`,
+        source,
+        revalidateSeconds,
+        options,
+      );
+      const columns = normalizeColumns(response.columns ?? []);
+      const rows = normalizeRows(response.rows ?? [], columns);
+      return {
+        sourceType: source.sourceType,
+        id: response.id,
+        name: response.name,
+        columns,
+        rows,
+        fetchedAt: new Date().toISOString(),
+      };
+    },
+  });
 }
 
 /**
@@ -615,29 +667,52 @@ export async function updateSmartsheetRow(
   cells: Array<{ columnId: number; value?: unknown; objectValue?: unknown }>,
   columnTypeById: Map<number, string>,
 ) {
-  const { token, apiBaseUrl } = resolveConnection(source.connectionKey, source.apiBaseUrl);
-  const url = `${apiBaseUrl.replace(/\/$/, "")}/sheets/${sheetId}/rows`;
-  const outgoingCells = formatCellsForSmartsheetRowPut(cells, columnTypeById);
-  console.log(
-    `[updateSmartsheetRow] PUT sheet=${sheetId} row=${rowId} cellCount=${outgoingCells.length}`,
+  const { hasImportedSheet, updateImportedRows, emitLocalRowEvents } = await import(
+    "@/lib/local-sheets/store"
   );
-  await ensureSmartsheetApiAllowed();
-  const putBody = JSON.stringify([{ id: rowId, cells: outgoingCells }]);
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
-    body: putBody,
-  });
+  const { withImportedOrLive } = await import("@/lib/local-sheets/routing");
+  const outgoingCells = formatCellsForSmartsheetRowPut(cells, columnTypeById);
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new SmartsheetRequestError(response.status, body);
-  }
+  await withImportedOrLive({
+    kind: "sheet",
+    id: sheetId,
+    hasImported: () => hasImportedSheet(sheetId),
+    fromImported: async () => {
+      await updateImportedRows(sheetId, [{ id: rowId, cells: outgoingCells }]);
+      await emitLocalRowEvents(sheetId, [
+        {
+          eventType: "updated",
+          objectId: rowId,
+          rowId,
+          columnId: outgoingCells[0]?.columnId,
+        },
+      ]);
+    },
+    fromLive: async () => {
+      const { token, apiBaseUrl } = resolveConnection(source.connectionKey, source.apiBaseUrl);
+      const url = `${apiBaseUrl.replace(/\/$/, "")}/sheets/${sheetId}/rows`;
+      console.log(
+        `[updateSmartsheetRow] PUT sheet=${sheetId} row=${rowId} cellCount=${outgoingCells.length}`,
+      );
+      await ensureSmartsheetApiAllowed();
+      const putBody = JSON.stringify([{ id: rowId, cells: outgoingCells }]);
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+        body: putBody,
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new SmartsheetRequestError(response.status, body);
+      }
+    },
+  });
 }
 
 export async function testSourceConnection(source: SourceConfig): Promise<{ ok: boolean; error?: string }> {

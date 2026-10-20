@@ -12,7 +12,7 @@ export function StudentPageFrame({
   headingTourId,
   children,
 }: {
-  breadcrumbs: BreadcrumbItem[];
+  breadcrumbs?: BreadcrumbItem[];
   eyebrow?: string;
   title: string;
   description?: string;
@@ -22,17 +22,21 @@ export function StudentPageFrame({
 }) {
   return (
     <div className="min-h-screen bg-[color:var(--wsu-stone,#f7f5f2)] text-[color:var(--wsu-ink)]">
-      <FormBrandHeader maxWidthClassName="max-w-6xl" />
+      <FormBrandHeader
+        maxWidthClassName="max-w-6xl"
+        actionsLabel="Account"
+        actions={<NotificationBell />}
+      />
       <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <Breadcrumbs items={breadcrumbs} />
+          {breadcrumbs && breadcrumbs.length > 0 ? <Breadcrumbs items={breadcrumbs} /> : null}
           <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div data-tour={headingTourId}>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">{eyebrow}</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
               {description ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">{description}</p> : null}
             </div>
-            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : <NotificationBell />}
+            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
           </header>
           {children}
         </div>

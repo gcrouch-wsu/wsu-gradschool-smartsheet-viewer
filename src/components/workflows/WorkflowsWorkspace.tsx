@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert, inputClass, primaryBtnClass, secondaryBtnClass } from "@/components/forms/admin/AdminCard";
-import { FormsWorkspaceChrome } from "@/components/forms/layout/FormsWorkspaceChrome";
 import { Modal } from "@/components/ui/Modal";
 import { WorkflowTemplateDetailsModal } from "@/components/workflows/WorkflowTemplateDetailsModal";
 import { FILTER_OPERATOR_OPTIONS } from "@/lib/config/options";
@@ -29,8 +28,17 @@ function emptyFilter(): ViewFilterConfig {
   return { columnId: undefined, columnTitle: "", op: "equals", value: "" };
 }
 
-export function WorkflowsWorkspace() {
+export function WorkflowsWorkspace({
+  sheetId,
+  sourceId,
+  sourceLabel,
+}: {
+  sheetId: string;
+  sourceId?: string;
+  sourceLabel?: string;
+}) {
   const [payload, setPayload] = useState<WorkflowsPayload | null>(null);
+  const [sheetName, setSheetName] = useState("");
   const [error, setError] = useState("");
   const [columns, setColumns] = useState<SheetColumn[]>([]);
   const [details, setDetails] = useState<WorkflowTemplate | null>(null);
@@ -40,20 +48,23 @@ export function WorkflowsWorkspace() {
   const [notice, setNotice] = useState("");
 
   async function load() {
-    const res = await fetch("/api/forms/workflows?people=1");
+    const res = await fetch(
+      `/api/forms/workflows?sheetId=${encodeURIComponent(sheetId)}&people=1`,
+      { cache: "no-store" },
+    );
     const data = (await res.json()) as WorkflowsPayload & { error?: string; message?: string };
     if (!res.ok) throw new Error(data.error || data.message || "Could not load workflows.");
-    setPayload(data);
-    if (data.sheetId) {
-      const sheet = await fetch(`/api/forms/sheet-view?sheetId=${encodeURIComponent(data.sheetId)}`);
-      const sheetData = (await sheet.json()) as { columns?: SheetColumn[] };
-      setColumns(sheet.ok ? sheetData.columns ?? [] : []);
-    }
+    setPayload({ ...data, sheetId });
+    const sheet = await fetch(`/api/forms/sheet-view?sheetId=${encodeURIComponent(sheetId)}`);
+    const sheetData = (await sheet.json()) as { columns?: SheetColumn[]; sheetName?: string };
+    setColumns(sheet.ok ? sheetData.columns ?? [] : []);
+    setSheetName(sheet.ok ? sheetData.sheetName ?? "" : "");
   }
 
   useEffect(() => {
     load().catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load workflows."));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when sheet changes
+  }, [sheetId]);
 
   const people = payload?.people ?? [];
   const contactColumns = useMemo(
@@ -66,7 +77,7 @@ export function WorkflowsWorkspace() {
     setStep(0);
     setDraft({
       id: "",
-      sheetId: payload?.sheetId ?? "",
+      sheetId,
       name: template.defaults.name,
       enabled: false,
       templateKind: template.kind,
@@ -92,7 +103,7 @@ export function WorkflowsWorkspace() {
       const body = {
         ...draft,
         enabled: nextEnabled,
-        sheetId: payload?.sheetId || draft.sheetId,
+        sheetId,
       };
       const res = await fetch(draft.id ? `/api/forms/workflows/${draft.id}` : "/api/forms/workflows", {
         method: draft.id ? "PUT" : "POST",
@@ -127,15 +138,29 @@ export function WorkflowsWorkspace() {
     setNotice(`Preview sent to ${data.email}. Open Notifications to read it.`);
   }
 
+  const sheetHref = sourceId
+    ? `/admin/sources/${encodeURIComponent(sourceId)}/sheet`
+    : "/admin/sources";
+
   return (
-    <FormsWorkspaceChrome>
+    <>
       <div className="space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
+              Workflows
+            </p>
+            <h1 className="mt-1 text-xl font-medium text-[color:var(--wsu-ink)]">
+              {sourceLabel || sheetName || `Sheet ${sheetId}`}
+            </h1>
+          </div>
+          <Link href={sheetHref} className={secondaryBtnClass}>
+            Back to sheet
+          </Link>
+        </div>
         <div className="rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
-          Smartsheet automations are still sending emails for this sheet until you turn them off.{" "}
-          <Link href="/forms/manage" className="font-medium text-[color:var(--wsu-crimson)]">
-            Turn them off from Manage
-          </Link>{" "}
-          when in-app notifications are ready. Grid Approve/Decline is unchanged.
+          In-app workflows notify people in this app when rows change. Grid Approve/Decline is unchanged.
+          If Smartsheet still sends its own emails, turn those automations off in Smartsheet.
         </div>
         {error ? <Alert text={error} /> : null}
         {notice ? <Alert ok text={notice} /> : null}
@@ -276,7 +301,7 @@ export function WorkflowsWorkspace() {
           </>
         ) : null}
       </Modal>
-    </FormsWorkspaceChrome>
+    </>
   );
 }
 

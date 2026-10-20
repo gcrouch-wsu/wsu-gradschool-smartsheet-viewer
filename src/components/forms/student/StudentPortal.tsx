@@ -265,7 +265,7 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
 
           {!email ? (
             <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
-              <StudentLoginForm returnHref="/forms/my" />
+              <StudentLoginForm returnHref="/student" />
             </div>
           ) : (
             <div className="space-y-6">

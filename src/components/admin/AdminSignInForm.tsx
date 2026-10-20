@@ -173,7 +173,7 @@ export function AdminSignInForm({ nextPath, disabled = false }: AdminSignInFormP
         return;
       }
 
-      const destination = payload?.role === "coordinator" ? "/forms/sheet" : nextPath;
+      const destination = payload?.role === "coordinator" ? "/admin/sources" : nextPath;
 
       startTransition(() => {
         router.replace(destination);

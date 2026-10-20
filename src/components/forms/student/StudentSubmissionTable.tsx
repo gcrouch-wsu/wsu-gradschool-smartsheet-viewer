@@ -76,7 +76,7 @@ export function StudentSubmissionTable({
     );
   }, [query, rows]);
   const currentPage = resolveAdminTablePage(page, matchingRows.length);
-  const basePath = `/forms/my/${encodeURIComponent(sheetId)}`;
+  const basePath = `/student/${encodeURIComponent(sheetId)}`;
 
   return (
     <section className="rounded-xl border border-line bg-surface">

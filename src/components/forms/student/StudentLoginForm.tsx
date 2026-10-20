@@ -90,7 +90,7 @@ function ErrorAlert({ id, message }: { id: string; message: string }) {
   );
 }
 
-export function StudentLoginForm({ returnHref = "/forms/my" }: { returnHref?: string }) {
+export function StudentLoginForm({ returnHref = "/student" }: { returnHref?: string }) {
   const router = useRouter();
   const errorId = useId();
   const [step, setStep] = useState<Step>("email");

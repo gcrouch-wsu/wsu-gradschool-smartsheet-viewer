@@ -6,7 +6,7 @@ import { FormsShell } from "@/components/forms/layout/FormsShell";
 export function FormsLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isApproverSignIn = pathname === "/forms/approver/sign-in";
-  const isStudentPortal = pathname === "/forms/my" || pathname.startsWith("/forms/my/");
+  const isStudentPortal = pathname === "/student" || pathname.startsWith("/student/");
 
   if (isApproverSignIn || isStudentPortal) {
     return <>{children}</>;

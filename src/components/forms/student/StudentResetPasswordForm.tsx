@@ -50,7 +50,7 @@ export function StudentResetPasswordForm({ token }: { token: string }) {
           <p className="mt-1">You can now sign in to the student portal with your new password.</p>
         </div>
         <Link
-          href="/forms/my"
+          href="/student"
           className="block w-full rounded-full bg-[color:var(--wsu-crimson)] px-5 py-3 text-center text-sm font-medium text-white hover:bg-[color:var(--wsu-crimson-dark)]"
         >
           Sign in

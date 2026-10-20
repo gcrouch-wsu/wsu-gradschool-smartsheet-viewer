@@ -1,28 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconFile,
-  IconGrid,
-  IconPencil,
-  IconWebhook,
-} from "@/components/forms/icons";
-
-export type AdminTab = "forms" | "webhooks";
-
-type NavItem =
-  | { kind: "tab"; id: AdminTab; label: string; icon: ReactNode }
-  | { kind: "link"; href: string; label: string; icon: ReactNode };
-
-const SECTIONS: NavItem[] = [
-  { kind: "tab", id: "forms", label: "Forms", icon: <IconFile className="h-3.5 w-3.5" /> },
-  { kind: "link", href: "/forms/builder", label: "Builder", icon: <IconPencil className="h-3.5 w-3.5" /> },
-  { kind: "link", href: "/forms/sheet", label: "Sheet", icon: <IconGrid className="h-3.5 w-3.5" /> },
-  { kind: "link", href: "/forms/workflows", label: "Workflows", icon: <IconWebhook className="h-3.5 w-3.5" /> },
-  { kind: "tab", id: "webhooks", label: "Webhooks", icon: <IconWebhook className="h-3.5 w-3.5" /> },
-];
+import { IconFile } from "@/components/forms/icons";
 
 function pillClass(isActive: boolean) {
   return [
@@ -33,50 +13,22 @@ function pillClass(isActive: boolean) {
   ].join(" ");
 }
 
-interface AdminSectionNavProps {
-  /** Active manage tab, or null when a link route (Grid / Builder) is current. */
-  active: AdminTab | null;
-  onSelect: (tab: AdminTab) => void;
-}
-
-export function AdminSectionNav({ active, onSelect }: AdminSectionNavProps) {
+/** Minimal nav for leftover Forms workspace pages — catalog lives under Admin Sources. */
+export function AdminSectionNav() {
   const pathname = usePathname();
+  const isSources = pathname.startsWith("/admin/sources");
 
   return (
     <div className="border-b border-[color:var(--wsu-border)] pb-4">
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Admin sections">
-        {SECTIONS.map((section) => {
-          if (section.kind === "link") {
-            const isActive = pathname === section.href || pathname.startsWith(`${section.href}/`);
-            return (
-              <Link
-                key={section.href}
-                href={section.href}
-                className={pillClass(isActive)}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {section.icon}
-                {section.label}
-              </Link>
-            );
-          }
-
-          const isActive = active === section.id;
-          return (
-            <button
-              key={section.id}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onSelect(section.id)}
-              className={pillClass(isActive)}
-              data-tour={section.id === "webhooks" ? "fm-webhooks-tab" : undefined}
-            >
-              {section.icon}
-              {section.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap gap-2" role="navigation" aria-label="Admin sections">
+        <Link
+          href="/admin/sources"
+          className={pillClass(isSources)}
+          aria-current={isSources ? "page" : undefined}
+        >
+          <IconFile className="h-3.5 w-3.5" />
+          Sources
+        </Link>
       </div>
     </div>
   );

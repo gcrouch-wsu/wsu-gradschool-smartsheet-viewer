@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SourceForm } from "@/components/admin/SourceForm";
-import { SourcesUseInFormsButton } from "@/components/admin/SourcesUseInFormsButton";
+import { Button } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { getSourceConfigById } from "@/lib/config/store";
@@ -16,8 +17,6 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
     notFound();
   }
 
-  const formsEnabled = source?.sourceType === "sheet" && source.formsEnabled !== false;
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -25,13 +24,13 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
         title={source?.label ?? "New source"}
         description={
           isNew
-            ? "Register a Smartsheet sheet or report for views and Forms."
-            : "Update source connection, schema, and role-group configuration. Sheet sources can also drive Forms."
+            ? "Register a Smartsheet sheet or report for views and forms."
+            : "Update source connection, schema, role groups, and form publish settings."
         }
         actions={
-          formsEnabled && source ? (
-            <SourcesUseInFormsButton sourceId={source.id} sheetId={source.smartsheetId} />
-          ) : undefined
+          <Link href="/admin/sources">
+            <Button>Back to sources</Button>
+          </Link>
         }
       />
       <SourceForm initialSource={source} connectionKeys={listConfiguredConnectionKeys()} isNew={isNew} />

@@ -351,11 +351,15 @@ export function normalizeAdminNextPath(value: string | null | undefined) {
     return "/admin";
   }
 
-  if (!value.startsWith("/admin") && !value.startsWith("/forms")) {
+  if (value.startsWith("/forms")) {
+    return "/admin/sources";
+  }
+
+  if (!value.startsWith("/admin")) {
     return "/admin";
   }
 
-  if (value === "/admin/sign-in" || value === "/admin/reset-password" || value === "/forms/approver/sign-in") {
+  if (value === "/admin/sign-in" || value === "/admin/reset-password") {
     return "/admin";
   }
 

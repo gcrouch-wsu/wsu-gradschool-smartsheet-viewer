@@ -4,16 +4,28 @@ import {
   FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
   AppBrandHeader,
 } from "@/components/layout/AppBrandHeader";
+import { DatabaseUnavailable } from "@/components/DatabaseUnavailable";
+import type { PublicPageSummary } from "@/lib/config/types";
+import { isDatabaseUnavailableError } from "@/lib/database-unavailable";
 import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [pages, connectionOk] = await Promise.all([
-    getPublicPageSummaries(),
-    testSmartsheetConnection(),
-  ]);
+  let pages: PublicPageSummary[];
+  let connectionOk: boolean;
+  try {
+    [pages, connectionOk] = await Promise.all([
+      getPublicPageSummaries(),
+      testSmartsheetConnection(),
+    ]);
+  } catch (error) {
+    if (isDatabaseUnavailableError(error)) {
+      return <DatabaseUnavailable />;
+    }
+    throw error;
+  }
 
   return (
     <div className="bg-canvas min-h-screen">
@@ -33,7 +45,7 @@ export default async function HomePage() {
         actionsLabel="Workspace administration"
         actions={
           <>
-            <Link href="/forms/my" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
+            <Link href="/student" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               My submissions
             </Link>
             <Link href="/instructions/admin" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>

@@ -3,6 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Keep build tracing scoped to this extracted app, even when a parent folder also has a lockfile.
   outputFileTracingRoot: process.cwd(),
+  // db-migrations reads this SQL at runtime. The path is built in code, so the file
+  // tracer does not see it unless every route includes the migrations folder.
+  outputFileTracingIncludes: {
+    "*": ["./migrations/**/*"],
+  },
   async headers() {
     return [
       {

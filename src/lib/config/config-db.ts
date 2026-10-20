@@ -1,13 +1,19 @@
+import { connect } from "node:net";
 import { Pool } from "pg";
 import type { PublicPageSummary, SourceConfig, ViewConfig } from "@/lib/config/types";
 import { normalizePublishedSlug } from "@/lib/slug-normalize";
 import { humanizeSlug } from "@/lib/utils";
 import { validateSourceConfig, validateViewConfig } from "@/lib/config/validation";
+import { createDatabaseUnavailableError, isDatabaseConnectionFailure } from "@/lib/database-unavailable";
 import { buildPgPoolOptions } from "@/lib/pg-connection";
 
 const DATABASE_URL_ENV_VAR = "DATABASE_URL";
 
-const globalForDb = globalThis as unknown as { __smartsheetsViewConfigPool?: Pool };
+const globalForDb = globalThis as unknown as {
+  __smartsheetsViewConfigPool?: Pool;
+  __smartsheetsViewDbReachableUntil?: number;
+  __smartsheetsViewDbReachableUrl?: string;
+};
 
 function getDatabaseUrl(): string | null {
   return process.env[DATABASE_URL_ENV_VAR]?.trim() ?? null;
@@ -20,19 +26,100 @@ function getPool(): Pool {
   }
   if (!globalForDb.__smartsheetsViewConfigPool) {
     const { connectionString, ssl } = buildPgPoolOptions(url);
-    globalForDb.__smartsheetsViewConfigPool = new Pool({
+    const pool = new Pool({
       connectionString,
       max: 2,
       connectionTimeoutMillis: 10_000,
       ...(ssl ? { ssl } : {}),
     });
+    globalForDb.__smartsheetsViewConfigPool = pool;
   }
-  return globalForDb.__smartsheetsViewConfigPool;
+  const pool = globalForDb.__smartsheetsViewConfigPool;
+  if (pool.listenerCount("error") === 0) {
+    pool.on("error", () => {
+      // Idle disconnects are reported by the next query.
+    });
+  }
+  return pool;
+}
+
+const PROBE_TIMEOUT_MS = 1_500;
+const REACHABLE_TTL_MS = 30_000;
+
+function databaseEndpoint(rawUrl: string): { host: string; port: number } | null {
+  try {
+    const parsed = new URL(buildPgPoolOptions(rawUrl).connectionString);
+    const host = parsed.hostname.replace(/^\[|\]$/g, "");
+    if (!host) return null;
+    const port = parsed.port ? Number(parsed.port) : 5432;
+    if (!Number.isFinite(port)) return null;
+    return { host, port };
+  } catch {
+    return null;
+  }
+}
+
+function probePort(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect({ host, port });
+    const finish = (reachable: boolean) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(reachable);
+    };
+    socket.setTimeout(PROBE_TIMEOUT_MS);
+    socket.once("connect", () => finish(true));
+    socket.once("timeout", () => finish(false));
+    socket.once("error", () => finish(false));
+  });
+}
+
+/** Unit tests alias `pg` to an in-memory driver, so a TCP probe would hit a fake host. */
+function isInMemoryPgDriver(): boolean {
+  return (Pool as { isSmartsheetsViewTestMock?: boolean }).isSmartsheetsViewTestMock === true;
+}
+
+/** Fail before `pg` connects. Its refusal error crashes the Next.js dev overlay. */
+async function assertDatabaseReachable(rawUrl: string) {
+  if (isInMemoryPgDriver()) return;
+
+  const now = Date.now();
+  if (
+    globalForDb.__smartsheetsViewDbReachableUrl === rawUrl &&
+    (globalForDb.__smartsheetsViewDbReachableUntil ?? 0) > now
+  ) {
+    return;
+  }
+
+  const endpoint = databaseEndpoint(rawUrl);
+  if (!endpoint) return;
+
+  const hosts = endpoint.host === "localhost" ? ["127.0.0.1", "::1"] : [endpoint.host];
+  for (const host of hosts) {
+    if (await probePort(host, endpoint.port)) {
+      globalForDb.__smartsheetsViewDbReachableUrl = rawUrl;
+      globalForDb.__smartsheetsViewDbReachableUntil = Date.now() + REACHABLE_TTL_MS;
+      return;
+    }
+  }
+  throw createDatabaseUnavailableError();
 }
 
 export async function queryConfigDb<T = unknown>(text: string, params?: readonly unknown[]) {
-  const result = await getPool().query(text, params as unknown[]);
-  return { rows: result.rows as T[], rowCount: result.rowCount ?? 0 };
+  const url = getDatabaseUrl();
+  if (url) {
+    await assertDatabaseReachable(url);
+  }
+  try {
+    const result = await getPool().query(text, params as unknown[]);
+    return { rows: result.rows as T[], rowCount: result.rowCount ?? 0 };
+  } catch (error) {
+    if (isDatabaseConnectionFailure(error)) {
+      globalForDb.__smartsheetsViewDbReachableUntil = 0;
+      throw createDatabaseUnavailableError();
+    }
+    throw error;
+  }
 }
 
 /** Ensures platform tables exist via versioned migrations (no-op without DATABASE_URL). */

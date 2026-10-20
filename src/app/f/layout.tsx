@@ -1,4 +1,4 @@
-import "../forms/forms.css";
+import "../../styles/forms.css";
 
 export default function PublicFormLayout({ children }: { children: React.ReactNode }) {
   return (
