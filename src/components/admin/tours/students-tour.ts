@@ -25,7 +25,7 @@ export const STUDENTS_TOUR_STEPS: ProductTourStep[] = [
     id: "table",
     target: '[data-tour="ast-table"]',
     title: "Account list",
-    body: "Accounts appear when students claim a password at My submissions.",
+    body: "Accounts appear when students sign in at the student portal.",
   },
   {
     id: "actions",

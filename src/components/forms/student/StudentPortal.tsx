@@ -197,15 +197,7 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
   }
 
   async function signOut() {
-    await fetch("/api/forms/student/sign-out", { method: "POST" });
-    setEmail(null);
-    setSheets([]);
-    setSelectedSheetId(null);
-    setRows([]);
-    setSelectedRowId(null);
-    startTransition(() => {
-      router.refresh();
-    });
+    window.location.assign("/api/auth/okta/logout?next=/");
   }
 
   const selectedStage = stages.find((s) => s.name === stageTitle);

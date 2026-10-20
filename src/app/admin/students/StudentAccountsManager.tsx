@@ -211,7 +211,7 @@ export function StudentAccountsManager({
               description={
                 initialQuery.trim()
                   ? "Try a different email address."
-                  : "Accounts are created when students complete first-time access at My submissions."
+                  : "Accounts are created when students sign in at the student portal."
               }
               variant="panel"
             />

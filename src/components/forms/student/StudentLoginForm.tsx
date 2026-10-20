@@ -2,6 +2,7 @@
 
 import { startTransition, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OktaSignInButton } from "@/components/auth/OktaSignInButton";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 
 type Mode = "sign_in" | "claim";
@@ -90,7 +91,15 @@ function ErrorAlert({ id, message }: { id: string; message: string }) {
   );
 }
 
-export function StudentLoginForm({ returnHref = "/student" }: { returnHref?: string }) {
+export function StudentLoginForm({
+  returnHref = "/student",
+  oktaEnabled = false,
+  errorMessage = null,
+}: {
+  returnHref?: string;
+  oktaEnabled?: boolean;
+  errorMessage?: string | null;
+}) {
   const router = useRouter();
   const errorId = useId();
   const [step, setStep] = useState<Step>("email");
@@ -101,6 +110,16 @@ export function StudentLoginForm({ returnHref = "/student" }: { returnHref?: str
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [entered, setEntered] = useState(true);
+
+  if (oktaEnabled) {
+    return (
+      <OktaSignInButton
+        intent="student"
+        nextPath={returnHref}
+        errorMessage={errorMessage}
+      />
+    );
+  }
 
   function animateStepChange(next: () => void) {
     setEntered(false);

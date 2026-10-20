@@ -27,9 +27,13 @@ type SheetSummary = {
 export function StudentSheetTable({
   initialEmail,
   page = "1",
+  oktaEnabled = false,
+  errorMessage = null,
 }: {
   initialEmail: string | null;
   page?: string;
+  oktaEnabled?: boolean;
+  errorMessage?: string | null;
 }) {
   const [sheets, setSheets] = useState<SheetSummary[]>([]);
   const [email, setEmail] = useState(initialEmail);
@@ -81,7 +85,11 @@ export function StudentSheetTable({
   if (!email) {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
-        <StudentLoginForm returnHref="/student" />
+        <StudentLoginForm
+          returnHref="/student"
+          oktaEnabled={oktaEnabled}
+          errorMessage={errorMessage}
+        />
       </div>
     );
   }
