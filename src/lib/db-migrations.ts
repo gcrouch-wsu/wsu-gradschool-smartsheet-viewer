@@ -4,7 +4,7 @@
  *
  * Only `001_platform_schema.sql` exists; it is always re-applied (idempotent).
  */
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
@@ -68,11 +68,27 @@ const RLS_TABLES = [
 
 let migratePromise: Promise<void> | null = null;
 
-function migrationsDir() {
-  // Resolve from this module so unit tests that chdir() into a temp cwd still find SQL.
-  // Use dirname + join (not `new URL("../..", import.meta.url)`) so Next/webpack does not
-  // try to resolve the parent directory as a module.
-  return join(dirname(fileURLToPath(import.meta.url)), "..", "..", "migrations");
+function migrationDirCandidates() {
+  // import.meta.url on Vercel is the build path (/vercel/path0/src/lib/...), which is gone at runtime.
+  // The traced SQL file is next to the deployed app (process.cwd()). Keep the source-relative path
+  // so local dev and unit tests that chdir() still find the file.
+  return [
+    join(process.cwd(), "migrations"),
+    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "migrations"),
+  ];
+}
+
+async function migrationsDir() {
+  const candidates = migrationDirCandidates();
+  for (const dir of candidates) {
+    try {
+      await access(join(dir, BASELINE));
+      return dir;
+    } catch {
+      // Try the next location.
+    }
+  }
+  throw new Error(`Database migration file not found (${BASELINE}). Looked in: ${candidates.join(", ")}`);
 }
 
 async function ensureMigrationsTable() {
@@ -96,7 +112,7 @@ export async function runDatabaseMigrations(): Promise<void> {
   if (!migratePromise) {
     migratePromise = (async () => {
       await ensureMigrationsTable();
-      const sql = await readFile(join(migrationsDir(), BASELINE), "utf8");
+      const sql = await readFile(join(await migrationsDir(), BASELINE), "utf8");
       await queryConfigDb(sql);
       await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
         BASELINE,
