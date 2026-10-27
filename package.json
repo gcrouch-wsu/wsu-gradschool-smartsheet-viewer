@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --webpack -p 8080",
     "prebuild": "node scripts/prepare-build.mjs",
     "build": "next build --webpack",
     "start": "node scripts/start.mjs",
@@ -30,6 +30,7 @@
     "@tiptap/react": "^3.20.4",
     "@tiptap/starter-kit": "^3.20.4",
     "exceljs": "^4.4.0",
+    "jose": "^6.2.12",
     "next": "^16.2.3",
     "pdf-lib": "^1.17.1",
     "pg": "^8.20.0",
@@ -40,7 +41,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/pg": "^8.18.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
