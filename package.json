@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "next dev --webpack -p 8080",
@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/pg": "^8.18.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -61,10 +61,10 @@
       "brace-expansion": "1.1.13"
     },
     "tinyglobby": {
-      "picomatch": "4.0.5"
+      "picomatch": "4.0.7"
     },
     "vitest": {
-      "picomatch": "4.0.5"
+      "picomatch": "4.0.7"
     }
   }
 }

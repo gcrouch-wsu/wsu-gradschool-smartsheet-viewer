@@ -74,8 +74,15 @@ function probePort(host: string, port: number): Promise<boolean> {
   });
 }
 
+/** Unit tests alias `pg` to an in-memory driver, so a TCP probe would hit a fake host. */
+function isInMemoryPgDriver(): boolean {
+  return (Pool as { isSmartsheetsViewTestMock?: boolean }).isSmartsheetsViewTestMock === true;
+}
+
 /** Fail before `pg` connects. Its refusal error crashes the Next.js dev overlay. */
 async function assertDatabaseReachable(rawUrl: string) {
+  if (isInMemoryPgDriver()) return;
+
   const now = Date.now();
   if (
     globalForDb.__smartsheetsViewDbReachableUrl === rawUrl &&

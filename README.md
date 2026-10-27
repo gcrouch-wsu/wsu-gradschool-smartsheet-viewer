@@ -102,7 +102,7 @@ Routine checklist for shipping this app. Railway is the current target host, but
 - Railway and other Git-based hosts deploy from your Git remote, not from uncommitted local changes. Commit and push to ship new code.
 - **Webpack vs Turbopack:** Next.js 16 defaults to Turbopack for `next build`. This repo uses **`next dev --webpack`** and **`next build --webpack`** because `pg` and TipTap / ProseMirror are not reliable here under the default bundler. Keep `--webpack` unless you re-validate a full production build.
 - **`next build` runs TypeScript checking.** Fix errors locally with `npx tsc --noEmit` or `npm run build` before pushing; your host will fail on the same errors.
-- Pin the deployment environment to an LTS Node version (e.g. 22.x) if you want parity with local builds.
+- Pin the deployment environment to Node 24.x so production matches local builds and CI.
 
 ### Environment variables (production checklist)
 
