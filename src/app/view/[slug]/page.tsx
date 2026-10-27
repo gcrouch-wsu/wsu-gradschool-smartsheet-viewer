@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
+import { HeaderLogoutLink } from "@/components/auth/HeaderLogoutLink";
+import { AppBrandHeader } from "@/components/layout/AppBrandHeader";
 import { notFound } from "next/navigation";
 import { ToastProvider } from "@/components/ui/Toast";
 import { EmbedHeightReporter } from "@/components/views/shell/EmbedHeightReporter";
 import { PublicHeaderBrandStrip } from "@/components/views/shell/PublicHeaderBrandStrip";
 import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import { ViewWithSearchAndIndex } from "@/components/views/layouts/ViewWithSearchAndIndex";
+import { PublicLayoutSwitcher } from "@/components/views/shell/PublicLayoutSwitcher";
 import { ViewTabs } from "@/components/views/shell/ViewTabs";
 import { PublicViewTourHost } from "@/components/views/shell/PublicViewTourHost";
 import { LAYOUT_OPTIONS, formatLayoutLabel } from "@/lib/config/options";
@@ -14,10 +17,9 @@ import { mergeThemeTokens } from "@/lib/config/themes";
 import { ADMIN_SESSION_COOKIE_NAME } from "@/lib/admin-auth";
 import { resolveAdminPrincipalFromSession } from "@/lib/admin-users";
 import {
-  CONTRIBUTOR_SESSION_COOKIE_NAME,
   getContributorConfigurationError,
-  readContributorSessionToken,
 } from "@/lib/contributor-auth";
+import { resolveContributorPrincipal } from "@/lib/identity";
 import {
   buildContributorEditingClientConfig,
   collectResolvableRowIdsForUnrestrictedEditing,
@@ -153,21 +155,14 @@ export default async function PublicViewPage({
   const headerPublicUrl = publicOrigin ? `${publicOrigin}${publicPath}` : publicPath;
   const contributorInstructionsHref = showContributorInstructions ? "/instructions/contributor" : null;
   const layoutSwitcher = !activeView.fixedLayout ? (
-    <nav aria-label="Layout" className="view-control-group view-control-group--layouts" data-tour="pv-layouts">
-      {LAYOUT_OPTIONS.map((option) => {
-        const active = option === layout;
-        return (
-          <Link
-            key={option}
-            href={publicInteractiveHref(slug, activeView.id, singlePublishedView, { layout: option, embed })}
-            aria-current={active ? "page" : undefined}
-            className={active ? "view-control-active" : "view-control"}
-          >
-            {formatLayoutLabel(option)}
-          </Link>
-        );
-      })}
-    </nav>
+    <PublicLayoutSwitcher
+      layout={layout}
+      options={LAYOUT_OPTIONS.map((option) => ({
+        id: option,
+        label: formatLayoutLabel(option),
+        href: publicInteractiveHref(slug, activeView.id, singlePublishedView, { layout: option, embed }),
+      }))}
+    />
   ) : null;
 
   let contributorEmail: string | null = null;
@@ -193,12 +188,12 @@ export default async function PublicViewPage({
     }
 
     if (!adminUnrestrictedEditing) {
-      const session = await readContributorSessionToken(cookieStore.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value);
-
-      if (session.ok && session.payload) {
+      const contributor = await resolveContributorPrincipal();
+      const email = contributor?.email ?? null;
+      if (email) {
         const dataset = await loadContributorDataset(page.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
-        if (isContributorStillInSheet(dataset.rows, session.payload.email, activeViewConfig.editing!.contactColumnIds)) {
-          contributorEmail = session.payload.email;
+        if (isContributorStillInSheet(dataset.rows, email, activeViewConfig.editing!.contactColumnIds)) {
+          contributorEmail = email;
           editingConfig = buildContributorEditingClientConfig(activeViewConfig, dataset.columns, page.sourceConfig);
           editableRowIds = getEditableRowIdsForView(dataset.rows, activeViewConfig, contributorEmail);
         }
@@ -221,7 +216,17 @@ export default async function PublicViewPage({
     viewForDisplay = omitRecordSuppressedRowsFromResolvedView(viewForDisplay);
   }
 
+  const contributorLogoutHref = `/api/auth/okta/logout?next=${encodeURIComponent(`/view/${slug}`)}`;
+
   return (
+    <>
+    {!embed ? (
+      <AppBrandHeader
+        maxWidthClassName="max-w-7xl"
+        actionsLabel="Contributor account"
+        actions={contributorEmail ? <HeaderLogoutLink href={contributorLogoutHref} /> : undefined}
+      />
+    ) : null}
     <main className={mainClassName} style={mainStyle}>
       {!embed && (
         <a
@@ -240,32 +245,19 @@ export default async function PublicViewPage({
               <div className="flex flex-wrap items-start justify-between gap-5 lg:gap-8">
                 <div className="min-w-0 flex-1 space-y-2.5">
                   <PublicHeaderBrandStrip presentation={activeView.presentation} />
-                  {!embed ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PublicViewTourHost />
-                    </div>
-                  ) : null}
                   {!activeView.presentation?.hideHeaderBackLink &&
                     (showPublicEditingChrome ? (
                       <p className="text-sm text-[color:var(--wsu-muted)]">
                         <Link href="/" className="link-inline">
                           All views
                         </Link>
-                        <span className="mt-1 block text-xs text-[color:var(--wsu-muted)]">
-                          {adminUnrestrictedEditing ? (
-                            <>
-                              End your admin session from the{" "}
-                              <strong className="font-medium text-[color:var(--wsu-ink)]">Admin</strong> area. Browser
-                              Back may leave this site—use this link to return to the catalog.
-                            </>
-                          ) : (
-                            <>
-                              Use <strong className="font-medium text-[color:var(--wsu-ink)]">Sign out</strong> below to
-                              change accounts. Browser Back may go to other sites you opened earlier—use this link to
-                              stay in public views.
-                            </>
-                          )}
-                        </span>
+                        {adminUnrestrictedEditing ? (
+                          <span className="mt-1 block text-xs text-[color:var(--wsu-muted)]">
+                            End your admin session from the{" "}
+                            <strong className="font-medium text-[color:var(--wsu-ink)]">Admin</strong> area. Browser
+                            Back may leave this site—use this link to return to the catalog.
+                          </span>
+                        ) : null}
                       </p>
                     ) : (
                       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-1.5 text-xs">
@@ -363,7 +355,7 @@ export default async function PublicViewPage({
                     !activeView.presentation?.hideHeaderRefreshed)) ||
                   layoutSwitcher ||
                   ((loginHref && !showPublicEditingChrome) || printHref || exportCsvHref || contributorInstructionsHref)) && (
-                  <div className="w-full shrink-0 sm:w-auto sm:min-w-[28rem] lg:min-w-[32rem]">
+                  <div className="w-full min-w-0 sm:min-w-[16rem] sm:max-w-[36rem] sm:flex-1">
                     <div className="view-surface-muted rounded-xl border border-[color:var(--wsu-border)] px-3.5 py-3.5 text-sm text-[color:var(--wsu-muted)]">
                       {!activeView.presentation?.hideHeaderInfoBox &&
                         (!activeView.presentation?.hideHeaderActiveView ||
@@ -423,8 +415,8 @@ export default async function PublicViewPage({
                         <div
                           className={
                             !activeView.presentation?.hideHeaderInfoBox
-                              ? "mt-3 border-t border-[color:var(--wsu-border)]/70 pt-3"
-                              : ""
+                              ? "mt-3 min-w-0 border-t border-[color:var(--wsu-border)]/70 pt-3"
+                              : "min-w-0"
                           }
                         >
                           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--wsu-muted)]">
@@ -448,6 +440,7 @@ export default async function PublicViewPage({
                               <PublicActionLink href={loginHref} label="Contributor sign in" primary compact />
                             ) : null}
                             {printHref ? <PublicActionLink href={printHref} label="Print / PDF" compact /> : null}
+                            {!embed ? <PublicViewTourHost /> : null}
                             {exportCsvHref ? (
                               <PublicActionLink href={exportCsvHref} label="Export CSV" compact />
                             ) : null}
@@ -517,6 +510,7 @@ export default async function PublicViewPage({
                   >
                     {loginHref ? <PublicActionLink href={loginHref} label="Contributor sign in" primary /> : null}
                     {printHref ? <PublicActionLink href={printHref} label="Print / PDF" /> : null}
+                    <PublicViewTourHost />
                     {exportCsvHref ? <PublicActionLink href={exportCsvHref} label="Export CSV" /> : null}
                     {contributorInstructionsHref ? (
                       <PublicActionLink href={contributorInstructionsHref} label="Contributor instructions" newWindow />
@@ -524,7 +518,7 @@ export default async function PublicViewPage({
                   </div>
                 )}
               </div>
-              {activeView.presentation?.hideHeader ? <div className="flex flex-wrap items-center gap-3">{layoutSwitcher}</div> : null}
+              {activeView.presentation?.hideHeader ? <div className="flex min-w-0 w-full items-center">{layoutSwitcher}</div> : null}
             </div>
 
             <ToastProvider>
@@ -548,5 +542,6 @@ export default async function PublicViewPage({
         </ViewStyleWrapper>
       </div>
     </main>
+    </>
   );
 }

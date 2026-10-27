@@ -139,7 +139,7 @@ export function DataAccordion({
                   </span>
                 </div>
               </summary>
-              <div className={`border-t ${innerBorderClass} px-5 py-5`}>
+              <div className={`view-record-scroll border-t ${innerBorderClass} px-5 py-5`}>
                 <MergedRowCampusBadges
                   row={row}
                   suppressWhenProgramSections={suppressMergedRowCampusBadgesWhenSectionStripShows(view.presentation)}
@@ -218,7 +218,7 @@ export function DataAccordion({
                 </span>
               </div>
             </summary>
-            <div className={`border-t ${innerBorderClass} px-5 py-5`}>
+            <div className={`view-record-scroll border-t ${innerBorderClass} px-5 py-5`}>
               {!cardLayoutIncludesCampusBadges(view) ? (
                 <MergedRowCampusBadges
                   row={row}

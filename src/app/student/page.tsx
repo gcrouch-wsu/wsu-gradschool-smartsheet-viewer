@@ -27,6 +27,7 @@ export default async function StudentMySubmissionsPage({
     <StudentPageFrame
       title="Graduate School Student Portal"
       description="View your submission sheets, track their status, and propose contact reroutes for Programs Team review."
+      showSignOut={Boolean(email)}
     >
       {configurationError && !oktaEnabled ? (
         <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

@@ -205,8 +205,9 @@ a {
 }
 
 .view-control-group--layouts {
-  flex-wrap: nowrap;
-  width: max-content;
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -474,6 +475,50 @@ a {
   font-weight: var(--view-row-heading-font-weight, 600);
   font-style: var(--view-heading-font-style, inherit);
   color: var(--view-heading-text, var(--view-text, var(--wsu-ink)));
+}
+
+/* Record cards stay a readable height; extra fields scroll inside the card. */
+.view-record-scroll {
+  max-height: min(68dvh, 18rem);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--wsu-muted, #6b625c) 70%, transparent) transparent;
+}
+
+.view-record-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.view-record-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wsu-muted, #6b625c) 55%, transparent);
+}
+
+@media (min-width: 640px) {
+  .view-record-scroll {
+    max-height: min(62dvh, 22rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .view-record-scroll {
+    max-height: min(56dvh, 26rem);
+  }
+}
+
+@media (min-width: 1280px) {
+  .view-record-scroll {
+    max-height: min(52dvh, 28rem);
+  }
+}
+
+@media print {
+  .view-record-scroll {
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 .view-people-name {

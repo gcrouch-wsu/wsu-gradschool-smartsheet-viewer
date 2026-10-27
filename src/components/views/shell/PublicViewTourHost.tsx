@@ -6,14 +6,20 @@ import { PUBLIC_VIEW_TOUR_STEPS, PUBLIC_VIEW_TOUR_STORAGE_KEY } from "@/componen
 import { useProductTour } from "@/hooks/useProductTour";
 
 /** Client island: How to use + tour overlay for the public view page. */
-export function PublicViewTourHost({ enabled = true }: { enabled?: boolean }) {
+export function PublicViewTourHost({
+  enabled = true,
+  className = "link-pill-muted justify-center whitespace-nowrap text-xs !text-[color:var(--wsu-crimson)]",
+}: {
+  enabled?: boolean;
+  className?: string;
+}) {
   const tour = useProductTour(PUBLIC_VIEW_TOUR_STORAGE_KEY, { enabled });
 
   if (!enabled) return null;
 
   return (
     <>
-      <TourHowToButton onClick={tour.startTour} className="link-pill-muted justify-center whitespace-nowrap text-xs !text-[color:var(--wsu-crimson)]" />
+      <TourHowToButton onClick={tour.startTour} className={className} />
       <ProductTour
         open={tour.open}
         steps={PUBLIC_VIEW_TOUR_STEPS}

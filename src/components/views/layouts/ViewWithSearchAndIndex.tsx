@@ -8,7 +8,7 @@ import { ContributorProvider } from "@/components/views/contributor/ContributorC
 import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
 import { EditRowDrawer } from "@/components/views/contributor/EditRowDrawer";
 import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PublicViewTourHost } from "@/components/views/shell/PublicViewTourHost";
 import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
 import { describeResolvedField, getIndexText } from "@/components/views/layouts/layout-utils";
 import {
@@ -309,12 +309,12 @@ export function ViewWithSearchAndIndex({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <NotificationBell />
               {printHref ? (
                 <Link href={printHref} className="link-pill-muted px-3 py-1.5 text-sm">
                   Print / PDF
                 </Link>
               ) : null}
+              <PublicViewTourHost className="link-pill-muted px-3 py-1.5 text-sm !text-[color:var(--wsu-crimson)]" />
               {contributorInstructionsHref ? (
                 <Link
                   href={contributorInstructionsHref}
@@ -326,17 +326,9 @@ export function ViewWithSearchAndIndex({
                   Contributor instructions
                 </Link>
               ) : null}
-              {!adminUnrestrictedEditing ? (
-                <button
-                  type="button"
-                  onClick={() => void handleSignOut()}
-                  className="link-pill-muted px-3 py-1.5 text-sm"
-                >
-                  Sign out
-                </button>
-              ) : (
+              {adminUnrestrictedEditing ? (
                 <span className="text-xs text-[color:var(--wsu-muted)]">Use Admin to sign out</span>
-              )}
+              ) : null}
             </div>
           </div>
         )}

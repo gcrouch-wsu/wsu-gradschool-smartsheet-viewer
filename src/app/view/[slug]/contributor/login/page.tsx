@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AppBrandHeader } from "@/components/layout/AppBrandHeader";
 import { ContributorLoginForm } from "@/components/views/contributor/ContributorLoginForm";
 import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
 import { getContributorConfigurationError } from "@/lib/contributor-auth";
@@ -71,6 +72,8 @@ export default async function ContributorLoginPage({
   }
 
   return (
+    <>
+    <AppBrandHeader maxWidthClassName="max-w-3xl" />
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <ViewStyleWrapper style={activeView.style} themePresetId={activeView.themePresetId}>
@@ -132,5 +135,6 @@ export default async function ContributorLoginPage({
         </ViewStyleWrapper>
       </div>
     </main>
+    </>
   );
 }

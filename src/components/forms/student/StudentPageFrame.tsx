@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs";
+import { HeaderLogoutLink } from "@/components/auth/HeaderLogoutLink";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
@@ -10,6 +11,7 @@ export function StudentPageFrame({
   description,
   actions,
   headingTourId,
+  showSignOut = true,
   children,
 }: {
   breadcrumbs?: BreadcrumbItem[];
@@ -18,6 +20,8 @@ export function StudentPageFrame({
   description?: string;
   actions?: ReactNode;
   headingTourId?: string;
+  /** Hide on the signed-out student login screen. */
+  showSignOut?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -25,7 +29,12 @@ export function StudentPageFrame({
       <FormBrandHeader
         maxWidthClassName="max-w-6xl"
         actionsLabel="Account"
-        actions={<NotificationBell />}
+        actions={
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            {showSignOut ? <HeaderLogoutLink href="/api/auth/okta/logout?next=/student" /> : null}
+          </div>
+        }
       />
       <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
