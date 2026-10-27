@@ -1,14 +1,12 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { ContributorProvider } from "@/components/views/contributor/ContributorContext";
 import { DisplayTimezoneProvider } from "@/components/views/shared/DisplayTimezoneContext";
 import { EditRowDrawer } from "@/components/views/contributor/EditRowDrawer";
 import { PublicViewRenderer } from "@/components/views/layouts/ViewRenderer";
-import { PublicViewTourHost } from "@/components/views/shell/PublicViewTourHost";
 import { ViewValueLinkProvider } from "@/components/views/shared/ViewValueLinkContext";
 import { describeResolvedField, getIndexText } from "@/components/views/layouts/layout-utils";
 import {
@@ -56,10 +54,7 @@ export function ViewWithSearchAndIndex({
   editingConfig = null,
   editableRowIds = [],
   adminUnrestrictedEditing = false,
-  adminEditingLabel = null,
   contributorRowsFiltered = false,
-  printHref,
-  contributorInstructionsHref,
 }: {
   view: ResolvedView;
   layout: LayoutType;
@@ -70,10 +65,7 @@ export function ViewWithSearchAndIndex({
   editingConfig?: ContributorEditingClientConfig | null;
   editableRowIds?: number[];
   adminUnrestrictedEditing?: boolean;
-  adminEditingLabel?: string | null;
   contributorRowsFiltered?: boolean;
-  printHref?: string;
-  contributorInstructionsHref?: string;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -288,51 +280,6 @@ export function ViewWithSearchAndIndex({
           }}
         >
           <div className="relative">
-        {!embed && editingConfig && (contributorEmail || adminUnrestrictedEditing) && (
-          <div className="view-surface-muted mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--wsu-border)] px-3.5 py-2.5 text-sm text-[color:var(--wsu-muted)]">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-medium text-[color:var(--wsu-ink)]">
-                {adminUnrestrictedEditing ? (
-                  <>
-                    Administrator: {adminEditingLabel ?? "signed in"} — all rows editable (same fields as contributors)
-                  </>
-                ) : (
-                  <>Editing as {contributorEmail}</>
-                )}
-              </span>
-              <span>
-                {adminUnrestrictedEditing
-                  ? "Row contact restrictions are not applied for administrators."
-                  : contributorRowsFiltered
-                    ? `Showing only your ${editableRowIds.length} assigned row${editableRowIds.length === 1 ? "" : "s"}`
-                    : `${editableRowIds.length} editable row${editableRowIds.length === 1 ? "" : "s"} in this view`}
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {printHref ? (
-                <Link href={printHref} className="link-pill-muted px-3 py-1.5 text-sm">
-                  Print / PDF
-                </Link>
-              ) : null}
-              <PublicViewTourHost className="link-pill-muted px-3 py-1.5 text-sm !text-[color:var(--wsu-crimson)]" />
-              {contributorInstructionsHref ? (
-                <Link
-                  href={contributorInstructionsHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Opens contributor instructions in a new window"
-                  className="link-pill-muted px-3 py-1.5 text-sm"
-                >
-                  Contributor instructions
-                </Link>
-              ) : null}
-              {adminUnrestrictedEditing ? (
-                <span className="text-xs text-[color:var(--wsu-muted)]">Use Admin to sign out</span>
-              ) : null}
-            </div>
-          </div>
-        )}
-
         {showSearchAndIndex && (
           <div className="mb-3 flex flex-col gap-2.5">
             <div className="view-toolbar" data-tour="pv-search">
@@ -346,11 +293,11 @@ export function ViewWithSearchAndIndex({
                       ? "Search within your assigned rows..."
                       : "Search programs, names, emails..."
                   }
-                  className="view-input w-full rounded-lg px-3.5 py-2 pl-9 text-sm"
+                  className="view-input w-full rounded-full px-4 py-2.5 pl-10 text-[0.9375rem]"
                   aria-label={contributorRowsFiltered ? "Search your assigned rows" : "Search"}
                 />
                 <svg
-                  className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--wsu-muted)]"
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--wsu-muted)]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

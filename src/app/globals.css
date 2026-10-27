@@ -377,13 +377,35 @@ a {
 }
 
 /** Main page h1 inside the public header (optional header-specific typography). */
+.view-header-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--view-muted, var(--wsu-muted));
+  text-decoration: none;
+}
+
+.view-header-back:hover {
+  color: var(--wsu-crimson);
+}
+
+.view-header-back svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
 .view-header-page-title {
   font-family: var(--view-header-page-title-font-family, var(--view-heading-font, inherit));
-  font-size: var(--view-header-page-title-font-size, var(--view-page-title-font-size, 2.25rem));
-  font-weight: var(--view-header-page-title-font-weight, var(--view-heading-font-weight, 600));
+  font-size: clamp(1.45rem, 1.15rem + 0.7vw, var(--view-header-page-title-font-size, 1.75rem));
+  font-weight: var(--view-header-page-title-font-weight, var(--view-heading-font-weight, 500));
   font-style: var(--view-header-page-title-font-style, var(--view-heading-font-style, normal));
-  letter-spacing: var(--view-header-page-title-letter-spacing, -0.025em);
-  line-height: 1.15;
+  letter-spacing: var(--view-header-page-title-letter-spacing, -0.02em);
+  line-height: 1.2;
+  text-wrap: balance;
   color: var(
     --view-header-page-title-color,
     var(--view-heading-text, var(--view-text, var(--wsu-ink)))
@@ -413,9 +435,10 @@ a {
   font-family: var(--view-heading-font, inherit);
   font-size: var(--view-field-label-font-size, 0.6875rem);
   font-weight: var(--view-field-label-font-weight, 600);
-  letter-spacing: var(--view-field-label-letter-spacing, 0.08em);
+  letter-spacing: var(--view-field-label-letter-spacing, 0.06em);
+  line-height: 1.35;
   text-transform: var(--view-field-label-text-transform, uppercase);
-  color: var(--wsu-muted);
+  color: var(--view-muted, var(--wsu-muted));
 }
 
 /* Optional per-field typography (ViewFieldRender.textStyle / labelStyle) */
@@ -574,11 +597,33 @@ a {
   background: color-mix(in srgb, var(--view-surface-muted-bg, var(--wsu-stone)) 55%, white);
 }
 
+.view-page {
+  text-rendering: optimizeLegibility;
+}
+
 .view-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem 1rem;
+}
+
+.view-toolbar .view-input {
+  min-height: 2.75rem;
+  border-radius: 999px;
+  background: #fff;
+}
+
+.view-data-panel table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--view-surface-muted-bg, var(--wsu-stone)) 42%, white);
+}
+
+.view-data-panel table tbody tr:hover {
+  background: color-mix(in srgb, var(--view-accent, var(--wsu-crimson)) 6%, white);
+}
+
+.view-data-panel td {
+  line-height: 1.45;
 }
 
 /* Custom header text: use body font, not heading font */

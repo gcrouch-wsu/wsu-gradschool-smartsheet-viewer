@@ -3,6 +3,8 @@ import type { FilterOperator, LayoutType, RenderType } from "@/lib/config/types"
 /** Web-safe font stacks for body and heading text. */
 export const FONT_OPTIONS: { value: string; label: string }[] = [
   { value: "system-ui, sans-serif", label: "System UI (default)" },
+  { value: "var(--font-workspace-sans), sans-serif", label: "IBM Plex Sans" },
+  { value: "var(--font-workspace-serif), Georgia, serif", label: "IBM Plex Serif" },
   { value: "Georgia, serif", label: "Georgia" },
   { value: "'Times New Roman', Times, serif", label: "Times New Roman" },
   { value: "Arial, Helvetica, sans-serif", label: "Arial" },

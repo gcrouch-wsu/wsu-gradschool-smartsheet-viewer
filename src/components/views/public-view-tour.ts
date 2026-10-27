@@ -22,10 +22,34 @@ export const PUBLIC_VIEW_TOUR_STEPS: ProductTourStep[] = [
     body: "When several views share this URL, use these tabs to move between them.",
   },
   {
-    id: "actions",
-    target: '[data-tour="pv-actions"]',
-    title: "Sign in, print, export",
-    body: "Contributor sign in unlocks editing for your rows. Print and Export CSV are available for everyone.",
+    id: "signin",
+    target: '[data-tour="pv-signin"]',
+    title: "Contributor sign in",
+    body: "This icon opens contributor sign-in. After you sign in, the edit icon appears on the rows you can update.",
+  },
+  {
+    id: "account",
+    target: '[data-tour="pv-account"]',
+    title: "You're signed in",
+    body: "Your name is in the header. The icons beside it are print, how to use, export, and contributor instructions. Log out is the last icon.",
+  },
+  {
+    id: "print",
+    target: '[data-tour="pv-print"]',
+    title: "Print / PDF",
+    body: "Print this view or save it as a PDF.",
+  },
+  {
+    id: "export",
+    target: '[data-tour="pv-export"]',
+    title: "Export CSV",
+    body: "Download the rows in this view as a CSV file.",
+  },
+  {
+    id: "instructions",
+    target: '[data-tour="pv-instructions"]',
+    title: "Contributor instructions",
+    body: "Open the contributor guide in a new window. It explains how to sign in and edit your rows.",
   },
   {
     id: "search",
@@ -49,6 +73,6 @@ export const PUBLIC_VIEW_TOUR_STEPS: ProductTourStep[] = [
     id: "results",
     target: '[data-tour="pv-results"]',
     title: "Browse results",
-    body: "Open listings here. After contributor sign-in, Edit appears on rows you can update.",
+    body: "Open listings here. After contributor sign-in, the edit icon appears on rows you can update.",
   },
 ];

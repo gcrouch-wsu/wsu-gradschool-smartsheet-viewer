@@ -98,8 +98,8 @@ export function StudentSheetTable({
     <section className="rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
         <div data-tour="sm-heading">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Student portal</p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">My submission sheets</h2>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Graduate School</p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">Student portal</h2>
           <p className="mt-1 text-sm text-sub">Sheets that contain your Student Email.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:max-w-xs">

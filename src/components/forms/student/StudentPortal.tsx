@@ -247,7 +247,7 @@ export function StudentPortal({ initialEmail }: { initialEmail: string | null })
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">
               Graduate School
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">My submissions</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Student portal</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[color:var(--wsu-muted)]">
               {email
                 ? "View sheets that include you, open your rows, and propose contact reroutes for Programs Team review."

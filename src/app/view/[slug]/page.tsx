@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
-import { HeaderLogoutLink } from "@/components/auth/HeaderLogoutLink";
+import { HeaderIconLink, HeaderLogoutLink, HeaderSignedInIdentity } from "@/components/auth/HeaderLogoutLink";
 import { AppBrandHeader } from "@/components/layout/AppBrandHeader";
 import { notFound } from "next/navigation";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -45,31 +45,11 @@ function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function PublicActionLink({
-  href,
-  label,
-  primary = false,
-  newWindow = false,
-  compact = false,
-}: {
-  href: string;
-  label: string;
-  primary?: boolean;
-  newWindow?: boolean;
-  compact?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      target={newWindow ? "_blank" : undefined}
-      rel={newWindow ? "noopener noreferrer" : undefined}
-      title={newWindow ? `${label} (opens in a new window)` : undefined}
-      className={`${primary ? "link-pill" : "link-pill-muted"} justify-center whitespace-nowrap${compact ? " text-xs" : ""}`}
-      style={compact ? { padding: "0.4rem 0.75rem" } : undefined}
-    >
-      {label}
-    </Link>
-  );
+/** Treat "Test - Graduate Leave (rou)" and "Test Graduate Leave Rou" as the same heading. */
+function sameHeading(a?: string | null, b?: string | null) {
+  const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!a?.trim() || !b?.trim()) return false;
+  return normalize(a) === normalize(b);
 }
 
 export default async function PublicViewPage({
@@ -131,7 +111,9 @@ export default async function PublicViewPage({
         ? (requestedLayout as LayoutType)
         : activeView.layout;
 
-  const mainClassName = embed ? "bg-transparent px-0 py-0" : "min-h-screen px-4 py-6 sm:px-6 lg:px-8";
+  const mainClassName = embed
+    ? "bg-transparent px-0 py-0"
+    : "view-page min-h-screen px-3 py-5 sm:px-6 sm:py-8 lg:px-8";
   const containerClassName = embed ? "mx-auto max-w-none space-y-4" : "mx-auto max-w-7xl space-y-5";
   const tokens = mergeThemeTokens(activeView.themePresetId ?? "wsu_crimson", activeView.style);
   const mainStyle = !embed && tokens.backgroundColor ? { backgroundColor: tokens.backgroundColor } : undefined;
@@ -166,6 +148,7 @@ export default async function PublicViewPage({
   ) : null;
 
   let contributorEmail: string | null = null;
+  let contributorDisplayName: string | null = null;
   let editingConfig = null;
   let editableRowIds: number[] = [];
   let adminUnrestrictedEditing = false;
@@ -194,6 +177,7 @@ export default async function PublicViewPage({
         const dataset = await loadContributorDataset(page.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
         if (isContributorStillInSheet(dataset.rows, email, activeViewConfig.editing!.contactColumnIds)) {
           contributorEmail = email;
+          contributorDisplayName = (contributor?.displayName ?? email).trim() || email;
           editingConfig = buildContributorEditingClientConfig(activeViewConfig, dataset.columns, page.sourceConfig);
           editableRowIds = getEditableRowIdsForView(dataset.rows, activeViewConfig, contributorEmail);
         }
@@ -217,14 +201,74 @@ export default async function PublicViewPage({
   }
 
   const contributorLogoutHref = `/api/auth/okta/logout?next=${encodeURIComponent(`/view/${slug}`)}`;
+  const headerIdentityName =
+    contributorDisplayName || contributorEmail || (adminUnrestrictedEditing ? adminEditingLabel : null);
 
   return (
     <>
     {!embed ? (
       <AppBrandHeader
         maxWidthClassName="max-w-7xl"
-        actionsLabel="Contributor account"
-        actions={contributorEmail ? <HeaderLogoutLink href={contributorLogoutHref} /> : undefined}
+        actionsLabel="Account"
+        actions={
+          loginHref || printHref || exportCsvHref || contributorInstructionsHref || showPublicEditingChrome || contributorEmail ? (
+            <>
+              {headerIdentityName ? (
+                <HeaderSignedInIdentity
+                  name={headerIdentityName}
+                  email={contributorEmail}
+                  detail={adminUnrestrictedEditing ? "Administrator" : "Contributor"}
+                />
+              ) : null}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+              {!showPublicEditingChrome && loginHref ? (
+                <span data-tour="pv-signin" className="inline-flex">
+                <HeaderIconLink href={loginHref} label="Contributor sign in">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                    <path d="M10 17l5-5-5-5M15 12H3" />
+                  </svg>
+                </HeaderIconLink>
+                </span>
+              ) : null}
+              {printHref ? (
+                <span data-tour="pv-print" className="inline-flex">
+                <HeaderIconLink href={printHref} label="Print / PDF">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M6 9V3h12v6" />
+                    <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+                    <path d="M6 14h12v7H6z" />
+                  </svg>
+                </HeaderIconLink>
+                </span>
+              ) : null}
+              <PublicViewTourHost icon />
+              {exportCsvHref ? (
+                <span data-tour="pv-export" className="inline-flex">
+                <HeaderIconLink href={exportCsvHref} label="Export CSV">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 3v12" />
+                    <path d="M7 10l5 5 5-5" />
+                    <path d="M5 21h14" />
+                  </svg>
+                </HeaderIconLink>
+                </span>
+              ) : null}
+              {contributorInstructionsHref ? (
+                <span data-tour="pv-instructions" className="inline-flex">
+                <HeaderIconLink href={contributorInstructionsHref} label="Contributor instructions" newWindow>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <path d="M14 2v6h6M8 13h8M8 17h5" />
+                  </svg>
+                </HeaderIconLink>
+                </span>
+              ) : null}
+              </div>
+              {contributorEmail ? <HeaderLogoutLink href={contributorLogoutHref} /> : null}
+            </>
+          ) : undefined
+        }
       />
     ) : null}
     <main className={mainClassName} style={mainStyle}>
@@ -241,14 +285,17 @@ export default async function PublicViewPage({
         <ViewStyleWrapper style={activeView.style} themePresetId={activeView.themePresetId}>
           {!embed && !activeView.presentation?.hideHeader && (
             <div>
-            <header className="view-header-panel px-5 py-5 sm:px-6 sm:py-6">
-              <div className="flex flex-wrap items-start justify-between gap-5 lg:gap-8">
-                <div className="min-w-0 flex-1 space-y-2.5">
+            <header className="view-header-panel px-4 py-5 sm:px-7 sm:py-7">
+              <div className="flex flex-wrap items-start justify-between gap-5 lg:gap-10">
+                <div className="min-w-0 flex-1 space-y-2">
                   <PublicHeaderBrandStrip presentation={activeView.presentation} />
                   {!activeView.presentation?.hideHeaderBackLink &&
                     (showPublicEditingChrome ? (
-                      <p className="text-sm text-[color:var(--wsu-muted)]">
-                        <Link href="/" className="link-inline">
+                      <p>
+                        <Link href="/" className="view-header-back">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M15 6l-6 6 6 6" />
+                          </svg>
                           All views
                         </Link>
                         {adminUnrestrictedEditing ? (
@@ -260,11 +307,15 @@ export default async function PublicViewPage({
                         ) : null}
                       </p>
                     ) : (
-                      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-1.5 text-xs">
-                        <Link href="/" className="link-inline-muted !font-medium !no-underline hover:!underline">
+                      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-x-1.5">
+                        <Link href="/" className="view-header-back">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M15 6l-6 6 6 6" />
+                          </svg>
                           All views
                         </Link>
-                        {!activeView.presentation?.hideHeaderSourceLabel ? (
+                        {!activeView.presentation?.hideHeaderSourceLabel &&
+                        !sameHeading(page.sourceConfig.label, page.title) ? (
                           <>
                             <span className="text-[color:var(--wsu-border)]" aria-hidden>
                               /
@@ -276,18 +327,20 @@ export default async function PublicViewPage({
                     ))}
                   <div data-tour="pv-heading">
                     {(!activeView.presentation?.hideHeaderBackLink && !showPublicEditingChrome) ||
-                    activeView.presentation?.hideHeaderSourceLabel
+                    activeView.presentation?.hideHeaderSourceLabel ||
+                    (!activeView.presentation?.hideHeaderPageTitle &&
+                      sameHeading(page.sourceConfig.label, page.title))
                       ? null
-                      : !activeView.presentation?.hideHeaderSourceLabel && (
+                      : (
                           <p className="view-header-source-label">{page.sourceConfig.label}</p>
                         )}
                     {!activeView.presentation?.hideHeaderPageTitle && (
-                      <h1 className="view-header-page-title mt-1.5 text-balance">{page.title}</h1>
+                      <h1 className="view-header-page-title mt-1 text-balance">{page.title}</h1>
                     )}
                     {!activeView.presentation?.hideViewTitleSection &&
-                      (activeView.label !== page.title || activeView.description) && (
+                      (!sameHeading(activeView.label, page.title) || activeView.description) && (
                         <div className="mt-2.5 max-w-3xl">
-                          {activeView.label !== page.title ? (
+                          {!sameHeading(activeView.label, page.title) ? (
                             <p className="view-section-title text-[1.125rem] leading-snug text-[color:var(--wsu-ink)]">
                               {activeView.label}
                             </p>
@@ -295,7 +348,7 @@ export default async function PublicViewPage({
                           {activeView.description ? (
                             <p
                               className={`text-sm leading-relaxed text-[color:var(--wsu-muted)] ${
-                                activeView.label !== page.title ? "mt-0.5" : ""
+                                !sameHeading(activeView.label, page.title) ? "mt-0.5" : ""
                               }`}
                             >
                               {activeView.description}
@@ -303,7 +356,12 @@ export default async function PublicViewPage({
                           ) : null}
                         </div>
                       )}
-                    {!activeView.presentation?.hideHeaderLiveDataText && (
+                    {!activeView.presentation?.hideHeaderLiveDataText &&
+                    !(
+                      (!activeView.presentation?.hideHeaderPageTitle &&
+                        sameHeading(page.sourceName, page.title)) ||
+                      sameHeading(page.sourceName, activeView.label)
+                    ) && (
                       <p className="view-header-live-blurb mt-2 max-w-2xl !leading-relaxed">
                         Live data from{" "}
                         <span className="view-header-live-blurb-strong font-medium">{page.sourceName}</span>.
@@ -351,110 +409,42 @@ export default async function PublicViewPage({
                 </div>
                 {((!activeView.presentation?.hideHeaderInfoBox &&
                   (!activeView.presentation?.hideHeaderActiveView ||
-                    !activeView.presentation?.hideHeaderRows ||
                     !activeView.presentation?.hideHeaderRefreshed)) ||
-                  layoutSwitcher ||
-                  ((loginHref && !showPublicEditingChrome) || printHref || exportCsvHref || contributorInstructionsHref)) && (
+                  layoutSwitcher) && (
                   <div className="w-full min-w-0 sm:min-w-[16rem] sm:max-w-[36rem] sm:flex-1">
-                    <div className="view-surface-muted rounded-xl border border-[color:var(--wsu-border)] px-3.5 py-3.5 text-sm text-[color:var(--wsu-muted)]">
+                    <div className="view-surface-muted rounded-xl border border-[color:var(--wsu-border)] px-3.5 py-3 text-sm text-[color:var(--wsu-muted)]">
                       {!activeView.presentation?.hideHeaderInfoBox &&
-                        (!activeView.presentation?.hideHeaderActiveView ||
-                          !activeView.presentation?.hideHeaderRows ||
-                          !activeView.presentation?.hideHeaderRefreshed) && (
-                          <dl className="view-header-meta">
-                            <div className="meta-row flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                              {!activeView.presentation?.hideHeaderRows && (
-                                <div>
-                                  <dt>Rows</dt>
-                                  <dd>
-                                    {" "}
-                                    {contributorEmail && editableRowIds.length > 0 ? (
-                                      <>
-                                        <span className="tabular-nums text-[color:var(--wsu-ink)]">
-                                          {viewForDisplay.rowCount}
-                                        </span>
-                                        <span> assigned</span>
-                                        <span className="text-[color:var(--wsu-muted)]">
-                                          {" "}
-                                          ({activeView.rowCount} in view)
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="tabular-nums text-[color:var(--wsu-ink)]">
-                                        {activeView.rowCount}
-                                      </span>
-                                    )}
-                                  </dd>
-                                </div>
-                              )}
-                              {!activeView.presentation?.hideHeaderRefreshed && (
-                                <div>
-                                  <dt>Refreshed</dt>
-                                  <dd>
-                                    {" "}
-                                    <time dateTime={page.fetchedAt} className="tabular-nums">
-                                      {formatFetchedAtInViewTimeZone(page.fetchedAt, activeView.displayTimeZone)}
-                                    </time>
-                                  </dd>
-                                </div>
-                              )}
-                            </div>
-                            {!activeView.presentation?.hideHeaderActiveView &&
-                              !showViewTabs &&
-                              (activeView.presentation?.hideViewTitleSection ||
-                                (activeView.label === page.title && !activeView.description)) && (
-                                <div className="meta-row mt-1">
-                                  <dt>View</dt>
-                                  <dd> {activeView.label}</dd>
-                                </div>
-                              )}
-                          </dl>
-                        )}
+                      !activeView.presentation?.hideHeaderActiveView &&
+                      !showViewTabs &&
+                      (activeView.presentation?.hideViewTitleSection ||
+                        (activeView.label === page.title && !activeView.description)) ? (
+                        <dl className="view-header-meta mb-2">
+                          <div className="meta-row">
+                            <dt>View</dt>
+                            <dd> {activeView.label}</dd>
+                          </div>
+                        </dl>
+                      ) : null}
 
-                      {layoutSwitcher ? (
-                        <div
-                          className={
-                            !activeView.presentation?.hideHeaderInfoBox
-                              ? "mt-3 min-w-0 border-t border-[color:var(--wsu-border)]/70 pt-3"
-                              : "min-w-0"
-                          }
-                        >
-                          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--wsu-muted)]">
+                      <div className="flex items-center justify-between gap-3">
+                        {layoutSwitcher ? (
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--wsu-muted)]">
                             Layout
                           </p>
-                          {layoutSwitcher}
-                        </div>
-                      ) : null}
-
-                      {!showPublicEditingChrome &&
-                      (loginHref || printHref || exportCsvHref || contributorInstructionsHref) ? (
-                        <div
-                          className={
-                            !activeView.presentation?.hideHeaderInfoBox || layoutSwitcher
-                              ? "mt-3 border-t border-[color:var(--wsu-border)]/70 pt-3"
-                              : ""
-                          }
-                        >
-                          <div className="flex flex-wrap gap-1.5" data-tour="pv-actions">
-                            {loginHref ? (
-                              <PublicActionLink href={loginHref} label="Contributor sign in" primary compact />
-                            ) : null}
-                            {printHref ? <PublicActionLink href={printHref} label="Print / PDF" compact /> : null}
-                            {!embed ? <PublicViewTourHost /> : null}
-                            {exportCsvHref ? (
-                              <PublicActionLink href={exportCsvHref} label="Export CSV" compact />
-                            ) : null}
-                            {contributorInstructionsHref ? (
-                              <PublicActionLink
-                                href={contributorInstructionsHref}
-                                label="Contributor instructions"
-                                newWindow
-                                compact
-                              />
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : null}
+                        ) : (
+                          <span />
+                        )}
+                        {!activeView.presentation?.hideHeaderInfoBox &&
+                        !activeView.presentation?.hideHeaderRefreshed ? (
+                          <p className="view-header-meta shrink-0 text-right">
+                            <span className="font-semibold text-[color:var(--wsu-ink)]">Refreshed</span>{" "}
+                            <time dateTime={page.fetchedAt} className="tabular-nums">
+                              {formatFetchedAtInViewTimeZone(page.fetchedAt, activeView.displayTimeZone)}
+                            </time>
+                          </p>
+                        ) : null}
+                      </div>
+                      {layoutSwitcher ? <div className="mt-1.5 min-w-0">{layoutSwitcher}</div> : null}
                     </div>
                   </div>
                 )}
@@ -488,34 +478,15 @@ export default async function PublicViewPage({
               <div>
                 {activeView.presentation?.hideHeader &&
                   !activeView.presentation?.hideViewTitleSection &&
-                  (activeView.label !== page.title || activeView.description) && (
+                  (!sameHeading(activeView.label, page.title) || activeView.description) && (
                   <>
-                    <h2 className="view-section-title text-[1.25rem] leading-snug">{activeView.label}</h2>
+                    {!sameHeading(activeView.label, page.title) ? (
+                      <h2 className="view-section-title text-[1.25rem] leading-snug">{activeView.label}</h2>
+                    ) : null}
                     {activeView.description && (
                       <p className="mt-0.5 max-w-3xl text-sm text-[color:var(--wsu-muted)]">{activeView.description}</p>
                     )}
                   </>
-                )}
-                {!embed &&
-                  !showPublicEditingChrome &&
-                  activeView.presentation?.hideHeader &&
-                  (loginHref || printHref || exportCsvHref || contributorInstructionsHref) && (
-                  <div
-                    className={`${
-                      !activeView.presentation?.hideViewTitleSection &&
-                      (activeView.label !== page.title || activeView.description)
-                        ? "mt-3 "
-                        : ""
-                    }flex flex-wrap gap-2`}
-                  >
-                    {loginHref ? <PublicActionLink href={loginHref} label="Contributor sign in" primary /> : null}
-                    {printHref ? <PublicActionLink href={printHref} label="Print / PDF" /> : null}
-                    <PublicViewTourHost />
-                    {exportCsvHref ? <PublicActionLink href={exportCsvHref} label="Export CSV" /> : null}
-                    {contributorInstructionsHref ? (
-                      <PublicActionLink href={contributorInstructionsHref} label="Contributor instructions" newWindow />
-                    ) : null}
-                  </div>
                 )}
               </div>
               {activeView.presentation?.hideHeader ? <div className="flex min-w-0 w-full items-center">{layoutSwitcher}</div> : null}
@@ -532,10 +503,7 @@ export default async function PublicViewPage({
                 editingConfig={editingConfig}
                 editableRowIds={editableRowIds}
                 adminUnrestrictedEditing={adminUnrestrictedEditing}
-                adminEditingLabel={adminEditingLabel}
                 contributorRowsFiltered={Boolean(contributorEmail && editableRowIds.length > 0)}
-                printHref={printHref ?? undefined}
-                contributorInstructionsHref={contributorInstructionsHref ?? undefined}
               />
             </ToastProvider>
           </section>

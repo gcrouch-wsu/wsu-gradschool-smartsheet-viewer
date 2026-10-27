@@ -133,7 +133,7 @@ export default function ContributorInstructionsPage() {
                 <li>Sign in.</li>
                 <li>Find your row.</li>
                 <li>
-                  Click <strong className="text-[color:var(--wsu-ink)]">Edit</strong>.
+                  Click the <strong className="text-[color:var(--wsu-ink)]">edit</strong> icon.
                 </li>
                 <li>Update the fields shown.</li>
                 <li>
