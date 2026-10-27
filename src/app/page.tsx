@@ -46,7 +46,7 @@ export default async function HomePage() {
         actions={
           <>
             <Link href="/student" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
-              My submissions
+              Student portal
             </Link>
             <Link href="/instructions/admin" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               Admin guide

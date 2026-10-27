@@ -7,9 +7,9 @@ import {
 } from "@/components/forms/submission/FormBrandHeader";
 
 export const metadata: Metadata = {
-  title: "Contributor help - create an account and edit your row",
+  title: "Contributor help - sign in and edit your row",
   description:
-    "Help for WSU contributors: create a password, sign in, and update your own row on a published Smartsheet view.",
+    "Help for WSU contributors: sign in with your WSU account and update your own row on a published Smartsheet view.",
 };
 
 export default function ContributorInstructionsPage() {
@@ -87,8 +87,8 @@ export default function ContributorInstructionsPage() {
                   .
                 </li>
                 <li>
-                  You do not choose first-time access yourself — after you enter your email, the system checks whether you
-                  need to create a password or sign in.
+                  Sign in with your WSU account. Access is granted only when your email appears in the contact field for
+                  that page.
                 </li>
               </ul>
             </section>
@@ -99,8 +99,8 @@ export default function ContributorInstructionsPage() {
               </h2>
               <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
                 <li>The page link you were sent</li>
-                <li>Your WSU email address</li>
-                <li>A contributor password (separate from your WSU password)</li>
+                <li>Your WSU email address (@wsu.edu)</li>
+                <li>Access to Sign in with WSU (campus Okta)</li>
               </ul>
             </section>
 
@@ -113,34 +113,15 @@ export default function ContributorInstructionsPage() {
                 <li>
                   Select <strong className="text-[color:var(--wsu-ink)]">Contributor sign in</strong>.
                 </li>
-                <li>Enter your WSU email address and continue.</li>
                 <li>
-                  The page will either ask you to <strong className="text-[color:var(--wsu-ink)]">create a password</strong>{" "}
-                  (first time) or <strong className="text-[color:var(--wsu-ink)]">sign in</strong> (if you already set one).
+                  Choose <strong className="text-[color:var(--wsu-ink)]">Sign in with WSU</strong> and complete campus
+                  login.
                 </li>
-                <li>Submit the form.</li>
+                <li>Return to the page and edit your assigned rows.</li>
               </ol>
               <p className="mt-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
-                Your contributor password is separate from your WSU password.
-              </p>
-              <div className="mt-4 rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/20 p-4 text-sm text-[color:var(--wsu-muted)]">
-                <p className="font-medium text-[color:var(--wsu-ink)]">Password rule</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  <li>at least 8 characters</li>
-                  <li>at least 1 uppercase letter</li>
-                  <li>at least 1 number</li>
-                  <li>
-                    at least 1 special character such as{" "}
-                    <code className="rounded bg-white px-1.5 py-0.5 text-xs">!</code>,{" "}
-                    <code className="rounded bg-white px-1.5 py-0.5 text-xs">*</code>, or{" "}
-                    <code className="rounded bg-white px-1.5 py-0.5 text-xs">_</code>
-                  </li>
-                </ul>
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
-                If you see a message about{" "}
-                <strong className="text-[color:var(--wsu-ink)]">too many sign-in attempts</strong>, wait about fifteen
-                minutes before trying again, or contact the administrator who manages the page.
+                You do not create a separate contributor password when WSU sign-in is enabled. If Okta is not configured
+                for a local or test environment, the page may still ask for an app password instead.
               </p>
             </section>
 
@@ -152,7 +133,7 @@ export default function ContributorInstructionsPage() {
                 <li>Sign in.</li>
                 <li>Find your row.</li>
                 <li>
-                  Click <strong className="text-[color:var(--wsu-ink)]">Edit</strong>.
+                  Click the <strong className="text-[color:var(--wsu-ink)]">edit</strong> icon.
                 </li>
                 <li>Update the fields shown.</li>
                 <li>
@@ -224,17 +205,18 @@ export default function ContributorInstructionsPage() {
 
             <section aria-labelledby="s-reset">
               <h2 id="s-reset" className="text-xl font-semibold text-[color:var(--wsu-ink)] sm:text-2xl">
-                Password reset
+                Cannot sign in
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
-                There is no self-service password reset. If you cannot sign in, contact{" "}
+                If Sign in with WSU fails, or your email is not recognized on the page, contact{" "}
                 <a
                   href="mailto:gradschool@wsu.edu"
                   className="font-medium text-[color:var(--wsu-crimson)] underline underline-offset-2"
                 >
                   gradschool@wsu.edu
-                </a>{" "}
-                and ask for a password reset link from the administrator for your page.
+                </a>
+                . For campus account problems, use WSU ITS support. On environments that still use an app password, ask
+                the page administrator for a reset link.
               </p>
             </section>
 
@@ -244,7 +226,7 @@ export default function ContributorInstructionsPage() {
               </h2>
               <div className="mt-4 space-y-4 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
                 <div>
-                  <h3 className="font-semibold text-[color:var(--wsu-ink)]">I cannot create an account</h3>
+                  <h3 className="font-semibold text-[color:var(--wsu-ink)]">I cannot sign in</h3>
                   <p className="mt-2">
                     In most cases your WSU email is not listed on the Smartsheet row for that page. Contact{" "}
                     <a
@@ -288,7 +270,7 @@ export default function ContributorInstructionsPage() {
                 <a href="mailto:gradschool@wsu.edu" className="font-medium underline underline-offset-2">
                   gradschool@wsu.edu
                 </a>{" "}
-                for help with contributor access, password reset, or editing problems.
+                for help with contributor access or editing problems.
               </p>
             </section>
           </main>

@@ -65,12 +65,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
+  const { clearAllAppSessionCookies } = await import("@/lib/okta/clear-session");
   const response = NextResponse.json({ ok: true });
-  response.cookies.set({
-    ...getAdminSessionCookieSettings(),
-    name: ADMIN_SESSION_COOKIE_NAME,
-    value: "",
-    maxAge: 0,
-  });
+  clearAllAppSessionCookies(response);
   return response;
 }

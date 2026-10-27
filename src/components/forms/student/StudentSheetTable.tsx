@@ -27,9 +27,13 @@ type SheetSummary = {
 export function StudentSheetTable({
   initialEmail,
   page = "1",
+  oktaEnabled = false,
+  errorMessage = null,
 }: {
   initialEmail: string | null;
   page?: string;
+  oktaEnabled?: boolean;
+  errorMessage?: string | null;
 }) {
   const [sheets, setSheets] = useState<SheetSummary[]>([]);
   const [email, setEmail] = useState(initialEmail);
@@ -81,7 +85,11 @@ export function StudentSheetTable({
   if (!email) {
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
-        <StudentLoginForm returnHref="/student" />
+        <StudentLoginForm
+          returnHref="/student"
+          oktaEnabled={oktaEnabled}
+          errorMessage={errorMessage}
+        />
       </div>
     );
   }
@@ -90,8 +98,8 @@ export function StudentSheetTable({
     <section className="rounded-xl border border-line bg-surface">
       <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
         <div data-tour="sm-heading">
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Student portal</p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">My submission sheets</h2>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Graduate School</p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">Student portal</h2>
           <p className="mt-1 text-sm text-sub">Sheets that contain your Student Email.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:max-w-xs">

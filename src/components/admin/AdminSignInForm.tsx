@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { startTransition, useId, useState } from "react";
+import { OktaSignInButton } from "@/components/auth/OktaSignInButton";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 
 type AdminMode = "sign_in" | "claim";
@@ -10,6 +11,9 @@ type Step = "username" | "password";
 interface AdminSignInFormProps {
   nextPath: string;
   disabled?: boolean;
+  /** When true, show WSU Okta sign-in instead of local password forms. */
+  oktaEnabled?: boolean;
+  errorMessage?: string | null;
 }
 
 const fieldClass =
@@ -95,7 +99,12 @@ function ErrorAlert({ id, message }: { id: string; message: string }) {
   );
 }
 
-export function AdminSignInForm({ nextPath, disabled = false }: AdminSignInFormProps) {
+export function AdminSignInForm({
+  nextPath,
+  disabled = false,
+  oktaEnabled = false,
+  errorMessage = null,
+}: AdminSignInFormProps) {
   const router = useRouter();
   const errorId = useId();
   const [step, setStep] = useState<Step>("username");
@@ -106,6 +115,17 @@ export function AdminSignInForm({ nextPath, disabled = false }: AdminSignInFormP
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [entered, setEntered] = useState(true);
+
+  if (oktaEnabled) {
+    return (
+      <OktaSignInButton
+        intent="admin"
+        nextPath={nextPath}
+        disabled={disabled}
+        errorMessage={errorMessage}
+      />
+    );
+  }
 
   function animateStepChange(next: () => void) {
     setEntered(false);

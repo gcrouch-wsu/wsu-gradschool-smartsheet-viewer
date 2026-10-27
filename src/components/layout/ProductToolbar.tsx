@@ -78,19 +78,17 @@ export function ProductToolbar({
   async function handleSignOut() {
     setSigningOut(true);
     try {
+      // Clears app cookies; Okta post-logout returns to site root (ITS-registered URI).
+      window.location.assign("/api/auth/okta/logout?next=/");
+    } catch {
+      setSigningOut(false);
       if (variant === "admin" || isStaffSession) {
         await fetch("/api/admin/session", { method: "DELETE" });
       } else {
         await fetch("/api/forms/approver/session", { method: "DELETE" });
       }
-      if (variant === "admin") {
-        router.replace("/admin/sign-in");
-      } else {
-        router.replace("/admin/sign-in?next=/admin/sources");
-      }
+      router.replace(variant === "admin" ? "/admin/sign-in" : "/admin/sign-in?next=/admin/sources");
       router.refresh();
-    } finally {
-      setSigningOut(false);
     }
   }
 

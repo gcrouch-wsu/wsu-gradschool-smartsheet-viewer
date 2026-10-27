@@ -59,15 +59,20 @@ export function DataList({
   }
 
   const dividerStyle = view.presentation?.rowDividerStyle ?? "default";
-  const listDividerClass =
-    dividerStyle === "none" ? "" : dividerStyle === "subtle" ? "divide-y divide-[color:var(--wsu-border)]/40" : "divide-y divide-[color:var(--wsu-border)]/70";
+  const itemFrameClass =
+    dividerStyle === "none"
+      ? "border-0"
+      : dividerStyle === "subtle"
+        ? "border border-[color:var(--wsu-border)]/40"
+        : "border border-[color:var(--wsu-border)]";
+  const listItemFrame = `list-none rounded-2xl sm:rounded-[1.75rem] ${itemFrameClass} bg-[color:var(--wsu-paper)] px-4 py-4 shadow-[0_16px_40px_rgba(35,31,32,0.06)] sm:px-5 sm:py-5`;
 
   function renderListItem(row: ResolvedViewRow) {
     const isEditingThisRow = editingRowId === row.id || (row.mergedSourceRowIds?.includes(editingRowId ?? -1) ?? false);
 
     if (isEditingThisRow && onCancelEdit) {
       return (
-        <li key={row.id} id={`row-${row.id}`} className="scroll-mt-24 list-none px-5 py-5">
+        <li key={row.id} id={`row-${row.id}`} className={`scroll-mt-24 ${listItemFrame}`}>
           <ContributorCardEditShell slug={slug} view={view} row={row} onCancel={onCancelEdit} />
         </li>
       );
@@ -86,7 +91,7 @@ export function DataList({
 
     if (customRows.length > 0) {
       return (
-        <li key={row.id} id={`row-${row.id}`} className={`scroll-mt-24 px-5 py-5 ${getContributorRowAccentClass(isEditable)}`}>
+        <li key={row.id} id={`row-${row.id}`} className={`view-record-scroll scroll-mt-24 ${listItemFrame} ${getContributorRowAccentClass(isEditable)}`}>
           {isEditable && (
             <div className="mb-4 flex items-center justify-between gap-3">
               <ContributorEditableBadge />
@@ -145,7 +150,7 @@ export function DataList({
     }
 
     return (
-      <li key={row.id} id={`row-${row.id}`} className={`scroll-mt-24 px-5 py-5 ${getContributorRowAccentClass(isEditable)}`}>
+      <li key={row.id} id={`row-${row.id}`} className={`view-record-scroll scroll-mt-24 ${listItemFrame} ${getContributorRowAccentClass(isEditable)}`}>
         {isEditable && (
           <div className="mb-4 flex items-center justify-between gap-3">
             <ContributorEditableBadge />
@@ -179,9 +184,7 @@ export function DataList({
                 ) : null}
               </header>
             ) : null}
-            <div className="overflow-hidden rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-              <ul className={listDividerClass}>{group.rows.map((row) => renderListItem(row))}</ul>
-            </div>
+            <ul className="list-none space-y-4 p-0 md:space-y-5">{group.rows.map((row) => renderListItem(row))}</ul>
           </section>
         ))}
       </div>
@@ -189,8 +192,6 @@ export function DataList({
   }
 
   return (
-    <div className="overflow-hidden rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-      <ul className={listDividerClass}>{view.rows.map((row) => renderListItem(row))}</ul>
-    </div>
+    <ul className="list-none space-y-4 p-0 md:space-y-5">{view.rows.map((row) => renderListItem(row))}</ul>
   );
 }

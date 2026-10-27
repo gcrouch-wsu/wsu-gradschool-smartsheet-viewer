@@ -133,13 +133,28 @@ export function DataAccordion({
                   {isEditable && (
                     <ContributorEditButton rowId={editTargetId} onEditRow={onEditRow} compact stopPropagation />
                   )}
-                  <span className="view-control px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] group-open:border-[color:var(--view-accent,var(--wsu-crimson))] group-open:text-[color:var(--view-accent,var(--wsu-crimson))]">
-                    <span className="group-open:hidden">Expand</span>
-                    <span className="hidden group-open:inline">Collapse</span>
+                  <span
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-muted)] group-open:border-[color:var(--view-accent,var(--wsu-crimson))] group-open:text-[color:var(--view-accent,var(--wsu-crimson))]"
+                    title="Expand or collapse"
+                  >
+                    <svg
+                      className="h-4 w-4 transition-transform group-open:rotate-180"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                    <span className="sr-only group-open:hidden">Expand</span>
+                    <span className="sr-only hidden group-open:inline">Collapse</span>
                   </span>
                 </div>
               </summary>
-              <div className={`border-t ${innerBorderClass} px-5 py-5`}>
+              <div className={`view-record-scroll border-t ${innerBorderClass} px-5 py-5`}>
                 <MergedRowCampusBadges
                   row={row}
                   suppressWhenProgramSections={suppressMergedRowCampusBadgesWhenSectionStripShows(view.presentation)}
@@ -212,13 +227,28 @@ export function DataAccordion({
                 {isEditable && (
                   <ContributorEditButton rowId={editTargetId} onEditRow={onEditRow} compact stopPropagation />
                 )}
-                <span className="view-control px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] group-open:border-[color:var(--view-accent,var(--wsu-crimson))] group-open:text-[color:var(--view-accent,var(--wsu-crimson))]">
-                  <span className="group-open:hidden">Expand</span>
-                  <span className="hidden group-open:inline">Collapse</span>
+                <span
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-muted)] group-open:border-[color:var(--view-accent,var(--wsu-crimson))] group-open:text-[color:var(--view-accent,var(--wsu-crimson))]"
+                  title="Expand or collapse"
+                >
+                  <svg
+                    className="h-4 w-4 transition-transform group-open:rotate-180"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                  <span className="sr-only group-open:hidden">Expand</span>
+                  <span className="sr-only hidden group-open:inline">Collapse</span>
                 </span>
               </div>
             </summary>
-            <div className={`border-t ${innerBorderClass} px-5 py-5`}>
+            <div className={`view-record-scroll border-t ${innerBorderClass} px-5 py-5`}>
               {!cardLayoutIncludesCampusBadges(view) ? (
                 <MergedRowCampusBadges
                   row={row}

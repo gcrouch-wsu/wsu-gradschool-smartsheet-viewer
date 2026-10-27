@@ -83,7 +83,7 @@ export function StudentSubmissionTable({
       <div className="flex flex-col gap-4 border-b border-line px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
         <div data-tour="ss-heading">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-crimson">Submission sheet</p>
-          <h2 className="mt-1 text-xl font-semibold text-ink">{sheetName || "My submissions"}</h2>
+          <h2 className="mt-1 text-xl font-semibold text-ink">{sheetName || "Student portal"}</h2>
           <p className="mt-1 text-sm text-sub">Select a submission to view its details or propose a reroute.</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:max-w-xs">
@@ -121,7 +121,7 @@ export function StudentSubmissionTable({
               <EmptyState
                 icon={<span className="text-sm font-semibold">M</span>}
                 title="No matching submissions"
-                description="Try a different search, or return to My submissions to choose another sheet."
+                description="Try a different search, or return to the student portal to choose another sheet."
                 variant="panel"
               />
             }

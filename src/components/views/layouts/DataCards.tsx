@@ -102,7 +102,7 @@ export function DataCards({
         <article
           key={row.id}
           id={`row-${row.id}`}
-          className={`scroll-mt-24 rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-5 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
+          className={`view-record-scroll scroll-mt-24 rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-5 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
         >
           {isEditable && (
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -162,7 +162,7 @@ export function DataCards({
       <article
         key={row.id}
         id={`row-${row.id}`}
-        className={`scroll-mt-24 rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-5 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
+        className={`view-record-scroll scroll-mt-24 rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-5 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
       >
         {isEditable && (
           <div className="mb-4 flex items-center justify-between gap-3">

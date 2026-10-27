@@ -227,6 +227,49 @@ export async function addUserRole(userId: string, role: AssignablePlatformRole) 
   ]);
 }
 
+/**
+ * Ensure a platform user exists for Okta (and similar SSO) flows.
+ * Creates the account without a local password when missing, then grants the role.
+ */
+export async function ensurePlatformUserWithRole(
+  email: string,
+  role: AssignablePlatformRole,
+  displayName?: string,
+): Promise<PlatformUserRecord> {
+  await ensureTables();
+  const normalized = normalizeEmail(email);
+  if (!normalized) {
+    throw new Error("Email is required.");
+  }
+
+  const existing = await getPlatformUserByEmail(normalized);
+  if (existing) {
+    if (displayName?.trim() && !existing.displayName) {
+      await queryConfigDb(`UPDATE users SET display_name = $1, updated_at = now() WHERE id = $2`, [
+        displayName.trim(),
+        existing.id,
+      ]);
+    }
+    await addUserRole(existing.id, role);
+    const updated = await getPlatformUserById(existing.id);
+    if (!updated) throw new Error("User not found after role grant.");
+    return updated;
+  }
+
+  const { rows } = await queryConfigDb<{ id: string }>(
+    `INSERT INTO users (email, display_name, password_hash, password_salt, is_active)
+     VALUES ($1, $2, $3, $4, true)
+     RETURNING id`,
+    [normalized, displayName?.trim() || null, "", ""],
+  );
+  const id = rows[0]?.id;
+  if (!id) throw new Error("Failed to create user.");
+  await addUserRole(id, role);
+  const created = await getPlatformUserById(id);
+  if (!created) throw new Error("User not found after create.");
+  return created;
+}
+
 export interface SavePlatformUserInput {
   id?: string;
   email: string;
