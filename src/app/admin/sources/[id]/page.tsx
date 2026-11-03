@@ -18,7 +18,7 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         eyebrow="Admin builder"
         title={source?.label ?? "New source"}

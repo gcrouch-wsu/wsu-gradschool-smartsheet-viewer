@@ -40,7 +40,7 @@ export default async function SourcesIndexPage() {
   });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-5">
       <PageHeader
         eyebrow="Admin builder"
         title="Sources"

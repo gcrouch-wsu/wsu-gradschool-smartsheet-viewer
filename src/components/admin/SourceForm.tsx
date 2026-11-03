@@ -133,10 +133,10 @@ function SmartsheetResourcePicker({
     return (
       <div className="flex flex-col gap-2" ref={rootRef}>
         <div className="flex h-6 items-center justify-between gap-2">
-          <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Smartsheet ID</span>
+          <span className="text-sm font-medium text-ink">Smartsheet ID</span>
           <button
             type="button"
-            className="shrink-0 whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
+            className="shrink-0 whitespace-nowrap text-xs font-medium text-crimson hover:underline"
             onClick={() => setManualMode(false)}
           >
             Use searchable list
@@ -154,9 +154,9 @@ function SmartsheetResourcePicker({
             }
           }}
           placeholder="From sheet/report URL"
-          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+          className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink"
         />
-        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
+        <p className="min-h-4 text-xs text-sub">
           Numeric ID from the Smartsheet URL when the resource isn&apos;t in the list.
         </p>
       </div>
@@ -166,13 +166,13 @@ function SmartsheetResourcePicker({
   return (
     <div className="flex flex-col gap-2" ref={rootRef}>
       <div className="flex h-6 items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium text-[color:var(--wsu-ink)]">
+        <span className="truncate text-sm font-medium text-ink">
           {sourceType === "report" ? "Smartsheet report" : "Smartsheet sheet"}
         </span>
         <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
-            className="whitespace-nowrap text-xs font-medium text-[color:var(--wsu-muted)] hover:text-wsu-crimson hover:underline disabled:opacity-50"
+            className="whitespace-nowrap text-xs font-medium text-sub hover:text-crimson hover:underline disabled:opacity-50"
             onClick={() => void loadCatalog()}
             disabled={loading}
           >
@@ -180,7 +180,7 @@ function SmartsheetResourcePicker({
           </button>
           <button
             type="button"
-            className="whitespace-nowrap text-xs font-medium text-wsu-crimson hover:underline"
+            className="whitespace-nowrap text-xs font-medium text-crimson hover:underline"
             onClick={() => {
               setManualMode(true);
               setOpen(false);
@@ -208,17 +208,17 @@ function SmartsheetResourcePicker({
           }}
           placeholder={loading ? `Loading ${sourceType}s…` : `Search ${sourceType}s by name or ID…`}
           disabled={loading && items.length === 0}
-          className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
+          className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-crimson"
         />
 
         {open ? (
           <ul
             id="smartsheet-catalog-listbox"
             role="listbox"
-            className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-[color:var(--wsu-border)] bg-white py-1 shadow-lg"
+            className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-line bg-white py-1 shadow-lg"
           >
             {filtered.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
+              <li className="px-4 py-3 text-sm text-sub">
                 {loading ? "Loading…" : error || `No matching ${sourceType}s.`}
               </li>
             ) : (
@@ -229,8 +229,8 @@ function SmartsheetResourcePicker({
                     <button
                       type="button"
                       className={[
-                        "flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-[color:var(--wsu-stone)]",
-                        isActive ? "bg-wsu-crimson/5 text-wsu-crimson" : "text-[color:var(--wsu-ink)]",
+                        "flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm hover:bg-wsu-stone",
+                        isActive ? "bg-[var(--crimson-soft)] text-crimson" : "text-ink",
                       ].join(" ")}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => {
@@ -240,14 +240,14 @@ function SmartsheetResourcePicker({
                       }}
                     >
                       <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
-                      <span className="shrink-0 text-xs text-[color:var(--wsu-muted)]">ID {item.id}</span>
+                      <span className="shrink-0 text-xs text-sub">ID {item.id}</span>
                     </button>
                   </li>
                 );
               })
             )}
             {filtered.length > 100 ? (
-              <li className="border-t border-[color:var(--wsu-border)] px-4 py-2 text-xs text-[color:var(--wsu-muted)]">
+              <li className="border-t border-line px-4 py-2 text-xs text-sub">
                 Showing first 100 matches — type to narrow the list.
               </li>
             ) : null}
@@ -258,7 +258,7 @@ function SmartsheetResourcePicker({
       {error && !loading ? (
         <p className="min-h-4 text-xs text-amber-800">{error}</p>
       ) : (
-        <p className="min-h-4 text-xs text-[color:var(--wsu-muted)]">
+        <p className="min-h-4 text-xs text-sub">
           {items.length
             ? `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
             : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
@@ -380,9 +380,9 @@ function RoleGroupColumnSelect({
   if (!schemaLoaded || sorted.length === 0) {
     return (
       <div className="space-y-0.5">
-        <p className="break-words text-[color:var(--wsu-ink)]">{selectorLabel(value)}</p>
-        <p className="text-[10px] text-[color:var(--wsu-muted)]">
-          Use <strong className="font-medium text-[color:var(--wsu-ink)]">Test + Fetch Schema</strong> on this page. Then
+        <p className="break-words text-ink">{selectorLabel(value)}</p>
+        <p className="text-[10px] text-sub">
+          Use <strong className="font-medium text-ink">Test + Fetch Schema</strong> on this page. Then
           column <strong className="font-medium">dropdowns</strong> replace this note so you can map fields.
         </p>
       </div>
@@ -395,7 +395,7 @@ function RoleGroupColumnSelect({
       aria-label={accessibilityLabel}
       value={selectValue}
       onChange={(e) => onChange(selectorFromColumnPick(sorted, e.target.value, value))}
-      className="w-full min-w-[10rem] max-w-[22rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 text-xs text-[color:var(--wsu-ink)]"
+      className="w-full min-w-[10rem] max-w-[22rem] rounded-lg border border-line bg-white px-2 py-1.5 text-xs text-ink"
     >
       <option value="">— Unmapped —</option>
       {orphanSelected ? (
@@ -772,18 +772,23 @@ export function SourceForm({
     });
   }
 
+  const fieldClass =
+    "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink disabled:bg-wsu-stone";
+  const outlineBtnClass =
+    "rounded-full border border-line bg-white px-3.5 py-2 text-sm font-medium text-sub hover:border-crimson hover:text-crimson";
+  const sectionClass = "border-t border-line pt-6 first:border-t-0 first:pt-0";
+  const sectionTitleClass = "font-serif text-lg font-medium tracking-[-0.01em] text-ink sm:text-xl";
+  const sectionDescClass = "mt-1.5 max-w-[68ch] text-[13px] leading-6 text-sub";
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div data-tour="asf-heading">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">
-              Source Registry
+    <div className="space-y-6" data-tour="asf-heading">
+      <section className={sectionClass}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-crimson">
+              Connection
             </p>
-            <h1 className="mt-2 text-3xl font-semibold text-[color:var(--wsu-ink)]">
-              {isNew ? "Create source" : `Edit source: ${initialSource?.label ?? form.label}`}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-[color:var(--wsu-muted)]">
+            <p className="mt-1 max-w-[58ch] text-[13px] leading-6 text-sub">
               Register the Smartsheet source once, then point one or more views at it.
             </p>
           </div>
@@ -795,7 +800,7 @@ export function SourceForm({
                 onClick={() => startTransition(() => {
                   void deleteSource();
                 })}
-                className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:border-rose-400 hover:text-rose-800"
+                className="rounded-full border border-rose-200 bg-white px-3.5 py-2 text-sm font-medium text-rose-700 hover:border-rose-400 hover:text-rose-800"
               >
                 {isPending ? "Working..." : "Delete Source"}
               </button>
@@ -806,7 +811,7 @@ export function SourceForm({
               onClick={() => startTransition(() => {
                 void fetchSchema();
               })}
-              className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
+              className={outlineBtnClass}
             >
               {isPending ? "Working..." : "Test + Fetch Schema"}
             </button>
@@ -816,7 +821,7 @@ export function SourceForm({
               onClick={() => startTransition(() => {
                 void saveSource();
               })}
-              className="rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--wsu-crimson-dark)]"
+              className="rounded-full bg-crimson px-3.5 py-2 text-sm font-medium text-white hover:bg-[var(--crimson-deep)]"
             >
               {isPending ? "Saving..." : "Save Source"}
             </button>
@@ -834,32 +839,32 @@ export function SourceForm({
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2" data-tour="asf-identity">
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Source ID</span>
+        <div className="mt-5 grid gap-4 md:grid-cols-2" data-tour="asf-identity">
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">Source ID</span>
             <input
               value={form.id}
               disabled={!isNew}
               onChange={(event) => update("id", event.target.value)}
               placeholder="e.g. grad-programs"
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 disabled:bg-[color:var(--wsu-stone)]"
+              className={fieldClass}
             />
-            <p className="text-xs text-[color:var(--wsu-muted)]">Unique, URL-safe identifier. Set once at creation; cannot be changed.</p>
+            <p className="text-xs text-sub">Unique, URL-safe identifier. Set once at creation; cannot be changed.</p>
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Label</span>
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">Label</span>
             <input
               value={form.label}
               onChange={(event) => update("label", event.target.value)}
               placeholder="e.g. Graduate Programs"
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+              className={fieldClass}
             />
-            <p className="text-xs text-[color:var(--wsu-muted)]">Display name shown in the admin UI. Editable anytime.</p>
+            <p className="text-xs text-sub">Display name shown in the admin UI. Editable anytime.</p>
           </label>
           <div className="contents">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <div className="flex h-6 items-center">
-                <span className="text-sm font-medium text-[color:var(--wsu-ink)]">Source type</span>
+                <span className="text-sm font-medium text-ink">Source type</span>
               </div>
               <select
                 value={form.sourceType}
@@ -874,7 +879,7 @@ export function SourceForm({
                   setSchema(null);
                   setSchemaError("");
                 }}
-                className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3 text-sm"
+                className={fieldClass}
               >
                 <option value="sheet">Sheet</option>
                 <option value="report">Report</option>
@@ -905,13 +910,13 @@ export function SourceForm({
               }}
             />
           </div>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Connection key</span>
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">Connection key</span>
             <input
               list="connection-keys"
               value={form.connectionKey ?? ""}
               onChange={(event) => update("connectionKey", event.target.value)}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+              className={fieldClass}
             />
             <datalist id="connection-keys">
               {connectionOptions.map((key) => (
@@ -919,35 +924,35 @@ export function SourceForm({
               ))}
             </datalist>
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">API base URL</span>
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">API base URL</span>
             <input
               value={form.apiBaseUrl ?? ""}
               onChange={(event) => update("apiBaseUrl", event.target.value)}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+              className={fieldClass}
             />
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Cache TTL seconds</span>
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">Cache TTL seconds</span>
             <input
               type="number"
               value={form.cacheTtlSeconds ?? 120}
               onChange={(event) => update("cacheTtlSeconds", Number(event.target.value) || 0)}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+              className={fieldClass}
             />
           </label>
-          <label className="space-y-2 text-sm">
-            <span className="font-medium text-[color:var(--wsu-ink)]">Fetch level</span>
+          <label className="space-y-1.5 text-sm">
+            <span className="font-medium text-ink">Fetch level</span>
             <input
               type="number"
               value={form.fetchOptions?.level ?? 2}
               onChange={(event) => updateFetchOption("level", Number(event.target.value) || 0)}
-              className="w-full rounded-2xl border border-[color:var(--wsu-border)] bg-white px-4 py-3"
+              className={fieldClass}
             />
           </label>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-4 text-sm text-[color:var(--wsu-muted)]">
+        <div className="mt-5 flex flex-wrap gap-4 text-sm text-sub">
           <label className="inline-flex items-center gap-2">
             <input
               type="checkbox"
@@ -968,17 +973,17 @@ export function SourceForm({
       </section>
 
       {form.sourceType === "sheet" ? (
-        <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
+        <section className={sectionClass}>
           <div>
-            <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Student portal</h2>
-            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+            <h2 className={sectionTitleClass}>Student portal</h2>
+            <p className={sectionDescClass}>
               Students signed in at <code className="text-xs">/student</code> can discover this sheet when their email
               appears in a Student Email column. Forms-enabled sheets are included by default; use the toggle for
               views-only sheets.
             </p>
           </div>
 
-          <label className="mt-4 inline-flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+          <label className="mt-4 inline-flex items-center gap-2 text-sm text-ink">
             <input
               type="checkbox"
               checked={Boolean(form.studentVisible)}
@@ -988,17 +993,17 @@ export function SourceForm({
           </label>
 
           <div className="mt-4 space-y-2">
-            <p className="text-sm font-medium text-[color:var(--wsu-ink)]">Student Email columns</p>
-            <p className="text-xs text-[color:var(--wsu-muted)]">
+            <p className="text-sm font-medium text-ink">Student Email columns</p>
+            <p className="text-xs text-sub">
               Fetch schema preview to pick columns. If none are selected, the portal looks for a column titled
               &quot;Student Email&quot;, then a form field marked as email.
             </p>
             {schema?.columns?.length ? (
-              <div className="mt-2 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-[color:var(--wsu-border)] bg-white p-3">
+              <div className="mt-2 max-h-56 space-y-2 overflow-y-auto rounded-xl border border-line bg-white p-3">
                 {schema.columns.map((column) => {
                   const checked = (form.studentEmailColumnIds ?? []).includes(column.id);
                   return (
-                    <label key={column.id} className="flex items-center gap-2 text-sm text-[color:var(--wsu-ink)]">
+                    <label key={column.id} className="flex items-center gap-2 text-sm text-ink">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -1012,19 +1017,19 @@ export function SourceForm({
                       />
                       <span>
                         {column.title}{" "}
-                        <span className="text-xs text-[color:var(--wsu-muted)]">({column.type})</span>
+                        <span className="text-xs text-sub">({column.type})</span>
                       </span>
                     </label>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-xs text-[color:var(--wsu-muted)]">Fetch the schema preview below to choose columns.</p>
+              <p className="text-xs text-sub">Fetch the schema preview below to choose columns.</p>
             )}
             {(form.studentEmailColumnIds?.length ?? 0) > 0 ? (
               <button
                 type="button"
-                className="text-xs font-medium text-[color:var(--wsu-crimson)] underline underline-offset-2"
+                className="text-xs font-medium text-crimson underline underline-offset-2"
                 onClick={() => update("studentEmailColumnIds", undefined)}
               >
                 Clear selected columns
@@ -1034,14 +1039,11 @@ export function SourceForm({
         </section>
       ) : null}
 
-      <section
-        className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]"
-        data-tour="asf-schema"
-      >
+      <section className={sectionClass} data-tour="asf-schema">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Schema preview</h2>
-            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
+            <h2 className={sectionTitleClass}>Schema preview</h2>
+            <p className={sectionDescClass}>
               Fetch the schema first. Use it to verify the connection, merge detected role groups, and enable column dropdowns in Role groups below.
             </p>
           </div>
@@ -1052,32 +1054,32 @@ export function SourceForm({
         {schema ? (
           <div className="mt-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-4 text-sm text-[color:var(--wsu-muted)]">
+              <div className="rounded-xl border border-line bg-white p-4 text-sm text-sub">
                 <p>
-                  <span className="font-semibold text-[color:var(--wsu-ink)]">Source:</span> {schema.name}
+                  <span className="font-semibold text-ink">Source:</span> {schema.name}
                 </p>
                 <p className="mt-1">
-                  <span className="font-semibold text-[color:var(--wsu-ink)]">Columns:</span> {schema.columns.length}
+                  <span className="font-semibold text-ink">Columns:</span> {schema.columns.length}
                 </p>
                 <p className="mt-1">
-                  <span className="font-semibold text-[color:var(--wsu-ink)]">Rows returned:</span> {schema.rowCount}
+                  <span className="font-semibold text-ink">Rows returned:</span> {schema.rowCount}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => startTransition(() => mergeDetectedRoleGroupsFromSchema())}
-                className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)]"
+                className={outlineBtnClass}
               >
                 Merge detected role groups
               </button>
             </div>
             {form.roleGroups && form.roleGroups.length > 0 && (
-              <p className="text-xs text-[color:var(--wsu-muted)]">
+              <p className="text-xs text-sub">
                 This source has {form.roleGroups.length} role group(s). Merge adds groups from column title patterns; adjust column mappings in{" "}
-                <strong className="font-medium text-[color:var(--wsu-ink)]">Role groups</strong> next.
+                <strong className="font-medium text-ink">Role groups</strong> next.
               </p>
             )}
-            <div className="overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white">
+            <div className="overflow-hidden rounded-xl border border-line bg-white">
               <DataTable
                 columns={[
                   {
@@ -1103,37 +1105,34 @@ export function SourceForm({
                 data={schema.columns}
                 getRowKey={(column) => column.id}
                 plainRows
-                headerClassName="bg-[color:var(--wsu-stone)]/70"
-                rowClassName="border-t border-[color:var(--wsu-border)]/60"
+                headerClassName="bg-wsu-stone/70"
+                rowClassName="border-t border-line/60"
               />
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-[color:var(--wsu-muted)]">No schema loaded yet.</p>
+          <p className="mt-4 text-sm text-sub">No schema loaded yet.</p>
         )}
       </section>
 
-      <section
-        className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]"
-        data-tour="asf-roles"
-      >
+      <section className={sectionClass} data-tour="asf-roles">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)]">Role groups</h2>
-            <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-              <strong className="font-medium text-[color:var(--wsu-ink)]">Fetch the schema first</strong> in{" "}
-              <strong className="font-medium text-[color:var(--wsu-ink)]">Schema preview</strong> above — mapping and saves expect a loaded column list. Then map
+            <h2 className={sectionTitleClass}>Role groups</h2>
+            <p className={sectionDescClass}>
+              <strong className="font-medium text-ink">Fetch the schema first</strong> in{" "}
+              <strong className="font-medium text-ink">Schema preview</strong> above — mapping and saves expect a loaded column list. Then map
               each person-slot to columns for name, email, phone, and optional campus. A group can have{" "}
-              <strong className="font-medium text-[color:var(--wsu-ink)]">one slot</strong> (e.g. a single assessment contact) or many. Merge detected groups only
-              finds titles like “Coordinator 1” / “Coordinator 1 Email”; use <strong className="font-medium text-[color:var(--wsu-ink)]">Add custom role group</strong>{" "}
-              for other column names. To drop a one-slot group, use <strong className="font-medium text-[color:var(--wsu-ink)]">Remove group</strong> on that card
-              (row <strong className="font-medium text-[color:var(--wsu-ink)]">Remove</strong> only removes a slot when you have two or more). For delimited groups,
+              <strong className="font-medium text-ink">one slot</strong> (e.g. a single assessment contact) or many. Merge detected groups only
+              finds titles like “Coordinator 1” / “Coordinator 1 Email”; use <strong className="font-medium text-ink">Add custom role group</strong>{" "}
+              for other column names. To drop a one-slot group, use <strong className="font-medium text-ink">Remove group</strong> on that card
+              (row <strong className="font-medium text-ink">Remove</strong> only removes a slot when you have two or more). For delimited groups,
               only enable trusted pairing when parallel columns stay in lockstep.
             </p>
           </div>
         </div>
 
-        <div className="mt-4 space-y-2 rounded-2xl border border-dashed border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/10 p-4">
+        <div className="mt-4 space-y-2 rounded-xl border border-dashed border-line bg-wsu-stone/10 p-4">
           {!schemaLoaded ? (
             <p className="text-xs text-amber-900 underline decoration-amber-700/50">
               Load the schema in <strong className="font-medium">Schema preview</strong> before adding a role group — otherwise column mapping and save can fail.
@@ -1141,14 +1140,14 @@ export function SourceForm({
           ) : null}
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex min-w-[14rem] flex-1 flex-col gap-1 text-xs">
-              <span className="font-semibold text-[color:var(--wsu-ink)]">Add custom role group</span>
+              <span className="font-semibold text-ink">Add custom role group</span>
               <input
                 type="text"
                 value={customRoleGroupLabel}
                 onChange={(e) => setCustomRoleGroupLabel(e.target.value)}
                 placeholder="e.g. Assessment support contact"
                 disabled={!schemaLoaded}
-                className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-3 py-2 text-sm text-[color:var(--wsu-ink)] disabled:opacity-50"
+                className="rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink disabled:opacity-50"
               />
             </label>
             <button
@@ -1160,7 +1159,7 @@ export function SourceForm({
                   ? undefined
                   : "Fetch schema in Schema preview first (Test + Fetch Schema or Fetch schema now)."
               }
-              className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-ink)] hover:border-[color:var(--wsu-crimson)] hover:text-[color:var(--wsu-crimson)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-crimson hover:text-crimson disabled:cursor-not-allowed disabled:opacity-50"
             >
               Add with one slot
             </button>
@@ -1173,14 +1172,14 @@ export function SourceForm({
               <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-[color:var(--wsu-ink)]">Customize columns after loading the schema</p>
-                    <p className="mt-1 text-xs leading-relaxed text-[color:var(--wsu-muted)]">
-                      <strong className="text-[color:var(--wsu-ink)]">Slot IDs</strong> are editable now.{" "}
-                      <strong className="text-[color:var(--wsu-ink)]">Name / email / phone</strong> use dropdowns only after
+                    <p className="font-medium text-ink">Customize columns after loading the schema</p>
+                    <p className="mt-1 text-xs leading-relaxed text-sub">
+                      <strong className="text-ink">Slot IDs</strong> are editable now.{" "}
+                      <strong className="text-ink">Name / email / phone</strong> use dropdowns only after
                       the column list is loaded (this page does not read it automatically). Click{" "}
-                      <strong className="text-[color:var(--wsu-ink)]">Fetch schema now</strong> or{" "}
-                      <strong className="text-[color:var(--wsu-ink)]">Test + Fetch Schema</strong> at the top, then map
-                      columns here and <strong className="text-[color:var(--wsu-ink)]">Save source</strong>. Merge only adds
+                      <strong className="text-ink">Fetch schema now</strong> or{" "}
+                      <strong className="text-ink">Test + Fetch Schema</strong> at the top, then map
+                      columns here and <strong className="text-ink">Save source</strong>. Merge only adds
                       suggested groups from titles — you customize mappings in this table.
                     </p>
                   </div>
@@ -1207,13 +1206,13 @@ export function SourceForm({
               return (
                 <article
                   key={roleGroup.id}
-                  className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-4"
+                  className="rounded-xl border border-line bg-white p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-semibold text-[color:var(--wsu-ink)]">{roleGroup.label}</h3>
-                        <span className="rounded-full bg-[color:var(--wsu-stone)]/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[color:var(--wsu-muted)]">
+                        <h3 className="text-sm font-semibold text-ink">{roleGroup.label}</h3>
+                        <span className="rounded-full bg-wsu-stone/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sub">
                           {roleGroup.mode === "numbered_slots" ? "Numbered slots" : "Delimited parallel"}
                         </span>
                         {roleGroup.mode === "numbered_slots" ? (
@@ -1234,10 +1233,10 @@ export function SourceForm({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
+                      <p className="mt-1 text-xs text-sub">
                         ID: <span className="font-mono">{roleGroup.id}</span>
                       </p>
-                      <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">Configured attributes: {attrSummary}</p>
+                      <p className="mt-1 text-xs text-sub">Configured attributes: {attrSummary}</p>
                     </div>
                     <button
                       type="button"
@@ -1261,7 +1260,7 @@ export function SourceForm({
                     <div className="mt-3 space-y-3">
                       <DataTable
                         className="text-xs"
-                        containerClassName="rounded-xl border border-[color:var(--wsu-border)]/70"
+                        containerClassName="rounded-xl border border-line/70"
                         columns={[
                           {
                             id: "slot",
@@ -1272,7 +1271,7 @@ export function SourceForm({
                               <input
                                 value={slot.slot}
                                 onChange={(e) => setNumberedSlotId(roleGroup.id, slotIndex, e.target.value)}
-                                className="w-[6.5rem] rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 font-mono text-xs"
+                                className="w-[6.5rem] rounded-lg border border-line bg-white px-2 py-1.5 font-mono text-xs"
                                 aria-label={`Slot ${slotIndex + 1} ID for ${roleGroup.label}`}
                               />
                             ),
@@ -1367,8 +1366,8 @@ export function SourceForm({
                         data={roleGroup.slots ?? []}
                         getRowKey={(_slot, slotIndex) => `${roleGroup.id}-slot-row-${slotIndex}`}
                         plainRows
-                        headerClassName="bg-[color:var(--wsu-stone)]/30"
-                        rowClassName="border-t border-[color:var(--wsu-border)]/60"
+                        headerClassName="bg-wsu-stone/30"
+                        rowClassName="border-t border-line/60"
                       />
                       {numberedSlotsHaveDuplicateIds(roleGroup.slots) ? (
                         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -1377,14 +1376,14 @@ export function SourceForm({
                         </p>
                       ) : null}
                       {(roleGroup.slots ?? []).length === 0 ? (
-                        <p className="text-xs text-[color:var(--wsu-muted)]">
+                        <p className="text-xs text-sub">
                           No slots yet. Add a slot and map columns, or use Merge detected role groups (schema section) from column title patterns.
                         </p>
                       ) : null}
                       <button
                         type="button"
                         onClick={() => addNumberedSlot(roleGroup.id)}
-                        className="rounded-full border border-dashed border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--wsu-ink)] hover:border-[color:var(--wsu-crimson)]"
+                        className="rounded-full border border-dashed border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:border-crimson"
                       >
                         + Add slot
                       </button>
@@ -1395,9 +1394,9 @@ export function SourceForm({
                         {(["name", "email", "phone"] as const).map((attr) => (
                           <div
                             key={attr}
-                            className="rounded-xl border border-[color:var(--wsu-border)]/70 bg-[color:var(--wsu-stone)]/10 px-3 py-3 text-xs"
+                            className="rounded-xl border border-line/70 bg-wsu-stone/10 px-3 py-3 text-xs"
                           >
-                            <p className="font-semibold uppercase tracking-wide text-[color:var(--wsu-ink)]">{attr}</p>
+                            <p className="font-semibold uppercase tracking-wide text-ink">{attr}</p>
                             <div className="mt-2">
                               <RoleGroupColumnSelect
                                 htmlId={`${roleGroup.id}-delim-${attr}`}
@@ -1408,7 +1407,7 @@ export function SourceForm({
                                 onChange={(sel) => updateDelimitedAttrSelector(roleGroup.id, attr, sel)}
                               />
                             </div>
-                            <label className="mt-2 block text-[10px] font-medium text-[color:var(--wsu-muted)]">
+                            <label className="mt-2 block text-[10px] font-medium text-sub">
                               Delimiters (optional). Separate tokens with <span className="font-mono">|</span>. Use{" "}
                               <span className="font-mono">\n</span> for newline, <span className="font-mono">\|</span> for a literal
                               pipe.
@@ -1418,7 +1417,7 @@ export function SourceForm({
                                 onChange={(e) => updateDelimitedAttrDelimiters(roleGroup.id, attr, e.target.value)}
                                 placeholder="e.g. ,| ;| \\n"
                                 disabled={!roleGroup.delimited?.[attr]?.source}
-                                className="mt-1 w-full rounded-lg border border-[color:var(--wsu-border)] bg-white px-2 py-1.5 text-xs text-[color:var(--wsu-ink)] disabled:opacity-50"
+                                className="mt-1 w-full rounded-lg border border-line bg-white px-2 py-1.5 text-xs text-ink disabled:opacity-50"
                               />
                             </label>
                           </div>
@@ -1426,7 +1425,7 @@ export function SourceForm({
                       </div>
 
                       {canTrustPairing ? (
-                        <label className="flex items-start gap-3 rounded-xl border border-[color:var(--wsu-border)]/70 bg-[color:var(--wsu-stone)]/10 px-4 py-3 text-sm">
+                        <label className="flex items-start gap-3 rounded-xl border border-line/70 bg-wsu-stone/10 px-4 py-3 text-sm">
                           <input
                             type="checkbox"
                             checked={isTrusted}
@@ -1434,10 +1433,10 @@ export function SourceForm({
                             className="mt-1"
                           />
                           <span>
-                            <span className="block font-medium text-[color:var(--wsu-ink)]">
+                            <span className="block font-medium text-ink">
                               Trust positional pairing for this delimited role group
                             </span>
-                            <span className="mt-1 block text-xs text-[color:var(--wsu-muted)]">
+                            <span className="mt-1 block text-xs text-sub">
                               Enable this only when the name, email, and phone columns remain in matching order in Smartsheet. If unchecked, the group stays
                               display-only in contributor editing.
                             </span>
@@ -1455,10 +1454,10 @@ export function SourceForm({
             })}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-[color:var(--wsu-muted)]">
-            No role groups yet. Use <strong className="font-medium text-[color:var(--wsu-ink)]">Add custom role group</strong> above for a single-person role or
+          <p className="mt-4 text-sm text-sub">
+            No role groups yet. Use <strong className="font-medium text-ink">Add custom role group</strong> above for a single-person role or
             any columns that do not match auto-detect patterns. Or load schema and use{" "}
-            <strong className="font-medium text-[color:var(--wsu-ink)]">Merge detected role groups</strong> for “Name 1” / “Name 1 Email” style titles.
+            <strong className="font-medium text-ink">Merge detected role groups</strong> for “Name 1” / “Name 1 Email” style titles.
           </p>
         )}
       </section>
