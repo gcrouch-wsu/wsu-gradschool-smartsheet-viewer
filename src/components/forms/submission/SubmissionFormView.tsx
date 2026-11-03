@@ -508,11 +508,19 @@ export function SubmissionFormView({
   }
 
   const allErrors = [...clientErrors, ...serverErrors];
+  const fillViewport = Boolean(publicMode);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4">
+    <div
+      className={[
+        "mx-auto flex w-full max-w-7xl flex-col gap-4",
+        fillViewport ? "min-h-0 flex-1" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       {allErrors.length > 0 ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
+        <div className="shrink-0 rounded-xl border border-red-200 bg-red-50 px-4 py-3" role="alert">
           <p className="text-sm font-medium text-red-800">Please fix the following:</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700">
             {allErrors.map((err, i) => (
@@ -522,19 +530,39 @@ export function SubmissionFormView({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-[color:var(--wsu-border)] shadow-sm">
+      <div
+        className={[
+          "overflow-hidden rounded-xl border border-[color:var(--wsu-border)] border-b-[3px] border-b-wsu-crimson shadow-sm",
+          fillViewport ? "flex min-h-0 flex-1 flex-col" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <FormBrandHeader
           logoDataUrl={schema.headerLogoDataUrl}
           logoAlt={schema.headerLogoAlt}
           maxWidthClassName="max-w-none"
+          className="shrink-0"
         />
 
         <form
           onSubmit={handleSubmit(processSubmit)}
           noValidate
-          className="relative flex min-h-[28rem] flex-col lg:min-h-[32rem] lg:flex-row"
+          className={[
+            "relative flex flex-col lg:flex-row",
+            fillViewport
+              ? "min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-hidden"
+              : "min-h-[28rem] lg:min-h-[32rem]",
+          ].join(" ")}
         >
-        <aside className="flex shrink-0 flex-col border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone,#f0eeea)] px-6 py-8 text-[color:var(--wsu-ink)] sm:px-8 sm:py-10 lg:w-1/2 lg:border-b-0 lg:border-r lg:py-12">
+        <aside
+          className={[
+            "flex shrink-0 flex-col border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone,#f0eeea)] px-6 py-8 text-[color:var(--wsu-ink)] sm:px-8 sm:py-10 lg:w-1/2 lg:border-b-0 lg:border-r lg:py-12",
+            fillViewport ? "min-h-0 lg:overflow-y-auto lg:overscroll-contain" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
           <RichTextHtml
             value={formTitle}
             as="h1"
@@ -555,8 +583,20 @@ export function SubmissionFormView({
           ) : null}
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-white lg:w-1/2">
-          <div className="flex-1 space-y-6 px-5 py-6 sm:px-8 sm:py-8">
+        <div
+          className={[
+            "flex min-w-0 flex-1 flex-col bg-white lg:w-1/2",
+            fillViewport ? "min-h-0" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div
+            className={[
+              "space-y-6 px-5 py-6 sm:px-8 sm:py-8",
+              fillViewport ? "min-h-0 flex-1 overflow-y-auto overscroll-contain" : "flex-1",
+            ].join(" ")}
+          >
             <p className="text-sm text-[#c45c26]">
               Fields marked with an asterisk (<span className="font-semibold text-wsu-crimson">*</span>) are required.
             </p>
@@ -626,7 +666,7 @@ export function SubmissionFormView({
           </div>
 
           {!preview ? (
-            <div className="flex flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-8">
               <button
                 type="submit"
                 disabled={submitting || visibleColumns.length === 0}
@@ -636,7 +676,7 @@ export function SubmissionFormView({
               </button>
             </div>
           ) : (
-            <div className="border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-3 sm:px-8">
+            <div className="shrink-0 border-t border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 px-5 py-3 sm:px-8">
               <p className="text-xs text-[color:var(--wsu-muted)]">Preview only — submissions are disabled.</p>
             </div>
           )}
