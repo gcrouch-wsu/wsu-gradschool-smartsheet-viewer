@@ -53,8 +53,8 @@ function TabButton({
 function SectionTitle({ title, description }: { title: string; description?: string }) {
   return (
     <div>
-      <h2 className="text-xl font-semibold text-[color:var(--wsu-ink)] sm:text-2xl">{title}</h2>
-      {description ? <p className="mt-2 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">{description}</p> : null}
+      <h2 className="font-serif text-lg font-medium tracking-[-0.01em] text-ink sm:text-xl">{title}</h2>
+      {description ? <p className="mt-2 max-w-[68ch] text-[13px] leading-6 text-sub sm:text-sm">{description}</p> : null}
     </div>
   );
 }
