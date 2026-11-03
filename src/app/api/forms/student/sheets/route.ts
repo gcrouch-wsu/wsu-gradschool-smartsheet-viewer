@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { discoverStudentSheets } from "@/lib/forms/student-access";
-import { requireStudentSession } from "@/lib/forms/student-auth";
+import { resolveStudentPortalAccess } from "@/lib/forms/student-portal-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await requireStudentSession();
+  const session = await resolveStudentPortalAccess();
   if (!session.ok) return session.response;
 
   await ensureBootstrapped();
@@ -16,6 +16,7 @@ export async function GET() {
     const sheets = await discoverStudentSheets(session.email);
     return NextResponse.json({
       email: session.email,
+      preview: session.preview,
       sheets: sheets.map((s) => ({
         sheetId: s.sheetId,
         name: s.name,

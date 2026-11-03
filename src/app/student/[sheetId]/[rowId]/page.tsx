@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { StudentSubmissionDetail } from "@/components/forms/student/StudentSubmissionDetail";
 import { StudentPageFrame } from "@/components/forms/student/StudentPageFrame";
-import { readStudentSessionEmail } from "@/lib/forms/student-auth";
+import { readStudentPortalEmail } from "@/lib/forms/student-portal-access";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,8 @@ export default async function StudentSubmissionDetailPage({
 }: {
   params: Promise<{ sheetId: string; rowId: string }>;
 }) {
-  const email = await readStudentSessionEmail();
-  if (!email) redirect("/student");
+  const portal = await readStudentPortalEmail();
+  if (!portal.email) redirect("/student");
   const { sheetId, rowId } = await params;
 
   return (
@@ -23,8 +23,10 @@ export default async function StudentSubmissionDetailPage({
       ]}
       title="Submission detail"
       description="Review your submission and propose a contact reroute when needed."
+      showSignOut={!portal.preview}
+      previewEmail={portal.preview ? portal.email : null}
     >
-      <StudentSubmissionDetail sheetId={sheetId} rowId={rowId} />
+      <StudentSubmissionDetail sheetId={sheetId} rowId={rowId} previewMode={portal.preview} />
     </StudentPageFrame>
   );
 }

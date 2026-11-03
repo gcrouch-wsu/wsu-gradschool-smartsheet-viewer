@@ -15,6 +15,10 @@ import {
   STUDENT_SESSION_COOKIE_NAME,
   getStudentSessionCookieSettings,
 } from "@/lib/forms/student-users";
+import {
+  STUDENT_PREVIEW_COOKIE_NAME,
+  getStudentPreviewCookieSettings,
+} from "@/lib/forms/student-preview";
 import { OKTA_ID_TOKEN_COOKIE } from "@/lib/okta/config";
 import { getOktaIdTokenCookieSettings } from "@/lib/okta/oidc";
 
@@ -27,6 +31,12 @@ export function clearAllAppSessionCookies(response: NextResponse) {
   });
   response.cookies.set(STUDENT_SESSION_COOKIE_NAME, "", {
     ...getStudentSessionCookieSettings(),
+    maxAge: 0,
+  });
+  response.cookies.set({
+    ...getStudentPreviewCookieSettings(),
+    name: STUDENT_PREVIEW_COOKIE_NAME,
+    value: "",
     maxAge: 0,
   });
   response.cookies.set(CONTRIBUTOR_SESSION_COOKIE_NAME, "", {

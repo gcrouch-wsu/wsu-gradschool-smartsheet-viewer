@@ -29,11 +29,13 @@ export function StudentSheetTable({
   page = "1",
   oktaEnabled = false,
   errorMessage = null,
+  previewMode = false,
 }: {
   initialEmail: string | null;
   page?: string;
   oktaEnabled?: boolean;
   errorMessage?: string | null;
+  previewMode?: boolean;
 }) {
   const [sheets, setSheets] = useState<SheetSummary[]>([]);
   const [email, setEmail] = useState(initialEmail);
@@ -83,6 +85,13 @@ export function StudentSheetTable({
   const currentPage = resolveAdminTablePage(page, matchingSheets.length);
 
   if (!email) {
+    if (previewMode) {
+      return (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          Unable to load this student preview.
+        </p>
+      );
+    }
     return (
       <div className="mx-auto max-w-md rounded-2xl border border-[color:var(--wsu-border)] bg-white p-6 shadow-sm sm:p-8">
         <StudentLoginForm

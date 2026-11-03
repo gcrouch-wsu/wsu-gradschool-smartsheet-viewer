@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
       <PageHeader
         eyebrow="Admin builder"
         title="Users"
-        description="One directory for every account. Assign roles on Accounts; admins can edit the permission matrix on Roles."
+        description="One directory for every account. Assign roles on Accounts, edit the permission matrix on Roles, or open a student portal in view-only mode."
         dataTour="au-heading"
         actions={
           <ProductTourControls storageKey={USERS_TOUR_STORAGE_KEY} steps={USERS_TOUR_STEPS} />

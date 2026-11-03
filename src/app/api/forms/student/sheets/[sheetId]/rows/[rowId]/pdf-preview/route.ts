@@ -10,7 +10,7 @@ import type { PdfFieldEntry } from "@/lib/forms/pdf-mapping-types";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { loadFormFields } from "@/lib/forms/store/field-config";
 import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
-import { requireStudentSession } from "@/lib/forms/student-auth";
+import { resolveStudentPortalAccess } from "@/lib/forms/student-portal-access";
 import { assertOwnedRow, loadOwnedSheetContext } from "@/lib/forms/student-rows";
 import { richTextPlainText } from "@/lib/rendering";
 
@@ -26,7 +26,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ sheetId: string; rowId: string }> },
 ) {
-  const session = await requireStudentSession();
+  const session = await resolveStudentPortalAccess();
   if (!session.ok) return session.response;
 
   await ensureBootstrapped();
