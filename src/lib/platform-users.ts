@@ -10,6 +10,7 @@ import {
   ALL_CAPABILITIES,
   ASSIGNABLE_ROLES,
   type AssignablePlatformRole,
+  applyStudentPortalCapabilityLock,
   OWNER_LOCKED_CAPABILITIES,
   PLATFORM_ROLES,
   type PlatformUserSummary,
@@ -28,9 +29,12 @@ export {
   ALL_CAPABILITIES,
   ADMIN_MANAGED_ROLES,
   ASSIGNABLE_ROLES,
+  applyStudentPortalCapabilityLock,
+  isStudentPortalCapabilityLocked,
   OWNER_LOCKED_CAPABILITIES,
   PLATFORM_ROLES,
   STAFF_ROLES,
+  STUDENT_PORTAL_CAPABILITY,
 } from "@/lib/platform-user-types";
 
 export interface PlatformUserRecord {
@@ -505,6 +509,13 @@ export async function getRolePermissionMatrix(): Promise<RolePermissionMatrix> {
       matrix[row.role_id][row.capability] = true;
     }
   }
+  for (const role of roles) {
+    const enforced = applyStudentPortalCapabilityLock(
+      role.id,
+      ALL_CAPABILITIES.filter((c) => matrix[role.id]?.[c]),
+    );
+    matrix[role.id] = Object.fromEntries(ALL_CAPABILITIES.map((c) => [c, enforced.includes(c)]));
+  }
   return { roles, capabilities: [...ALL_CAPABILITIES], matrix };
 }
 
@@ -514,12 +525,13 @@ export async function saveRolePermissionMatrix(
   await ensureTables();
   for (const [roleId, caps] of Object.entries(updates)) {
     if (!(PLATFORM_ROLES as readonly string[]).includes(roleId)) continue;
-    const nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
+    let nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
     if (roleId === "owner") {
       for (const locked of OWNER_LOCKED_CAPABILITIES) {
         if (!nextCaps.includes(locked)) nextCaps.push(locked);
       }
     }
+    nextCaps = applyStudentPortalCapabilityLock(roleId, nextCaps);
     await queryConfigDb(`DELETE FROM role_permissions WHERE role_id = $1`, [roleId]);
     for (const cap of nextCaps) {
       await queryConfigDb(

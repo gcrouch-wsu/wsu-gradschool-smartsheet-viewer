@@ -54,6 +54,25 @@ export const STAFF_ROLES: readonly AssignablePlatformRole[] = [
 
 export const OWNER_LOCKED_CAPABILITIES: readonly PrincipalCapability[] = ["admin.owner", "admin.manage"];
 
+/** Student portal belongs only to the student role; staff cannot grant or remove it here. */
+export const STUDENT_PORTAL_CAPABILITY: PrincipalCapability = "forms.student";
+
+export function isStudentPortalCapabilityLocked(roleId: string, capability: PrincipalCapability): boolean {
+  return capability === STUDENT_PORTAL_CAPABILITY;
+}
+
+/** Force forms.student on for student, off for every other role. */
+export function applyStudentPortalCapabilityLock(
+  roleId: string,
+  capabilities: readonly PrincipalCapability[],
+): PrincipalCapability[] {
+  const next = capabilities.filter((c) => c !== STUDENT_PORTAL_CAPABILITY);
+  if (roleId === "student") {
+    next.push(STUDENT_PORTAL_CAPABILITY);
+  }
+  return next;
+}
+
 export interface PlatformUserSummary {
   id: string;
   email: string;
