@@ -10,6 +10,7 @@ import {
 } from "@/components/forms/student/student-tours";
 import { ProductTour } from "@/components/ui/ProductTour";
 import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { UnderlineTabs } from "@/components/ui/UnderlineTabs";
 import { useProductTour } from "@/hooks/useProductTour";
 
 type StageOption = {
@@ -169,27 +170,17 @@ export function StudentSubmissionDetail({
           <div data-tour="sd-heading" className="sr-only">
             Submission detail for {sheetName || "this row"}
           </div>
-          <div className="grid grid-cols-3 border-b border-line" role="tablist" aria-label="Submission sections" data-tour="sd-tabs">
-            {([
-              ["details", "Submission details"],
-              ["reroute", "Contact reroute"],
-              ["history", "Request history"],
-            ] as const).map(([tab, label]) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                className={`border-b-2 px-3 py-3 text-center text-sm font-medium transition ${
-                  activeTab === tab
-                    ? "border-crimson text-crimson"
-                    : "border-transparent text-sub hover:border-mist hover:text-ink"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div data-tour="sd-tabs">
+            <UnderlineTabs
+              items={[
+                { id: "details", label: "Submission details" },
+                { id: "reroute", label: "Contact reroute" },
+                { id: "history", label: "Request history" },
+              ]}
+              value={activeTab}
+              onChange={setActiveTab}
+              ariaLabel="Submission sections"
+            />
           </div>
 
           {activeTab === "details" ? (

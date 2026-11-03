@@ -10,6 +10,7 @@ import {
 } from "@/components/admin/AdminDataTable";
 import { Button, EmptyState } from "@/components/admin/WorkspacePrimitives";
 import { IconCheck, IconX } from "@/components/forms/icons";
+import { UnderlineTabs } from "@/components/ui/UnderlineTabs";
 import { useToast } from "@/components/ui/Toast";
 import type { ContactChangeRequest } from "@/lib/forms/store/contact-change-requests";
 
@@ -171,21 +172,18 @@ export function ContactReroutesManager({
         </span>
       </form>
 
-      <div className="flex flex-wrap items-center gap-2" data-tour="ar-status">
-        {(["pending", "approved", "rejected", "all"] as StatusFilter[]).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => changeStatus(s)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition ${
-              status === s
-                ? "border-crimson bg-[var(--crimson-soft)] text-crimson"
-                : "border-line bg-white text-sub hover:border-mist"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+      <div data-tour="ar-status">
+        <UnderlineTabs
+          items={[
+            { id: "pending", label: "Pending" },
+            { id: "approved", label: "Approved" },
+            { id: "rejected", label: "Rejected" },
+            { id: "all", label: "All" },
+          ]}
+          value={status}
+          onChange={changeStatus}
+          ariaLabel="Reroute status"
+        />
       </div>
 
       {error ? (
