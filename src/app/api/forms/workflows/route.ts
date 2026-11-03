@@ -1,3 +1,4 @@
+import { recordAuditEvent } from "@/lib/audit";
 import { formsAuthErrorResponse, requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
@@ -65,6 +66,15 @@ export async function POST(request: Request) {
     const workflow = await createWorkflow(
       workflowBody(body, sheetId, authorEmail(access.user.email)),
     );
+    await recordAuditEvent({
+      actorKind: "admin",
+      actorId: access.user.email,
+      actorLabel: access.user.name,
+      action: "workflow.create",
+      resourceType: "workflow",
+      resourceId: workflow.id,
+      metadata: { sheetId, name: workflow.name },
+    });
     return Response.json({ workflow });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save workflow.";

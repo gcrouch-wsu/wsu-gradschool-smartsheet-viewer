@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import { saveAdminViewConfig, AdminActionError } from "@/lib/admin-management";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 import { validateViewConfig } from "@/lib/config/validation";
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
 
   try {
     const view = await saveAdminViewConfig(result.data, { rejectOnExistingId: true });
+    await auditFromAdminPrincipal(auth.principal, "view.create", "view", view.id, {
+      label: view.label,
+      sourceId: view.sourceId,
+    });
     revalidatePublicCatalog();
     return NextResponse.json({ view }, { status: 201 });
   } catch (error) {

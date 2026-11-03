@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import {
   applyStudentPreviewCookie,
   createStudentPreviewToken,
@@ -35,6 +36,9 @@ export async function POST(request: Request) {
   }
 
   const token = await createStudentPreviewToken(principal.id, user.email);
+  await auditFromAdminPrincipal(principal, "student.preview.start", "student", user.id, {
+    email: user.email,
+  });
   const response = NextResponse.json({
     ok: true,
     email: user.email,

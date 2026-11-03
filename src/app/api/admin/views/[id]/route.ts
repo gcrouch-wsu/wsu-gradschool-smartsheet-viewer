@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import { saveAdminViewConfig, deleteAdminView, AdminActionError } from "@/lib/admin-management";
 import { getViewConfigById, listSourceConfigs } from "@/lib/config/store";
 import { validateViewConfig } from "@/lib/config/validation";
@@ -50,6 +51,9 @@ export async function PUT(
 
   try {
     const view = await saveAdminViewConfig(result.data);
+    await auditFromAdminPrincipal(auth.principal, "view.update", "view", view.id, {
+      sourceId: view.sourceId,
+    });
     revalidatePublicCatalog();
     return NextResponse.json({ view });
   } catch (error) {
@@ -77,6 +81,7 @@ export async function DELETE(
 
   try {
     await deleteAdminView(id);
+    await auditFromAdminPrincipal(auth.principal, "view.delete", "view", id);
     revalidatePublicCatalog();
     return NextResponse.json({ ok: true });
   } catch (error) {
