@@ -532,7 +532,7 @@ export function SubmissionFormView({
 
       <div
         className={[
-          "overflow-hidden rounded-xl border border-[color:var(--wsu-border)] border-b-[3px] border-b-wsu-crimson shadow-sm",
+          "overflow-hidden rounded-xl border-x border-[color:var(--wsu-border)] border-b-[3px] border-b-wsu-crimson shadow-sm",
           fillViewport ? "flex min-h-0 flex-1 flex-col" : "",
         ]
           .filter(Boolean)
@@ -594,7 +594,7 @@ export function SubmissionFormView({
           <div
             className={[
               "space-y-6 px-5 py-6 sm:px-8 sm:py-8",
-              fillViewport ? "min-h-0 flex-1 overflow-y-auto overscroll-contain" : "flex-1",
+              fillViewport ? "min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain" : "flex-1",
             ].join(" ")}
           >
             <p className="text-sm text-[#c45c26]">
