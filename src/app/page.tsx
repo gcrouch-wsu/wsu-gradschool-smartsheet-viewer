@@ -1,10 +1,6 @@
 import Link from "next/link";
-import { HeaderLogoutLink, HeaderSignedInIdentity } from "@/components/auth/HeaderLogoutLink";
-import {
-  FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
-  FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
-  AppBrandHeader,
-} from "@/components/layout/AppBrandHeader";
+import { HeaderIconLink, HeaderLogoutLink, HeaderSignedInIdentity } from "@/components/auth/HeaderLogoutLink";
+import { AppBrandHeader } from "@/components/layout/AppBrandHeader";
 import { DatabaseUnavailable } from "@/components/DatabaseUnavailable";
 import type { PublicPageSummary } from "@/lib/config/types";
 import { isDatabaseUnavailableError } from "@/lib/database-unavailable";
@@ -13,6 +9,34 @@ import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
 export const dynamic = "force-dynamic";
+
+function StudentPortalIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 10L12 5 2 10l10 5 10-5z" />
+      <path d="M6 12.5v4.2c0 .6 2.7 2.3 6 2.3s6-1.7 6-2.3v-4.2" />
+      <path d="M22 10v6" />
+    </svg>
+  );
+}
+
+function AdminGuideIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6M8 13h8M8 17h5" />
+    </svg>
+  );
+}
+
+function AdminIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
+      <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+    </svg>
+  );
+}
 
 function isContributorOnlySession(principal: Awaited<ReturnType<typeof resolveContributorPrincipal>>) {
   if (!principal?.capabilities.includes("contributor.edit")) return false;
@@ -71,18 +95,16 @@ export default async function HomePage() {
                 detail="Contributor"
               />
             ) : null}
-            <Link href="/student" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
-              Student portal
-            </Link>
-            <Link href="/instructions/admin" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
-              Admin guide
-            </Link>
-            <Link href="/admin" className={FORM_BRAND_HEADER_ACTION_SOLID_CLASS}>
-              Admin
-            </Link>
-            {contributorSession ? (
-              <HeaderLogoutLink href="/api/auth/okta/logout?next=/" labeled />
-            ) : null}
+            <HeaderIconLink href="/student" label="Student portal">
+              <StudentPortalIcon />
+            </HeaderIconLink>
+            <HeaderIconLink href="/instructions/admin" label="Admin guide">
+              <AdminGuideIcon />
+            </HeaderIconLink>
+            <HeaderIconLink href="/admin" label="Admin">
+              <AdminIcon />
+            </HeaderIconLink>
+            {contributorSession ? <HeaderLogoutLink href="/api/auth/okta/logout?next=/" /> : null}
           </>
         }
       />
