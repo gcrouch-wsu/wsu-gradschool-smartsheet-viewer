@@ -31,7 +31,7 @@ export const PUBLIC_VIEW_TOUR_STEPS: ProductTourStep[] = [
     id: "account",
     target: '[data-tour="pv-account"]',
     title: "You're signed in",
-    body: "Your name is in the header. The icons beside it are print, how to use, export, and contributor instructions. Log out is the last icon.",
+    body: "Your name is in the header. The icons beside it are print, how to use, export, and contributor instructions. Use Log out when you are finished.",
   },
   {
     id: "print",

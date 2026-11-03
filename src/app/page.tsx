@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeaderLogoutLink, HeaderSignedInIdentity } from "@/components/auth/HeaderLogoutLink";
 import {
   FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
   FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
@@ -7,10 +8,20 @@ import {
 import { DatabaseUnavailable } from "@/components/DatabaseUnavailable";
 import type { PublicPageSummary } from "@/lib/config/types";
 import { isDatabaseUnavailableError } from "@/lib/database-unavailable";
+import { resolveContributorPrincipal } from "@/lib/identity";
 import { getPublicPageSummaries } from "@/lib/public-view";
 import { testSmartsheetConnection } from "@/lib/smartsheet";
 
 export const dynamic = "force-dynamic";
+
+function isContributorOnlySession(principal: Awaited<ReturnType<typeof resolveContributorPrincipal>>) {
+  if (!principal?.capabilities.includes("contributor.edit")) return false;
+  return !principal.capabilities.some((capability) =>
+    ["admin.manage", "admin.owner", "forms.admin", "forms.approver", "forms.coordinator", "forms.student"].includes(
+      capability,
+    ),
+  );
+}
 
 export default async function HomePage() {
   let pages: PublicPageSummary[];
@@ -26,6 +37,14 @@ export default async function HomePage() {
     }
     throw error;
   }
+
+  const contributor = await resolveContributorPrincipal();
+  const contributorSession = isContributorOnlySession(contributor) ? contributor : null;
+  const contributorName =
+    contributorSession?.displayName?.trim() ||
+    contributorSession?.email ||
+    contributorSession?.identifier ||
+    null;
 
   return (
     <div className="bg-canvas min-h-screen">
@@ -45,6 +64,13 @@ export default async function HomePage() {
         actionsLabel="Workspace administration"
         actions={
           <>
+            {contributorSession && contributorName ? (
+              <HeaderSignedInIdentity
+                name={contributorName}
+                email={contributorSession.email}
+                detail="Contributor"
+              />
+            ) : null}
             <Link href="/student" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
               Student portal
             </Link>
@@ -54,6 +80,9 @@ export default async function HomePage() {
             <Link href="/admin" className={FORM_BRAND_HEADER_ACTION_SOLID_CLASS}>
               Admin
             </Link>
+            {contributorSession ? (
+              <HeaderLogoutLink href="/api/auth/okta/logout?next=/" labeled />
+            ) : null}
           </>
         }
       />

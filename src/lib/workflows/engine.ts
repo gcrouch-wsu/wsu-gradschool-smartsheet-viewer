@@ -1,9 +1,11 @@
 import type { SmartsheetCell, SmartsheetRow, ViewFilterConfig } from "@/lib/config/types";
+import { listSourceConfigs } from "@/lib/config/store";
 import { applyViewFilters } from "@/lib/filters";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { fieldsFromCells, loadColumnIndex, renderAlertCopy } from "@/lib/workflows/alert-content";
 import { emailsFromContactCell, extractEmails, normalizeEmail } from "@/lib/workflows/recipients";
 import { insertNotifications } from "@/lib/workflows/notifications";
+import { notificationHref } from "@/lib/workflows/visible-notifications";
 import { insertWorkflowRun, listEnabledRunnableWorkflows, updateWorkflowRun } from "@/lib/workflows/store";
 import type { TriggerEvent, WorkflowRecord } from "@/lib/workflows/types";
 
@@ -115,7 +117,11 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
   const columns = await loadColumnIndex(event.sheetId);
   const filterRow = toFilterRow(rowId, raw.cells ?? []);
   const fields = fieldsFromCells(columns, raw.cells ?? []);
-  const href = `/admin/sources?sheetId=${encodeURIComponent(String(event.sheetId))}&rowId=${rowId}`;
+  const sources = await listSourceConfigs();
+  const source = sources.find(
+    (entry) => entry.sourceType === "sheet" && String(entry.smartsheetId) === String(event.sheetId),
+  );
+  const href = source ? notificationHref(source, rowId, "staff") : undefined;
 
   for (const workflow of matching) {
     if (!rowMatchesConditions(filterRow, workflow.conditions)) continue;

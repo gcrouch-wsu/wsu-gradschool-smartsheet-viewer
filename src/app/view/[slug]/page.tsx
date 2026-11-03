@@ -149,16 +149,20 @@ export default async function PublicViewPage({
 
   let contributorEmail: string | null = null;
   let contributorDisplayName: string | null = null;
+  let signedInContributorEmail: string | null = null;
+  let signedInContributorName: string | null = null;
   let editingConfig = null;
   let editableRowIds: number[] = [];
   let adminUnrestrictedEditing = false;
   let adminEditingLabel: string | null = null;
 
-  if (editingEnabled) {
+  if (!embed) {
     const cookieStore = await cookies();
-    const adminAuth = await resolveAdminPrincipalFromSession(cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value);
+    const adminAuth = editingEnabled
+      ? await resolveAdminPrincipalFromSession(cookieStore.get(ADMIN_SESSION_COOKIE_NAME)?.value)
+      : null;
 
-    if (adminAuth.ok && adminAuth.principal) {
+    if (adminAuth?.ok && adminAuth.principal) {
       const dataset = await loadContributorDataset(page.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
       const built = buildContributorEditingClientConfig(activeViewConfig, dataset.columns, page.sourceConfig);
       if (built) {
@@ -174,12 +178,16 @@ export default async function PublicViewPage({
       const contributor = await resolveContributorPrincipal();
       const email = contributor?.email ?? null;
       if (email) {
-        const dataset = await loadContributorDataset(page.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
-        if (isContributorStillInSheet(dataset.rows, email, activeViewConfig.editing!.contactColumnIds)) {
-          contributorEmail = email;
-          contributorDisplayName = (contributor?.displayName ?? email).trim() || email;
-          editingConfig = buildContributorEditingClientConfig(activeViewConfig, dataset.columns, page.sourceConfig);
-          editableRowIds = getEditableRowIdsForView(dataset.rows, activeViewConfig, contributorEmail);
+        signedInContributorEmail = email;
+        signedInContributorName = (contributor?.displayName ?? email).trim() || email;
+        if (editingEnabled) {
+          const dataset = await loadContributorDataset(page.sourceConfig, CONTRIBUTOR_DATASET_OPTIONS);
+          if (isContributorStillInSheet(dataset.rows, email, activeViewConfig.editing!.contactColumnIds)) {
+            contributorEmail = email;
+            contributorDisplayName = signedInContributorName;
+            editingConfig = buildContributorEditingClientConfig(activeViewConfig, dataset.columns, page.sourceConfig);
+            editableRowIds = getEditableRowIdsForView(dataset.rows, activeViewConfig, contributorEmail);
+          }
         }
       }
     }
@@ -202,7 +210,10 @@ export default async function PublicViewPage({
 
   const contributorLogoutHref = `/api/auth/okta/logout?next=${encodeURIComponent(`/view/${slug}`)}`;
   const headerIdentityName =
-    contributorDisplayName || contributorEmail || (adminUnrestrictedEditing ? adminEditingLabel : null);
+    contributorDisplayName ||
+    signedInContributorName ||
+    contributorEmail ||
+    (adminUnrestrictedEditing ? adminEditingLabel : null);
 
   return (
     <>
@@ -211,17 +222,17 @@ export default async function PublicViewPage({
         maxWidthClassName="max-w-7xl"
         actionsLabel="Account"
         actions={
-          loginHref || printHref || exportCsvHref || contributorInstructionsHref || showPublicEditingChrome || contributorEmail ? (
+          loginHref || printHref || exportCsvHref || contributorInstructionsHref || showPublicEditingChrome || signedInContributorEmail ? (
             <>
               {headerIdentityName ? (
                 <HeaderSignedInIdentity
                   name={headerIdentityName}
-                  email={contributorEmail}
-                  detail={adminUnrestrictedEditing ? "Administrator" : "Contributor"}
+                  email={signedInContributorEmail || contributorEmail}
+                  detail={adminUnrestrictedEditing ? "Administrator" : signedInContributorEmail ? "Contributor" : undefined}
                 />
               ) : null}
               <div className="flex flex-wrap items-center justify-end gap-2">
-              {!showPublicEditingChrome && loginHref ? (
+              {!showPublicEditingChrome && !signedInContributorEmail && loginHref ? (
                 <span data-tour="pv-signin" className="inline-flex">
                 <HeaderIconLink href={loginHref} label="Contributor sign in">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -264,8 +275,17 @@ export default async function PublicViewPage({
                 </HeaderIconLink>
                 </span>
               ) : null}
+              {signedInContributorEmail || adminUnrestrictedEditing ? (
+                <HeaderLogoutLink
+                  href={
+                    adminUnrestrictedEditing
+                      ? "/api/auth/okta/logout?next=/admin"
+                      : contributorLogoutHref
+                  }
+                  labeled
+                />
+              ) : null}
               </div>
-              {contributorEmail ? <HeaderLogoutLink href={contributorLogoutHref} /> : null}
             </>
           ) : undefined
         }

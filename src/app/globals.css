@@ -277,17 +277,18 @@ a {
   color: var(--view-control-active-text, #ffffff) !important;
 }
 
-/* Crimson primary buttons: white text for contrast (overrides a { color: inherit }) */
-.btn-crimson,
-.bg-\[color\:var\(--wsu-crimson\)\],
-.bg-crimson,
-.bg-wsu-crimson {
+/* Crimson primary buttons: white text for contrast (overrides a { color: inherit }).
+   Disabled controls keep their own text color so a light disabled background stays readable. */
+.btn-crimson:not(:disabled),
+.bg-\[color\:var\(--wsu-crimson\)\]:not(:disabled),
+.bg-crimson:not(:disabled),
+.bg-wsu-crimson:not(:disabled) {
   color: white !important;
 }
-.btn-crimson:hover,
-.bg-\[color\:var\(--wsu-crimson\)\]:hover,
-.bg-crimson:hover,
-.bg-wsu-crimson:hover {
+.btn-crimson:not(:disabled):hover,
+.bg-\[color\:var\(--wsu-crimson\)\]:not(:disabled):hover,
+.bg-crimson:not(:disabled):hover,
+.bg-wsu-crimson:not(:disabled):hover {
   color: white !important;
 }
 

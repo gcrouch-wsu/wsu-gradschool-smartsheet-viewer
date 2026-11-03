@@ -1,4 +1,8 @@
 import { redirect } from "next/navigation";
+import {
+  MarkAllNotificationsButton,
+  NotificationsProvider,
+} from "@/components/notifications/NotificationsContext";
 import { NotificationsList } from "@/components/notifications/NotificationsList";
 import { StudentPageFrame } from "@/components/forms/student/StudentPageFrame";
 import {
@@ -32,12 +36,20 @@ export default async function NotificationsEntryPage() {
   }
 
   return (
-    <StudentPageFrame
-      breadcrumbs={[{ href: null, label: "Notifications" }]}
-      title="Notifications"
-      description="In-app alerts from sheet workflows."
-    >
-      <NotificationsList />
-    </StudentPageFrame>
+    <NotificationsProvider>
+      <StudentPageFrame
+        breadcrumbs={[{ href: null, label: "Notifications" }]}
+        title="Notifications"
+        description="An organized view of all workflow alerts. Open View Details for the full change summary."
+        actions={<MarkAllNotificationsButton />}
+        signOutHref={
+          contributor && !student
+            ? "/api/auth/okta/logout?next=/"
+            : "/api/auth/okta/logout?next=/student"
+        }
+      >
+        <NotificationsList />
+      </StudentPageFrame>
+    </NotificationsProvider>
   );
 }

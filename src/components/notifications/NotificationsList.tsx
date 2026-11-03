@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { IconCheck, IconExternalLink } from "@/components/forms/icons";
+import { useMemo, useState } from "react";
+import { IconExternalLink } from "@/components/forms/icons";
+import { useNotifications } from "@/components/notifications/NotificationsContext";
 import { AppLoading } from "@/components/ui/AppLoading";
+import { Modal } from "@/components/ui/Modal";
+import { UnderlineTabs } from "@/components/ui/UnderlineTabs";
 
 export interface NotificationListItem {
   id: string;
@@ -11,57 +14,50 @@ export interface NotificationListItem {
   body: string;
   readAt: string | null;
   createdAt: string;
-  payload?: { href?: string; fields?: Array<{ title: string; value: string }> };
+  payload?: {
+    href?: string;
+    sheetId?: string;
+    rowId?: number | null;
+    templateKind?: string;
+    fields?: Array<{ title: string; value: string }>;
+  };
 }
 
-const iconBtnClass =
-  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--wsu-border)] bg-white text-[color:var(--wsu-ink)] transition hover:border-[color:var(--wsu-crimson)] hover:bg-[color:var(--crimson-soft)] hover:text-[color:var(--wsu-crimson)] disabled:cursor-not-allowed disabled:opacity-50";
+type FilterId = "all" | "unread";
 
-function formatWhen(iso: string): string {
+function formatExact(iso: string): string {
   const then = Date.parse(iso);
   if (!Number.isFinite(then)) return "";
-  return new Date(then).toLocaleString();
+  return new Date(then).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "medium" });
+}
+
+function templateBadge(kind: string | undefined): string {
+  if (!kind || kind === "alert") return "Workflow alert";
+  return kind
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export function NotificationsList() {
-  const [items, setItems] = useState<NotificationListItem[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [markingId, setMarkingId] = useState<string | null>(null);
+  const { items, error, loading, unreadCount, markRead } = useNotifications();
+  const [filter, setFilter] = useState<FilterId>("all");
+  const [detailId, setDetailId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/notifications");
-      const data = (await res.json()) as {
-        items?: NotificationListItem[];
-        message?: string;
-        notice?: string;
-      };
-      if (!res.ok) throw new Error(data.message || "Could not load notifications.");
-      setItems(data.items ?? []);
-      setError(data.notice || "");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load notifications.");
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const visibleItems = useMemo(() => {
+    if (filter === "unread") return items.filter((item) => !item.readAt);
+    return items;
+  }, [filter, items]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const detailItem = useMemo(
+    () => (detailId ? items.find((item) => item.id === detailId) ?? null : null),
+    [detailId, items],
+  );
 
-  async function markRead(id: string) {
-    setMarkingId(id);
-    try {
-      await fetch(`/api/notifications/${id}/read`, { method: "POST" });
-      setItems((current) =>
-        current.map((item) => (item.id === id ? { ...item, readAt: item.readAt ?? new Date().toISOString() } : item)),
-      );
-    } finally {
-      setMarkingId(null);
+  async function openDetails(item: NotificationListItem) {
+    setDetailId(item.id);
+    if (!item.readAt) {
+      await markRead(item.id);
     }
   }
 
@@ -71,89 +67,170 @@ export function NotificationsList() {
 
   if (error && !items.length) {
     return (
-      <p className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-4 py-8 text-center text-sm text-[color:var(--wsu-muted)]">
-        {error}
-      </p>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <p className="rounded-xl border border-[color:var(--wsu-border)] bg-white px-4 py-10 text-center text-sm text-[color:var(--wsu-muted)]">
-        You’re all caught up.
-      </p>
+      <p className="rounded-xl border border-line bg-white px-4 py-8 text-center text-sm text-sub">{error}</p>
     );
   }
 
   return (
-    <ul className="space-y-3">
-      {error ? (
-        <li className="rounded-lg bg-[color:var(--wsu-stone)] px-3 py-2 text-sm text-[color:var(--wsu-muted)]">{error}</li>
-      ) : null}
-      {items.map((item) => {
-        const unread = !item.readAt;
-        return (
-          <li
-            key={item.id}
-            className={`rounded-xl border bg-white p-4 shadow-sm ${
-              unread
-                ? "border-[color:var(--wsu-crimson)]/25 bg-[color:var(--crimson-soft)]/20"
-                : "border-[color:var(--wsu-border)]"
-            }`}
-          >
-            <div className="flex items-start gap-4">
-              <span
-                className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
-                  unread ? "bg-[color:var(--wsu-crimson)]" : "bg-[color:var(--wsu-border)]"
+    <div className="space-y-5">
+      <UnderlineTabs
+        items={[
+          { id: "all", label: "All notifications" },
+          { id: "unread", label: unreadCount ? `Unread notifications (${unreadCount})` : "Unread notifications" },
+        ]}
+        value={filter}
+        onChange={setFilter}
+        ariaLabel="Notification filters"
+      />
+
+      {error ? <p className="rounded-lg bg-[color:var(--wsu-stone)] px-3 py-2 text-sm text-sub">{error}</p> : null}
+
+      {!visibleItems.length ? (
+        <div className="rounded-xl border border-dashed border-line-strong bg-[#fdfbfc] px-5 py-12 text-center">
+          <p className="text-sm font-medium text-ink">
+            {filter === "unread" ? "No unread notifications" : "You’re all caught up"}
+          </p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-sub">
+            {filter === "unread"
+              ? "Switch to All notifications to review earlier alerts."
+              : "Alerts from sheet workflows will show up here."}
+          </p>
+          {filter === "unread" && items.length > 0 ? (
+            <button
+              type="button"
+              className="mt-4 text-sm font-medium text-crimson hover:underline"
+              onClick={() => setFilter("all")}
+            >
+              View all notifications
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {visibleItems.map((item) => {
+            const unread = !item.readAt;
+            return (
+              <li
+                key={item.id}
+                className={`rounded-xl border bg-white px-4 py-4 shadow-sm sm:px-5 ${
+                  unread ? "border-crimson/20" : "border-line"
                 }`}
-                aria-hidden
-              />
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium text-[color:var(--wsu-ink)]">{item.title}</p>
+              >
+                <div className="flex items-start gap-3 sm:gap-4">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-                      unread
-                        ? "bg-[color:var(--crimson-soft)] text-[color:var(--wsu-crimson)]"
-                        : "bg-[color:var(--wsu-stone)] text-[color:var(--wsu-muted)]"
+                    className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
+                      unread ? "bg-crimson" : "bg-line-strong"
                     }`}
-                  >
-                    {unread ? "Unread" : "Read"}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">{formatWhen(item.createdAt)}</p>
-                {item.body ? <p className="mt-2 text-sm text-[color:var(--wsu-muted)]">{item.body}</p> : null}
-              </div>
+                    aria-hidden
+                  />
 
-              <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:justify-end">
-                {item.payload?.href ? (
-                  <Link
-                    href={item.payload.href}
-                    className={iconBtnClass}
-                    aria-label="Open row"
-                    title="Open row"
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                  </Link>
-                ) : null}
-                {unread ? (
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className={`text-sm text-ink ${unread ? "font-semibold" : "font-medium"}`}>{item.title}</p>
+                      <span className="rounded-full bg-[color:var(--wsu-stone)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sub">
+                        {templateBadge(item.payload?.templateKind)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-sub">{formatExact(item.createdAt)}</p>
+                    {item.body ? (
+                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-sub">{item.body}</p>
+                    ) : null}
+                  </div>
+
                   <button
                     type="button"
-                    className={iconBtnClass}
-                    disabled={markingId === item.id}
-                    onClick={() => void markRead(item.id)}
-                    aria-label="Mark as read"
-                    title="Mark as read"
+                    onClick={() => void openDetails(item)}
+                    className="inline-flex shrink-0 items-center gap-1.5 self-center rounded-lg border border-line bg-white px-3 py-2 text-xs font-medium text-ink hover:border-crimson hover:text-crimson"
                   >
-                    <IconCheck className="h-4 w-4" />
+                    <IconExternalLink className="h-3.5 w-3.5" />
+                    View Details
                   </button>
-                ) : null}
-              </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Modal
+        open={Boolean(detailItem)}
+        onClose={() => setDetailId(null)}
+        title={detailItem?.title ?? "Notification"}
+        description={detailItem ? formatExact(detailItem.createdAt) : undefined}
+        size="lg"
+      >
+        {detailItem ? (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[color:var(--wsu-stone)] px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-sub">
+                {templateBadge(detailItem.payload?.templateKind)}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${
+                  detailItem.readAt
+                    ? "bg-[color:var(--wsu-stone)] text-sub"
+                    : "bg-[color:var(--crimson-soft)] text-crimson"
+                }`}
+              >
+                {detailItem.readAt ? "Read" : "Unread"}
+              </span>
             </div>
-          </li>
-        );
-      })}
-    </ul>
+
+            {detailItem.body ? (
+              <p className="text-sm leading-relaxed text-ink">{detailItem.body}</p>
+            ) : (
+              <p className="text-sm text-sub">No additional message was included with this alert.</p>
+            )}
+
+            {Array.isArray(detailItem.payload?.fields) && detailItem.payload.fields.length > 0 ? (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-mist">Included fields</h3>
+                <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {detailItem.payload.fields
+                    .filter((field) => field.value)
+                    .map((field) => (
+                      <div
+                        key={`${detailItem.id}-${field.title}`}
+                        className="rounded-lg border border-line bg-[#fdfbfc] px-3 py-2.5"
+                      >
+                        <dt className="text-[11px] font-medium uppercase tracking-wide text-mist">{field.title}</dt>
+                        <dd className="mt-1 break-words text-sm text-ink">{field.value}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </div>
+            ) : null}
+
+            {(detailItem.payload?.sheetId || detailItem.payload?.rowId != null) && (
+              <p className="text-xs text-sub">
+                {detailItem.payload.sheetId ? `Sheet ID: ${detailItem.payload.sheetId}` : null}
+                {detailItem.payload.sheetId && detailItem.payload.rowId != null ? " · " : null}
+                {detailItem.payload.rowId != null ? `Row ${detailItem.payload.rowId}` : null}
+              </p>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
+              <button
+                type="button"
+                onClick={() => setDetailId(null)}
+                className="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-mist"
+              >
+                Close
+              </button>
+              {detailItem.payload?.href ? (
+                <Link
+                  href={detailItem.payload.href}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-crimson bg-crimson px-4 py-2 text-sm font-medium text-white hover:border-[var(--crimson-deep)] hover:bg-[var(--crimson-deep)]"
+                  onClick={() => setDetailId(null)}
+                >
+                  <IconExternalLink className="h-4 w-4" />
+                  Open related row
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+    </div>
   );
 }

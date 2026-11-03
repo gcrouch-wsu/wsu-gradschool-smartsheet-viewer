@@ -13,6 +13,7 @@ export function StudentPageFrame({
   actions,
   headingTourId,
   showSignOut = true,
+  signOutHref = "/api/auth/okta/logout?next=/student",
   previewEmail = null,
   children,
 }: {
@@ -24,6 +25,8 @@ export function StudentPageFrame({
   headingTourId?: string;
   /** Hide on the signed-out student login screen. */
   showSignOut?: boolean;
+  /** Shared Okta-aware logout URL; override for contributor sessions. */
+  signOutHref?: string;
   /** When set, show the admin preview banner and hide account tools. */
   previewEmail?: string | null;
   children: ReactNode;
@@ -39,7 +42,7 @@ export function StudentPageFrame({
           previewMode ? null : (
             <div className="flex items-center gap-2">
               <NotificationBell />
-              {showSignOut ? <HeaderLogoutLink href="/api/auth/okta/logout?next=/student" /> : null}
+              {showSignOut ? <HeaderLogoutLink href={signOutHref} labeled /> : null}
             </div>
           )
         }

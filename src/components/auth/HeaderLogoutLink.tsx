@@ -43,9 +43,14 @@ export function HeaderSignedInIdentity({
   );
 }
 
-export function HeaderLogoutLink({ href }: { href: string }) {
+export function HeaderLogoutLink({ href, labeled = false }: { href: string; labeled?: boolean }) {
   return (
-    <a href={href} aria-label="Log out" title="Log out" className={headerIconButtonClass}>
+    <a
+      href={href}
+      aria-label="Log out"
+      title="Log out"
+      className={labeled ? `${headerIconButtonClass} w-auto gap-1.5 px-3` : headerIconButtonClass}
+    >
       <svg
         className="h-4 w-4"
         viewBox="0 0 24 24"
@@ -59,6 +64,7 @@ export function HeaderLogoutLink({ href }: { href: string }) {
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
         <path d="M16 17l5-5-5-5M21 12H9" />
       </svg>
+      {labeled ? <span className="text-sm font-medium">Log out</span> : null}
     </a>
   );
 }

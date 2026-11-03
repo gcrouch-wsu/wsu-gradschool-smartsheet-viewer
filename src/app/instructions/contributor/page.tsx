@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HeaderLogoutLink } from "@/components/auth/HeaderLogoutLink";
 import {
   FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
   FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
   FormBrandHeader,
 } from "@/components/forms/submission/FormBrandHeader";
+import { resolveContributorPrincipal } from "@/lib/identity";
 
 export const metadata: Metadata = {
   title: "Contributor help - sign in and edit your row",
@@ -12,7 +14,9 @@ export const metadata: Metadata = {
     "Help for WSU contributors: sign in with your WSU account and update your own row on a published Smartsheet view.",
 };
 
-export default function ContributorInstructionsPage() {
+export default async function ContributorInstructionsPage() {
+  const contributor = await resolveContributorPrincipal();
+
   return (
     <div className="min-h-screen bg-[color:var(--wsu-stone,#f7f5f2)] text-[color:var(--wsu-ink)]">
       <a
@@ -37,6 +41,9 @@ export default function ContributorInstructionsPage() {
             <Link href="/" className={FORM_BRAND_HEADER_ACTION_SOLID_CLASS}>
               Published views home
             </Link>
+            {contributor?.email || contributor?.identifier ? (
+              <HeaderLogoutLink href="/api/auth/okta/logout?next=/" labeled />
+            ) : null}
           </>
         }
       />

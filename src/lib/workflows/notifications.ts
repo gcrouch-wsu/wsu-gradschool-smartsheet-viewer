@@ -95,6 +95,20 @@ export async function markNotificationRead(id: string, email: string): Promise<b
   return rows.length > 0;
 }
 
+export async function markAllNotificationsRead(email: string): Promise<number> {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return 0;
+  await ensureFormsTables();
+  const { rows } = await queryFormsDb(
+    `UPDATE user_notifications
+     SET read_at = now()
+     WHERE recipient_email = $1 AND read_at IS NULL
+     RETURNING id`,
+    [normalized],
+  );
+  return rows.length;
+}
+
 export async function listKnownEmails(limit = 200): Promise<string[]> {
   await ensureFormsTables();
   const { rows } = await queryFormsDb(

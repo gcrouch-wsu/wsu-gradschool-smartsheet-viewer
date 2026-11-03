@@ -1,3 +1,4 @@
+import { listSourceConfigs } from "@/lib/config/store";
 import { requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { getWorkflow } from "@/lib/workflows/store";
@@ -5,6 +6,7 @@ import { insertNotifications } from "@/lib/workflows/notifications";
 import { insertWorkflowRun, updateWorkflowRun } from "@/lib/workflows/store";
 import { normalizeEmail } from "@/lib/workflows/recipients";
 import { fieldsFromCells, loadAlertRow, renderAlertCopy } from "@/lib/workflows/alert-content";
+import { notificationHref } from "@/lib/workflows/visible-notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +57,10 @@ export async function POST(
     idByTitle: loaded?.columns.idByTitle ?? new Map(),
   });
   const rowId = loaded?.rowId ?? null;
+  const sources = await listSourceConfigs();
+  const source = sources.find(
+    (entry) => entry.sourceType === "sheet" && String(entry.smartsheetId) === String(workflow.sheetId),
+  );
 
   await insertNotifications({
     emails: [email],
@@ -63,9 +69,7 @@ export async function POST(
     payload: {
       sheetId: workflow.sheetId,
       rowId,
-      href: rowId
-        ? `/admin/sources?sheetId=${encodeURIComponent(workflow.sheetId)}&rowId=${rowId}`
-        : `/admin/sources?sheetId=${encodeURIComponent(workflow.sheetId)}`,
+      href: source ? notificationHref(source, rowId, "staff") : undefined,
       fields: rendered.fields,
       templateKind: "alert",
     },
