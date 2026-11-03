@@ -165,6 +165,7 @@ Track optional hardening, operational follow-ups, and product ideas in your issu
 
 ## Project Structure
 
+- `docs/SECURITY.md` - Threat model, auth/roles, env map (server vs browser), agent hard rules, and RLS vs app-layer row scope
 - `src/app/` - Next.js App Router (public views and admin API)
 - `src/components/` - UI components (public layouts and admin builder)
 - `src/lib/` - Business logic (Smartsheet client, transforms, filters)
