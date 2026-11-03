@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
+import { IconPencil, IconRefresh, IconTrash } from "@/components/forms/icons";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -47,6 +48,9 @@ const inputClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-crimson focus:ring-1 focus:ring-crimson";
 
 const selectClass = `${inputClass} max-w-[12rem]`;
+
+const iconBtnClass =
+  "inline-flex items-center justify-center rounded-lg border border-line-strong p-1.5 text-ink hover:bg-[#faf7f8] disabled:cursor-not-allowed disabled:opacity-50";
 
 export function filterPlatformUsers(
   users: PlatformUserSummary[],
@@ -330,30 +334,36 @@ export function PlatformUsersManager({
                 </td>
                 <td className="px-4 py-3 text-mist">{formatTimestamp(user.updatedAt)}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      className="text-xs font-medium text-crimson hover:underline"
+                      className={iconBtnClass}
                       onClick={() => openEdit(user)}
                       disabled={busy}
+                      aria-label={`Edit ${user.displayName ?? user.email}`}
+                      title="Edit"
                     >
-                      Edit
+                      <IconPencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      className="text-xs font-medium text-ink hover:underline"
+                      className={iconBtnClass}
                       onClick={() => createResetLink(user.id)}
                       disabled={busy}
+                      aria-label={`Generate reset link for ${user.displayName ?? user.email}`}
+                      title="Reset link"
                     >
-                      Reset link
+                      <IconRefresh className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      className="text-xs font-medium text-rose-700 hover:underline"
+                      className={`${iconBtnClass} text-rose-700 hover:bg-rose-50`}
                       onClick={() => removeUser(user.id)}
                       disabled={busy}
+                      aria-label={`Delete ${user.displayName ?? user.email}`}
+                      title="Delete"
                     >
-                      Delete
+                      <IconTrash className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </td>
