@@ -4,7 +4,7 @@ import { applyViewFilters } from "@/lib/filters";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { fieldsFromCells, loadColumnIndex, renderAlertCopy } from "@/lib/workflows/alert-content";
 import { emailsFromContactCell, extractEmails, normalizeEmail } from "@/lib/workflows/recipients";
-import { insertNotifications } from "@/lib/workflows/notifications";
+import { deliverWorkflowNotifications } from "@/lib/workflows/deliver";
 import { notificationHref } from "@/lib/workflows/visible-notifications";
 import { insertWorkflowRun, listEnabledRunnableWorkflows, updateWorkflowRun } from "@/lib/workflows/store";
 import type { TriggerEvent, WorkflowRecord } from "@/lib/workflows/types";
@@ -150,7 +150,7 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
         includeColumnIds: workflow.action.includeColumnIds,
         idByTitle: columns.idByTitle,
       });
-      await insertNotifications({
+      const delivered = await deliverWorkflowNotifications({
         emails,
         title: rendered.title,
         body: rendered.body,
@@ -163,7 +163,12 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
         },
         workflowId: workflow.id,
         runId: run.id,
+        channels: workflow.action.channels,
       });
+      if (!delivered.inAppCreated && !delivered.emailQueued) {
+        await updateWorkflowRun(run.id, "skipped", "No notifications delivered.");
+        continue;
+      }
       await updateWorkflowRun(run.id, "sent");
     } catch (error) {
       await updateWorkflowRun(run.id, "failed", error instanceof Error ? error.message : "Workflow failed.");

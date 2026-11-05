@@ -2,7 +2,7 @@ import { listSourceConfigs } from "@/lib/config/store";
 import { requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { getWorkflow } from "@/lib/workflows/store";
-import { insertNotifications } from "@/lib/workflows/notifications";
+import { deliverWorkflowNotifications } from "@/lib/workflows/deliver";
 import { insertWorkflowRun, updateWorkflowRun } from "@/lib/workflows/store";
 import { normalizeEmail } from "@/lib/workflows/recipients";
 import { fieldsFromCells, loadAlertRow, renderAlertCopy } from "@/lib/workflows/alert-content";
@@ -62,7 +62,7 @@ export async function POST(
     (entry) => entry.sourceType === "sheet" && String(entry.smartsheetId) === String(workflow.sheetId),
   );
 
-  await insertNotifications({
+  await deliverWorkflowNotifications({
     emails: [email],
     title: rendered.title,
     body: rendered.body,
@@ -75,7 +75,12 @@ export async function POST(
     },
     workflowId: workflow.id,
     runId: run.id,
+    channels: workflow.action.channels ?? ["in_app"],
   });
   await updateWorkflowRun(run.id, "sent");
-  return Response.json({ ok: true, email });
+  return Response.json({
+    ok: true,
+    email,
+    message: "Preview delivered to Notifications. Email delivery will use the same path when enabled.",
+  });
 }

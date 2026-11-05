@@ -29,6 +29,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       conditions: [],
       action: {
         kind: "in_app_notification",
+        channels: ["in_app"],
         recipients: { userEmails: [] },
         title: "Update on {{Primary}}",
         body: "A row changed. Review the details below.",

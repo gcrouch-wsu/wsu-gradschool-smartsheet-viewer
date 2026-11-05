@@ -239,7 +239,11 @@ export function SourcesCatalogTable({
           <div className="flex items-center gap-2">
             <IconFile className="h-4 w-4 shrink-0 text-sub" />
             <Link
-              href={`/admin/sources/${encodeURIComponent(row.id)}`}
+              href={
+                row.sourceType === "sheet"
+                  ? `/admin/sources/${encodeURIComponent(row.id)}/sheet`
+                  : `/admin/sources/${encodeURIComponent(row.id)}`
+              }
               className="truncate font-medium text-ink hover:text-crimson"
             >
               {row.name}

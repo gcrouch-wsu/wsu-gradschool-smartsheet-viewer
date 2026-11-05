@@ -99,18 +99,24 @@ export default async function AdminDashboardPage() {
               />
             ) : (
               <div className="space-y-2">
-                {sources.slice(0, 5).map((source) => (
-                  <Link
-                    key={source.id}
-                    href={`/admin/sources/${source.id}`}
-                    className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
-                  >
-                    <p className="text-sm font-medium text-ink">{source.label}</p>
-                    <p className="mt-1 text-xs text-sub">
-                      {source.sourceType} · {source.smartsheetId}
-                    </p>
-                  </Link>
-                ))}
+                {sources.slice(0, 5).map((source) => {
+                  const detailsHref =
+                    source.sourceType === "sheet"
+                      ? `/admin/sources/${encodeURIComponent(source.id)}/sheet`
+                      : `/admin/sources/${encodeURIComponent(source.id)}`;
+                  return (
+                    <Link
+                      key={source.id}
+                      href={detailsHref}
+                      className="block rounded-xl border border-line bg-white px-4 py-3 transition hover:border-[var(--crimson-line)]"
+                    >
+                      <p className="text-sm font-medium text-ink">{source.label}</p>
+                      <p className="mt-1 text-xs text-sub">
+                        {source.sourceType} · {source.smartsheetId}
+                      </p>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </RecentCard>

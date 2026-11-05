@@ -31,12 +31,17 @@ export interface WorkflowTrigger {
   schedule?: { day?: string; time?: string };
 }
 
+/** Delivery channels for alert workflows. `in_app` is live; `email` is reserved for a later mailer. */
+export type NotificationChannel = "in_app" | "email";
+
 export interface WorkflowAction {
   kind: string;
   recipients?: {
     userEmails?: string[];
     contactColumnId?: number;
   };
+  /** Where to deliver alerts. Defaults to in-app when omitted. */
+  channels?: NotificationChannel[];
   title?: string;
   body?: string;
   includeColumnIds?: number[];
