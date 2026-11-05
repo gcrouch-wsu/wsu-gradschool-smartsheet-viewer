@@ -34,9 +34,14 @@ async function parseJson(r: Response): Promise<Record<string, unknown>> {
 
 interface SourcesCatalogClientProps {
   initialRows: SourceCatalogRow[];
+  /** When false, hide Smartsheet “New source” registration; Create form remains. */
+  allowSmartsheetSource?: boolean;
 }
 
-export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps) {
+export function SourcesCatalogClient({
+  initialRows,
+  allowSmartsheetSource = true,
+}: SourcesCatalogClientProps) {
   const router = useRouter();
   const [rows, setRows] = useState(initialRows);
   const [query, setQuery] = useState("");
@@ -45,12 +50,13 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
   const [loading, setLoading] = useState(false);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [mode, setMode] = useState<CreateFormMode>("template");
+  const [mode, setMode] = useState<CreateFormMode>(
+    allowSmartsheetSource ? "template" : "excel",
+  );
   const [sheets, setSheets] = useState<SheetOption[]>([]);
   const [sheetsError, setSheetsError] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [newName, setNewName] = useState("");
-  const [destinationFolderId, setDestinationFolderId] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -68,6 +74,12 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+
+  useEffect(() => {
+    if (!allowSmartsheetSource && mode === "template") {
+      setMode("excel");
+    }
+  }, [allowSmartsheetSource, mode]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -256,8 +268,20 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
 
   function openCreateModal() {
     setCreateMsg(null);
+    if (!allowSmartsheetSource && mode === "template") {
+      setMode("excel");
+    }
     setCreateModalOpen(true);
-    void loadSheets();
+    if (allowSmartsheetSource) {
+      void loadSheets();
+    }
+  }
+
+  function handleModeChange(next: CreateFormMode) {
+    if (!allowSmartsheetSource && next === "template") return;
+    setMode(next);
+    setCreateMsg(null);
+    if (next !== "excel") setExcelPreviewError("");
   }
 
   function closeCreateModal() {
@@ -268,12 +292,6 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
     setExcelColumns(null);
     setExcelRowCount(0);
     setExcelPreviewError("");
-  }
-
-  function handleModeChange(next: CreateFormMode) {
-    setMode(next);
-    setCreateMsg(null);
-    if (next !== "excel") setExcelPreviewError("");
   }
 
   async function previewExcelFile(file?: File | null) {
@@ -322,7 +340,6 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
         body.append("mode", "excel");
         body.append("file", excelFile!);
         body.append("newName", newName);
-        if (destinationFolderId.trim()) body.append("destinationFolderId", destinationFolderId.trim());
         body.append("columnOverrides", JSON.stringify(excelOverridesFromColumns(excelColumns!)));
         r = await fetch("/api/forms/registry/create", { method: "POST", body });
       } else {
@@ -333,7 +350,6 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
             mode,
             templateId,
             newName,
-            destinationFolderId: destinationFolderId || undefined,
           }),
         });
       }
@@ -369,9 +385,11 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
           <IconPlus className="h-4 w-4" />
           Create form
         </button>
-        <Link href="/admin/sources/new" data-tour="as-new">
-          <Button variant="primary">New source</Button>
-        </Link>
+        {allowSmartsheetSource ? (
+          <Link href="/admin/sources/new" data-tour="as-new">
+            <Button variant="primary">New source</Button>
+          </Link>
+        ) : null}
       </div>
 
       {error ? (
@@ -402,11 +420,10 @@ export function SourcesCatalogClient({ initialRows }: SourcesCatalogClientProps)
         sheetsError={sheetsError}
         newName={newName}
         onNewNameChange={setNewName}
-        destinationFolderId={destinationFolderId}
-        onDestinationFolderIdChange={setDestinationFolderId}
         creating={creating}
         onCreate={createForm}
         createMsg={createMsg}
+        allowTemplateMode={allowSmartsheetSource}
         excelFile={excelFile}
         onExcelFileChange={(file) => {
           setExcelFile(file);

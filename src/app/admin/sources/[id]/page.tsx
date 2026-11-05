@@ -1,16 +1,25 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SourceForm } from "@/components/admin/SourceForm";
 import { Button } from "@/components/admin/WorkspacePrimitives";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireAdminPageAccess } from "@/lib/admin-page";
+import { isDatabaseConfigEnabled } from "@/lib/config/config-db";
 import { getSourceConfigById } from "@/lib/config/store";
 import { listConfiguredConnectionKeys } from "@/lib/smartsheet";
+import { isSmartsheetApiEnabled } from "@/lib/smartsheet-api-gate";
 
 export default async function SourceEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireAdminPageAccess(`/admin/sources/${id}`);
   const isNew = id === "new";
+  if (isNew) {
+    const allowSmartsheetSource =
+      !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
+    if (!allowSmartsheetSource) {
+      redirect("/admin/sources");
+    }
+  }
   const source = isNew ? null : await getSourceConfigById(id);
 
   if (!isNew && !source) {
