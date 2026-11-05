@@ -34,6 +34,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -107,6 +108,20 @@ export function NotificationBell({ className = "" }: { className?: string }) {
     setCount((current) => Math.max(0, current - 1));
   }
 
+  async function markAllRead() {
+    if (count < 1 || markingAll) return;
+    setMarkingAll(true);
+    try {
+      const res = await fetch("/api/notifications/read-all", { method: "POST" });
+      if (!res.ok) return;
+      const now = new Date().toISOString();
+      setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? now })));
+      setCount(0);
+    } finally {
+      setMarkingAll(false);
+    }
+  }
+
   function toggleExpanded(item: NotificationItem) {
     const next = expandedId === item.id ? null : item.id;
     setExpandedId(next);
@@ -138,9 +153,21 @@ export function NotificationBell({ className = "" }: { className?: string }) {
           aria-label="Notifications"
           className="absolute right-0 z-[10050] mt-2 w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-[0_12px_32px_rgba(35,31,32,0.16)]"
         >
-          <div className="flex items-center justify-between border-b border-[color:var(--wsu-border)] px-3 py-2.5">
-            <p className="text-sm font-medium text-[color:var(--wsu-ink)]">Notifications</p>
-            <span className="text-xs text-[color:var(--wsu-muted)]">{count} unread</span>
+          <div className="flex items-center justify-between gap-3 border-b border-[color:var(--wsu-border)] px-3 py-2.5">
+            <p className="min-w-0 text-sm font-medium text-[color:var(--wsu-ink)]">
+              Notifications
+              {count > 0 ? (
+                <span className="ml-2 text-xs font-normal text-[color:var(--wsu-muted)]">{count} unread</span>
+              ) : null}
+            </p>
+            <button
+              type="button"
+              onClick={() => void markAllRead()}
+              disabled={count < 1 || markingAll}
+              className="shrink-0 whitespace-nowrap text-xs font-medium !text-crimson hover:underline disabled:cursor-not-allowed disabled:!text-mist disabled:no-underline"
+            >
+              {markingAll ? "Marking…" : "Mark all as read"}
+            </button>
           </div>
 
           <div className="max-h-80 overflow-y-auto overscroll-contain">
@@ -202,7 +229,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                                   className="inline-flex text-xs font-medium text-[color:var(--wsu-crimson)] hover:underline"
                                   onClick={(event) => event.stopPropagation()}
                                 >
-                                  Open row
+                                  Open related row
                                 </Link>
                               ) : null}
                             </span>
@@ -222,7 +249,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
               className="text-xs font-medium text-[color:var(--wsu-muted)] hover:text-[color:var(--wsu-crimson)]"
               onClick={() => setOpen(false)}
             >
-              Read all notifications
+              View all notifications
             </Link>
           </div>
         </div>

@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
-import {
-  CONTRIBUTOR_SESSION_COOKIE_NAME,
-  getContributorSessionCookieSettings,
-} from "@/lib/contributor-auth";
+import { clearAllAppSessionCookies } from "@/lib/okta/clear-session";
 
 export const runtime = "nodejs";
 
 export async function POST() {
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(CONTRIBUTOR_SESSION_COOKIE_NAME, "", {
-    ...getContributorSessionCookieSettings(),
-    maxAge: 0,
-  });
+  clearAllAppSessionCookies(response);
   return response;
 }

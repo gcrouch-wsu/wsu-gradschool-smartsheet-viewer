@@ -1,11 +1,12 @@
 /**
- * Audit trail for critical admin/forms actions.
+ * Audit trail for critical admin/forms actions and admin UI activity.
  * Uses Postgres when DATABASE_URL is set; otherwise appends to config/audit/events.jsonl.
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import type { AdminPrincipal } from "@/lib/admin-users";
 import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
-import type { Principal } from "@/lib/identity";
+import { adminPrincipalToPrincipal, type Principal } from "@/lib/identity";
 
 export interface AuditEventInput {
   actorKind: string;
@@ -86,6 +87,26 @@ export function auditFromPrincipal(
     metadata,
   });
 }
+
+/** Convenience for admin API routes that already have an AdminPrincipal. */
+export function auditFromAdminPrincipal(
+  admin: AdminPrincipal | null | undefined,
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  return auditFromPrincipal(
+    admin ? adminPrincipalToPrincipal(admin) : null,
+    action,
+    resourceType,
+    resourceId,
+    metadata,
+  );
+}
+
+/** Max events accepted from one UI batch POST. */
+export const UI_AUDIT_BATCH_LIMIT = 40;
 
 export async function listAuditEvents(options?: {
   limit?: number;

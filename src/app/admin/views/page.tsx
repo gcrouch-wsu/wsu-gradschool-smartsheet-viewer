@@ -79,7 +79,7 @@ export default async function ViewsIndexPage({
               description={
                 sourceFilter
                   ? "Create a view from this source, or clear the filter to see all views."
-                  : "A view starts from a source. Register a source first, then choose the fields to expose."
+                  : "A view starts from a source. Create a form on Sources first (or register a Smartsheet source when the API is on), then choose the fields to expose."
               }
               action={{
                 href: sourceFilter ? "/admin/views" : "/admin/sources",

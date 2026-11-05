@@ -7,9 +7,11 @@ import {
   ADMIN_LOGIN_TOO_MANY_ATTEMPTS_ERROR,
   authenticateAdminCredentials,
   createAdminSessionForPrincipal,
+  getCurrentAdminAuthResult,
   isAdminLoginRateLimited,
   recordAdminFailedLoginAttempt,
 } from "@/lib/admin-users";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import { adminAuthRateLimitKey } from "@/lib/request-ip";
 
 export async function POST(request: Request) {
@@ -52,6 +54,13 @@ export async function POST(request: Request) {
     );
   }
 
+  await auditFromAdminPrincipal(
+    authorization.principal,
+    "auth.login",
+    "session",
+    authorization.principal.id,
+    { role: authorization.principal.role },
+  );
   const response = NextResponse.json({
     ok: true,
     role: authorization.principal.role,
@@ -65,12 +74,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
+  const current = await getCurrentAdminAuthResult();
+  if (current.ok && current.principal) {
+    await auditFromAdminPrincipal(current.principal, "auth.logout", "session", current.principal.id);
+  }
+  const { clearAllAppSessionCookies } = await import("@/lib/okta/clear-session");
   const response = NextResponse.json({ ok: true });
-  response.cookies.set({
-    ...getAdminSessionCookieSettings(),
-    name: ADMIN_SESSION_COOKIE_NAME,
-    value: "",
-    maxAge: 0,
-  });
+  clearAllAppSessionCookies(response);
   return response;
 }

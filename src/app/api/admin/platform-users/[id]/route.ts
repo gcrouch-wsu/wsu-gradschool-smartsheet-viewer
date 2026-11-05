@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { validateAdminPassword } from "@/lib/admin-auth";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import {
   ADMIN_MANAGED_ROLES,
   type AssignablePlatformRole,
@@ -27,6 +28,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!user) {
     return NextResponse.json({ message: "User not found." }, { status: 404 });
   }
+  await auditFromAdminPrincipal(auth.principal, "user.view", "user", user.id, {
+    email: user.email,
+    roles: user.roles,
+  });
   return NextResponse.json({
     user: {
       id: user.id,
@@ -105,6 +110,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       isActive,
       password: password || null,
     });
+    await auditFromAdminPrincipal(auth.principal, "user.update", "user", user.id, {
+      email: user.email,
+      roles: user.roles,
+      isActive: user.isActive,
+      passwordChanged: Boolean(password),
+    });
     return NextResponse.json({ user });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update user.";
@@ -120,5 +131,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ message: "You cannot delete your own account." }, { status: 400 });
   }
   await deletePlatformUser(id);
+  await auditFromAdminPrincipal(auth.principal, "user.delete", "user", id);
   return NextResponse.json({ ok: true });
 }

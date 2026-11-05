@@ -85,7 +85,7 @@ export function DataStacked({
         <article
           key={row.id}
           id={`row-${row.id}`}
-          className={`scroll-mt-24 rounded-2xl sm:rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-4 shadow-[0_16px_40px_rgba(35,31,32,0.06)] sm:p-5`}
+          className={`view-record-scroll scroll-mt-24 rounded-2xl sm:rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-4 shadow-[0_16px_40px_rgba(35,31,32,0.06)] sm:p-5`}
         >
           {isEditable && (
             <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
@@ -148,7 +148,7 @@ export function DataStacked({
       <article
         key={row.id}
         id={`row-${row.id}`}
-        className={`scroll-mt-24 rounded-2xl sm:rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-4 shadow-[0_16px_40px_rgba(35,31,32,0.06)] sm:p-5`}
+        className={`view-record-scroll scroll-mt-24 rounded-2xl sm:rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(isEditable)} bg-[color:var(--wsu-paper)] p-4 shadow-[0_16px_40px_rgba(35,31,32,0.06)] sm:p-5`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--wsu-border)] pb-3 sm:gap-4 sm:pb-4">
           <div className="min-w-0">

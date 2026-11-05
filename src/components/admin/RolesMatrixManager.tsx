@@ -5,7 +5,10 @@ import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
 import { useToast } from "@/components/ui/Toast";
 import type { PrincipalCapability } from "@/lib/identity/principal";
 import type { RolePermissionMatrix } from "@/lib/platform-user-types";
-import { OWNER_LOCKED_CAPABILITIES } from "@/lib/platform-user-types";
+import {
+  isStudentPortalCapabilityLocked,
+  OWNER_LOCKED_CAPABILITIES,
+} from "@/lib/platform-user-types";
 
 interface RolesMatrixManagerProps {
   initialMatrix: RolePermissionMatrix;
@@ -31,6 +34,15 @@ export function RolesMatrixManager({ initialMatrix }: RolesMatrixManagerProps) {
   function toggle(roleId: string, capability: PrincipalCapability) {
     if (roleId === "owner" && (OWNER_LOCKED_CAPABILITIES as readonly string[]).includes(capability)) {
       addToast("Owner always keeps admin.owner and admin.manage.", "error");
+      return;
+    }
+    if (isStudentPortalCapabilityLocked(roleId, capability)) {
+      addToast(
+        roleId === "student"
+          ? "Student always keeps Student portal."
+          : "Student portal is only for the Student role.",
+        "error",
+      );
       return;
     }
     setMatrix((prev) => ({
@@ -104,8 +116,9 @@ export function RolesMatrixManager({ initialMatrix }: RolesMatrixManagerProps) {
                   </td>
                   {matrix.capabilities.map((cap) => {
                     const locked =
-                      role.id === "owner" &&
-                      (OWNER_LOCKED_CAPABILITIES as readonly string[]).includes(cap);
+                      (role.id === "owner" &&
+                        (OWNER_LOCKED_CAPABILITIES as readonly string[]).includes(cap)) ||
+                      isStudentPortalCapabilityLocked(role.id, cap);
                     const checked = Boolean(matrix.matrix[role.id]?.[cap]);
                     return (
                       <td key={cap} className="px-3 py-3 text-center">

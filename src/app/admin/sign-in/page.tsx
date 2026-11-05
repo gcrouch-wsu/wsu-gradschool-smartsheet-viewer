@@ -3,6 +3,7 @@ import { AdminSignInForm } from "@/components/admin/AdminSignInForm";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { getAdminConfigurationError, normalizeAdminNextPath } from "@/lib/admin-auth";
 import { getCurrentAdminAuthResult } from "@/lib/admin-users";
+import { isOktaConfigured } from "@/lib/okta/config";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -17,7 +18,9 @@ export default async function AdminSignInPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const nextPath = normalizeAdminNextPath(firstValue(resolvedSearchParams.next));
+  const errorMessage = firstValue(resolvedSearchParams.error)?.trim() || null;
   const configurationError = getAdminConfigurationError();
+  const oktaEnabled = isOktaConfigured();
   const auth = await getCurrentAdminAuthResult();
 
   if (auth.ok && auth.principal) {
@@ -64,7 +67,9 @@ export default async function AdminSignInPage({
                 Admin sign in
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-[15px]">
-                Use your admin email to continue. New accounts set a password on first access.
+                {oktaEnabled
+                  ? "Sign in with your WSU account. You must already have a staff account in this app."
+                  : "Use your admin email to continue. New accounts set a password on first access."}
               </p>
             </div>
 
@@ -76,7 +81,7 @@ export default async function AdminSignInPage({
                 Sign in form
               </h2>
 
-              {configurationError ? (
+              {configurationError && !oktaEnabled ? (
                 <div
                   role="alert"
                   className="mb-6 rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-950"
@@ -86,7 +91,12 @@ export default async function AdminSignInPage({
                 </div>
               ) : null}
 
-              <AdminSignInForm nextPath={nextPath} disabled={Boolean(configurationError)} />
+              <AdminSignInForm
+                nextPath={nextPath}
+                disabled={Boolean(configurationError) && !oktaEnabled}
+                oktaEnabled={oktaEnabled}
+                errorMessage={errorMessage}
+              />
             </section>
 
             <p className="mt-6 text-center text-xs leading-relaxed text-[color:var(--mist)] sm:text-left">

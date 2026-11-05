@@ -2,6 +2,7 @@
 
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OktaSignInButton } from "@/components/auth/OktaSignInButton";
 import { ADMIN_PASSWORD_POLICY_MESSAGE } from "@/lib/admin-auth";
 
 type ContributorMode = "sign_in" | "claim";
@@ -11,10 +12,14 @@ export function ContributorLoginForm({
   slug,
   viewId,
   returnHref,
+  oktaEnabled = false,
+  errorMessage = null,
 }: {
   slug: string;
   viewId: string;
   returnHref: string;
+  oktaEnabled?: boolean;
+  errorMessage?: string | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("email");
@@ -24,6 +29,18 @@ export function ContributorLoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (oktaEnabled) {
+    return (
+      <OktaSignInButton
+        intent="contributor"
+        nextPath={returnHref}
+        slug={slug}
+        viewId={viewId}
+        errorMessage={errorMessage}
+      />
+    );
+  }
 
   async function handleEmailContinue(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -7,12 +7,19 @@ import type { SourceCatalogRow } from "@/components/admin/SourcesCatalogTable";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
+import { isDatabaseConfigEnabled } from "@/lib/config/config-db";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
+import { isSmartsheetApiEnabled } from "@/lib/smartsheet-api-gate";
 
 export default async function SourcesIndexPage() {
   await requireAdminPageAccess("/admin/sources");
   const [sources, views] = await Promise.all([listSourceConfigs(), listViewConfigs()]);
+  const allowSmartsheetSource =
+    !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
+  const tourSteps = allowSmartsheetSource
+    ? SOURCES_LIST_TOUR_STEPS
+    : SOURCES_LIST_TOUR_STEPS.filter((step) => step.id !== "new");
 
   const viewsBySource = views.reduce<Map<string, number>>((map, view) => {
     map.set(view.sourceId, (map.get(view.sourceId) ?? 0) + 1);
@@ -40,17 +47,21 @@ export default async function SourcesIndexPage() {
   });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-5">
       <PageHeader
         eyebrow="Admin builder"
         title="Sources"
-        description="Shared catalog for public views and forms. Open sheet or builder from a row; publish for /f URLs."
+        description={
+          allowSmartsheetSource
+            ? "Shared catalog for public views and forms. Open sheet or builder from a row; publish for /f URLs."
+            : "Shared catalog for public views and forms. Use Create form (template, scratch, or Excel). Open sheet or builder from a row; publish for /f URLs."
+        }
         dataTour="as-heading"
         actions={
-          <ProductTourControls storageKey={SOURCES_LIST_TOUR_STORAGE_KEY} steps={SOURCES_LIST_TOUR_STEPS} />
+          <ProductTourControls storageKey={SOURCES_LIST_TOUR_STORAGE_KEY} steps={tourSteps} />
         }
       />
-      <SourcesCatalogClient initialRows={rows} />
+      <SourcesCatalogClient initialRows={rows} allowSmartsheetSource={allowSmartsheetSource} />
     </section>
   );
 }

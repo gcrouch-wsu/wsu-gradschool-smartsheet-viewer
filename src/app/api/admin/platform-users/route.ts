@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { canManageUsers } from "@/lib/admin-users";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import {
   ADMIN_MANAGED_ROLES,
   type AssignablePlatformRole,
@@ -69,6 +70,10 @@ export async function POST(request: Request) {
       isActive,
       password: password || null,
     });
+    await auditFromAdminPrincipal(auth.principal, "user.create", "user", user.id, {
+      email: user.email,
+      roles: user.roles,
+    });
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create user.";
@@ -91,5 +96,6 @@ export async function DELETE(request: Request) {
   }
 
   await deletePlatformUser(id);
+  await auditFromAdminPrincipal(auth.principal, "user.delete", "user", id);
   return NextResponse.json({ ok: true });
 }

@@ -32,7 +32,7 @@ export function DataTable({
           <th
             key={field.key}
             scope="col"
-            className="view-field-label whitespace-nowrap px-3 py-2.5 text-left text-[color:var(--wsu-muted)] first:pl-4 last:pr-4"
+            className="view-field-label whitespace-nowrap px-4 py-3 text-left first:pl-5 last:pr-5"
           >
             {field.label}
           </th>
@@ -61,7 +61,7 @@ export function DataTable({
           className={`border-b border-[color:var(--wsu-border)]/60 align-top transition-colors last:border-b-0 scroll-mt-24 hover:bg-[color:var(--wsu-stone)]/35 ${getContributorRowAccentClass(isEditable)} ${sup ? "bg-amber-50/30" : ""}`}
         >
           {row.fields.map((field, colIndex) => (
-            <td key={`${row.id}-${field.key}`} className="px-3 py-3 text-sm first:pl-4 last:pr-4">
+            <td key={`${row.id}-${field.key}`} className="px-4 py-3.5 text-[0.9375rem] leading-6 first:pl-5 last:pr-5">
               <div className="space-y-1.5">
                 {colIndex === 0 && sup ? (
                   <p className="m-0">

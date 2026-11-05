@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import type { PrincipalCapability } from "@/lib/identity/principal";
 import {
   ALL_CAPABILITIES,
@@ -37,5 +38,8 @@ export async function PUT(request: Request) {
   }
 
   const matrix = await saveRolePermissionMatrix(updates);
+  await auditFromAdminPrincipal(auth.principal, "roles.update", "roles", undefined, {
+    roleIds: Object.keys(updates),
+  });
   return NextResponse.json(matrix);
 }

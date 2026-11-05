@@ -47,7 +47,7 @@ export default async function AdminActivityPage({
       <PageHeader
         eyebrow="Admin builder"
         title="Activity"
-        description="Audit trail for form registry changes, builder saves, publish actions, resends, and related admin activity."
+        description="Audit trail for admin clicks and page views, user and student preview access, form/source/view changes, publish actions, and related staff activity."
         dataTour="aa-heading"
         actions={
           <ProductTourControls storageKey={ACTIVITY_TOUR_STORAGE_KEY} steps={ACTIVITY_TOUR_STEPS} />
@@ -67,24 +67,35 @@ export default async function AdminActivityPage({
             <EmptyState
               icon={<span className="font-serif text-lg">◷</span>}
               title="No audit events yet"
-              description="Actions like publishing views, registering sources, and saving form builders will show up here."
+              description="Clicks, page views, publishing views, user changes, student preview, and form builder saves will show up here."
               variant="panel"
             />
           }
-          renderRow={(event) => (
+          renderRow={(event) => {
+            const metaLabel =
+              event.metadata && typeof event.metadata.label === "string"
+                ? event.metadata.label
+                : event.metadata && typeof event.metadata.path === "string"
+                  ? event.metadata.path
+                  : null;
+            return (
             <>
               <p className="min-w-0 text-sm text-sub">{new Date(event.createdAt).toLocaleString()}</p>
               <div className="min-w-0">
                 <p className="font-medium text-ink">{event.actorLabel ?? event.actorId}</p>
                 <p className="mt-1 text-xs text-mist">{event.actorKind}</p>
               </div>
-              <p className="min-w-0 text-sm text-ink">{event.action}</p>
+              <div className="min-w-0">
+                <p className="text-sm text-ink">{event.action}</p>
+                {metaLabel ? <p className="mt-1 text-xs text-mist">{metaLabel}</p> : null}
+              </div>
               <p className="min-w-0 text-sm text-sub">
                 {event.resourceType}
                 {event.resourceId ? ` / ${event.resourceId}` : ""}
               </p>
             </>
-          )}
+            );
+          }}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureBootstrapped } from "@/lib/forms/init";
-import { requireStudentSession } from "@/lib/forms/student-auth";
+import { resolveStudentPortalAccess } from "@/lib/forms/student-portal-access";
 import { loadOwnedSheetContext } from "@/lib/forms/student-rows";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ sheetId: string }> },
 ) {
-  const session = await requireStudentSession();
+  const session = await resolveStudentPortalAccess();
   if (!session.ok) return session.response;
 
   await ensureBootstrapped();

@@ -1,3 +1,4 @@
+import { recordAuditEvent } from "@/lib/audit";
 import { formsAuthErrorResponse, requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { deleteWorkflow, getWorkflow, updateWorkflow } from "@/lib/workflows/store";
@@ -47,6 +48,16 @@ export async function PUT(
         createdByEmail: existing.createdByEmail,
       },
     );
+    if (!workflow) return Response.json({ error: "Workflow not found." }, { status: 404 });
+    await recordAuditEvent({
+      actorKind: "admin",
+      actorId: access.user.email,
+      actorLabel: access.user.name,
+      action: "workflow.update",
+      resourceType: "workflow",
+      resourceId: workflow.id,
+      metadata: { sheetId: workflow.sheetId, name: workflow.name },
+    });
     return Response.json({ workflow });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update workflow.";
@@ -67,6 +78,14 @@ export async function DELETE(
   try {
     const removed = await deleteWorkflow(id);
     if (!removed) return Response.json({ error: "Workflow not found." }, { status: 404 });
+    await recordAuditEvent({
+      actorKind: "admin",
+      actorId: access.user.email,
+      actorLabel: access.user.name,
+      action: "workflow.delete",
+      resourceType: "workflow",
+      resourceId: id,
+    });
     return Response.json({ ok: true });
   } catch (error) {
     return formsAuthErrorResponse(error);

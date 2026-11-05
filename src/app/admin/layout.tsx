@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { AdminActivityCapture } from "@/components/admin/AdminActivityCapture";
 import { AdminToastWrapper } from "@/components/admin/AdminToastWrapper";
 import { ProductShell } from "@/components/layout/ProductShell";
 import { ProductToolbar } from "@/components/layout/ProductToolbar";
@@ -79,6 +80,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           only when you need to import more data from Smartsheet.
         </div>
       ) : null}
+      <AdminActivityCapture />
       <AdminToastWrapper>{children}</AdminToastWrapper>
     </ProductShell>
   );

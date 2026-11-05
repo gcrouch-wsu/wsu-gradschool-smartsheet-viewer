@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { AppBrandHeader } from "@/components/layout/AppBrandHeader";
 import { ContributorLoginForm } from "@/components/views/contributor/ContributorLoginForm";
 import { ViewStyleWrapper } from "@/components/views/shell/ViewStyleWrapper";
-import {
-  CONTRIBUTOR_SESSION_COOKIE_NAME,
-  getContributorConfigurationError,
-  readContributorSessionToken,
-} from "@/lib/contributor-auth";
+import { getContributorConfigurationError } from "@/lib/contributor-auth";
+import { resolveContributorPrincipal } from "@/lib/identity";
+import { isOktaConfigured } from "@/lib/okta/config";
 import {
   loadPublicPageState,
   resolveRequestedResolvedView,
@@ -31,7 +29,9 @@ export default async function ContributorLoginPage({
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const requestedView = firstValue(resolvedSearchParams.view);
+  const errorMessage = firstValue(resolvedSearchParams.error)?.trim() || null;
   const configurationError = getContributorConfigurationError();
+  const oktaEnabled = isOktaConfigured();
 
   const page = await loadPublicPageState(slug, { datasetOptions: { fresh: true } });
   if (!page) {
@@ -66,13 +66,14 @@ export default async function ContributorLoginPage({
     );
   }
 
-  const cookieStore = await cookies();
-  const session = await readContributorSessionToken(cookieStore.get(CONTRIBUTOR_SESSION_COOKIE_NAME)?.value);
-  if (session.ok && session.payload) {
+  const contributor = await resolveContributorPrincipal();
+  if (contributor?.email) {
     redirect(returnHref);
   }
 
   return (
+    <>
+    <AppBrandHeader maxWidthClassName="max-w-3xl" />
     <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <ViewStyleWrapper style={activeView.style} themePresetId={activeView.themePresetId}>
@@ -101,9 +102,9 @@ export default async function ContributorLoginPage({
                     .
                   </li>
                   <li>
-                    After you enter your email, the system checks whether this is your first time and either asks you to{" "}
-                    <strong className="text-[color:var(--wsu-ink)]">create a password</strong> or{" "}
-                    <strong className="text-[color:var(--wsu-ink)]">sign in</strong>.
+                    {oktaEnabled
+                      ? "Sign in with your WSU account. Access is granted only if your email appears in the configured contact field."
+                      : "After you enter your email, the system checks whether this is your first time and either asks you to create a password or sign in."}
                   </li>
                 </ul>
                 <Link
@@ -116,7 +117,13 @@ export default async function ContributorLoginPage({
             </section>
 
             <section className="rounded-[2rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-8 shadow-[0_24px_64px_rgba(35,31,32,0.07)]">
-              <ContributorLoginForm slug={slug} viewId={activeView.id} returnHref={returnHref} />
+              <ContributorLoginForm
+                slug={slug}
+                viewId={activeView.id}
+                returnHref={returnHref}
+                oktaEnabled={oktaEnabled}
+                errorMessage={errorMessage}
+              />
               <Link
                 href={returnHref}
                 className="link-pill-muted mt-6"
@@ -128,5 +135,6 @@ export default async function ContributorLoginPage({
         </ViewStyleWrapper>
       </div>
     </main>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CardLayoutCellRenderer } from "@/components/views/layouts/CardLayoutCellRenderer";
 import { DataStacked } from "@/components/views/layouts/DataStacked";
 import { ContributorCardEditShell } from "@/components/views/contributor/ContributorCardEditShell";
@@ -64,6 +64,21 @@ export function DataTabbed({
   slug?: string;
 }) {
   const [activeRowId, setActiveRowId] = useState<number | null>(view.rows[0]?.id ?? null);
+  const tabListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const list = tabListRef.current;
+    const active = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !active) return;
+
+    const listRect = list.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    if (activeRect.left < listRect.left) {
+      list.scrollLeft -= listRect.left - activeRect.left + 8;
+    } else if (activeRect.right > listRect.right) {
+      list.scrollLeft += activeRect.right - listRect.right + 8;
+    }
+  }, [activeRowId]);
 
   if (programGroups && programGroups.length > 0) {
     return (
@@ -106,11 +121,19 @@ export function DataTabbed({
           : "border-t border-[color:var(--wsu-border)] pt-4"
       : "";
 
+  const isEditingActiveRow =
+    editingRowId === activeRow.id || (activeRow.mergedSourceRowIds?.includes(editingRowId ?? -1) ?? false);
+
   const detailPanelId = "record-tabbed-detail-panel";
 
   return (
     <div className="space-y-4">
-      <div role="tablist" aria-label="Records" className="flex flex-wrap gap-2">
+      <div
+        ref={tabListRef}
+        role="tablist"
+        aria-label="Records"
+        className="flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]"
+      >
         {view.rows.map((row) => {
           const active = row.id === activeRow.id;
           const isEditable = isContributorRowOrMergedEditable(row, editableRowIds);
@@ -128,7 +151,7 @@ export function DataTabbed({
               aria-controls={detailPanelId}
               tabIndex={active ? 0 : -1}
               onClick={() => setActiveRowId(row.id)}
-              className={active ? "view-control-active px-4 py-2 text-sm font-medium" : isEditable ? "view-control-primary px-4 py-2 text-sm font-medium" : "view-control px-4 py-2 text-sm font-medium"}
+              className={`shrink-0 whitespace-nowrap ${active ? "view-control-active px-4 py-2 text-sm font-medium" : isEditable ? "view-control-primary px-4 py-2 text-sm font-medium" : "view-control px-4 py-2 text-sm font-medium"}`}
             >
               <span className="inline-flex flex-col items-start gap-1">
                 {sup ? (
@@ -147,10 +170,10 @@ export function DataTabbed({
         role="tabpanel"
         id={detailPanelId}
         aria-labelledby={`row-${activeRow.id}`}
-        className={`rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(activeRowEditable)} bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
+        className={`${isEditingActiveRow && onCancelEdit ? "" : "view-record-scroll "}rounded-[1.75rem] ${cardBorderClass} ${getContributorRowAccentClass(activeRowEditable)} bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
       >
         {(() => {
-          const isEditingThisRow = editingRowId === activeRow.id || (activeRow.mergedSourceRowIds?.includes(editingRowId ?? -1) ?? false);
+          const isEditingThisRow = isEditingActiveRow;
           if (isEditingThisRow && onCancelEdit) {
             return (
               <ContributorCardEditShell

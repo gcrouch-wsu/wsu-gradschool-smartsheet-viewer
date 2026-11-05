@@ -24,11 +24,11 @@ export interface CreateFormModalProps {
   sheetsError: string;
   newName: string;
   onNewNameChange: (value: string) => void;
-  destinationFolderId: string;
-  onDestinationFolderIdChange: (value: string) => void;
   creating: boolean;
   onCreate: () => void;
   createMsg: { ok: boolean; text: string } | null;
+  /** When false, hide “From a template” (Smartsheet templates unavailable). */
+  allowTemplateMode?: boolean;
   /** Excel mode */
   excelFile: File | null;
   onExcelFileChange: (file: File | null) => void;
@@ -48,8 +48,11 @@ const TYPE_OPTIONS: { value: ExcelEditableType; label: string }[] = [
   { value: "PHONE", label: "Phone" },
 ];
 
-const CREATE_FORM_DESCRIPTION =
+const CREATE_FORM_DESCRIPTION_WITH_TEMPLATE =
   "Prefer a template when approval emails should go to the address entered on the form. Scratch and Excel sheets need Approval Request automations added later in Smartsheet.";
+
+const CREATE_FORM_DESCRIPTION_WITHOUT_TEMPLATE =
+  "Create from scratch or import Excel. Template cloning needs the Smartsheet API and is unavailable while it is off.";
 
 function typeSelectValue(col: ExcelImportColumn): ExcelEditableType {
   // NUMBER is a UI-only hint mapped to TEXT_NUMBER for Smartsheet
@@ -67,11 +70,10 @@ export function CreateFormModal({
   sheetsError,
   newName,
   onNewNameChange,
-  destinationFolderId,
-  onDestinationFolderIdChange,
   creating,
   onCreate,
   createMsg,
+  allowTemplateMode = true,
   excelFile,
   onExcelFileChange,
   excelColumns,
@@ -88,6 +90,8 @@ export function CreateFormModal({
     () => sheets.map((sheet) => ({ id: String(sheet.id), name: sheet.name })),
     [sheets],
   );
+
+  const showTemplate = allowTemplateMode && mode === "template";
 
   function handleClose() {
     if (!creating) onClose();
@@ -114,24 +118,28 @@ export function CreateFormModal({
       open={open}
       onClose={handleClose}
       title="Create a form"
-      description={CREATE_FORM_DESCRIPTION}
+      description={
+        allowTemplateMode ? CREATE_FORM_DESCRIPTION_WITH_TEMPLATE : CREATE_FORM_DESCRIPTION_WITHOUT_TEMPLATE
+      }
       size={mode === "excel" ? "3xl" : "md"}
     >
       <div className="space-y-4">
         <div className="inline-flex flex-wrap rounded-lg border border-[color:var(--wsu-border)] p-0.5">
-          <button
-            type="button"
-            onClick={() => onModeChange("template")}
-            className={[
-              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
-              mode === "template"
-                ? "bg-[color:var(--wsu-stone)] font-medium text-[color:var(--wsu-ink)]"
-                : "font-normal text-[color:var(--wsu-muted)] hover:text-[color:var(--wsu-ink)]",
-            ].join(" ")}
-          >
-            <IconCopy className="h-3.5 w-3.5" />
-            From a template
-          </button>
+          {allowTemplateMode ? (
+            <button
+              type="button"
+              onClick={() => onModeChange("template")}
+              className={[
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                mode === "template"
+                  ? "bg-[color:var(--wsu-stone)] font-medium text-[color:var(--wsu-ink)]"
+                  : "font-normal text-[color:var(--wsu-muted)] hover:text-[color:var(--wsu-ink)]",
+              ].join(" ")}
+            >
+              <IconCopy className="h-3.5 w-3.5" />
+              From a template
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => onModeChange("scratch")}
@@ -174,7 +182,7 @@ export function CreateFormModal({
           />
         </div>
 
-        {mode === "template" ? (
+        {showTemplate ? (
           <div>
             <FormSheetPicker
               forms={templateOptions}
@@ -202,16 +210,24 @@ export function CreateFormModal({
 
         {mode === "scratch" ? (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-            From scratch creates columns only — no Approval Request automations. After create, open the sheet in
-            Smartsheet → Automation and request approval from contacts in the form’s Contact/email column, or{" "}
-            <button
-              type="button"
-              onClick={() => onModeChange("template")}
-              className="font-medium text-wsu-crimson underline underline-offset-2 hover:text-wsu-crimson-dark"
-            >
-              use a template instead
-            </button>
-            .
+            From scratch creates columns only — no Approval Request automations.
+            {allowTemplateMode ? (
+              <>
+                {" "}
+                After create, open the sheet in Smartsheet → Automation and request approval from contacts in the
+                form’s Contact/email column, or{" "}
+                <button
+                  type="button"
+                  onClick={() => onModeChange("template")}
+                  className="font-medium text-wsu-crimson underline underline-offset-2 hover:text-wsu-crimson-dark"
+                >
+                  use a template instead
+                </button>
+                .
+              </>
+            ) : (
+              " Configure any approval workflows in-app after create."
+            )}
           </p>
         ) : null}
 
@@ -384,27 +400,15 @@ export function CreateFormModal({
                   </table>
                 </div>
                 <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
-                  Excel import creates columns and data only — no Approval Request automations. Use a template if you
-                  need post-submission workflows.
+                  Excel import creates columns and data only — no Approval Request automations.
+                  {allowTemplateMode
+                    ? " Use a template if you need post-submission workflows."
+                    : " Configure workflows in-app after create."}
                 </p>
               </div>
             ) : null}
           </div>
         ) : null}
-
-        <div>
-          <label htmlFor="create-form-folderId" className="mb-1 block text-xs text-[color:var(--wsu-muted)]">
-            Destination folder ID <span className="text-[color:var(--wsu-muted)]/70">· optional</span>
-          </label>
-          <input
-            id="create-form-folderId"
-            type="text"
-            placeholder="Smartsheet folder ID"
-            value={destinationFolderId}
-            onChange={(e) => onDestinationFolderIdChange(e.target.value)}
-            className="w-full rounded-lg border border-[color:var(--wsu-border)] px-3 py-2 text-sm text-[color:var(--wsu-ink)] placeholder:text-[color:var(--wsu-muted)] focus:border-wsu-crimson focus:outline-none focus:ring-1 focus:ring-wsu-crimson"
-          />
-        </div>
 
         {createMsg ? (
           <p

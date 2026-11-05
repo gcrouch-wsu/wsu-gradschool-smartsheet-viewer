@@ -10,6 +10,7 @@ import {
 } from "@/components/forms/student/student-tours";
 import { ProductTour } from "@/components/ui/ProductTour";
 import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { UnderlineTabs } from "@/components/ui/UnderlineTabs";
 import { useProductTour } from "@/hooks/useProductTour";
 
 type StageOption = {
@@ -33,7 +34,15 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; rowId: string }) {
+export function StudentSubmissionDetail({
+  sheetId,
+  rowId,
+  previewMode = false,
+}: {
+  sheetId: string;
+  rowId: string;
+  previewMode?: boolean;
+}) {
   const [cells, setCells] = useState<Array<{ title: string; displayValue: string }>>([]);
   const [stages, setStages] = useState<StageOption[]>([]);
   const [history, setHistory] = useState<ContactChangeRequest[]>([]);
@@ -125,6 +134,10 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (previewMode) {
+      setNotice("View-only preview cannot submit contact changes.");
+      return;
+    }
     setSubmitting(true);
     setNotice("");
     try {
@@ -157,27 +170,17 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
           <div data-tour="sd-heading" className="sr-only">
             Submission detail for {sheetName || "this row"}
           </div>
-          <div className="grid grid-cols-3 border-b border-line" role="tablist" aria-label="Submission sections" data-tour="sd-tabs">
-            {([
-              ["details", "Submission details"],
-              ["reroute", "Contact reroute"],
-              ["history", "Request history"],
-            ] as const).map(([tab, label]) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                className={`border-b-2 px-3 py-3 text-center text-sm font-medium transition ${
-                  activeTab === tab
-                    ? "border-crimson text-crimson"
-                    : "border-transparent text-sub hover:border-mist hover:text-ink"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div data-tour="sd-tabs">
+            <UnderlineTabs
+              items={[
+                { id: "details", label: "Submission details" },
+                { id: "reroute", label: "Contact reroute" },
+                { id: "history", label: "Request history" },
+              ]}
+              value={activeTab}
+              onChange={setActiveTab}
+              ariaLabel="Submission sections"
+            />
           </div>
 
           {activeTab === "details" ? (
@@ -234,6 +237,11 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
               Requests are reviewed by Programs Team before Smartsheet contacts change.
               {allowedDomains.length ? ` Allowed domains: ${allowedDomains.join(", ")}.` : ""}
             </p>
+            {previewMode ? (
+              <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                View-only preview — submitting a contact reroute is disabled.
+              </p>
+            ) : null}
             {stages.length === 0 ? <p className="mt-4 text-sm text-sub">There are no editable approval stages.</p> : (
               <form onSubmit={(event) => void submit(event)} className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1 text-sm sm:col-span-2">
@@ -246,27 +254,28 @@ export function StudentSubmissionDetail({ sheetId, rowId }: { sheetId: string; r
                       setProposedName(next?.contact.currentName ?? "");
                       setProposedEmail(next?.contact.currentEmail ?? "");
                     }}
-                    className="w-full rounded-lg border border-line bg-white px-3 py-2.5"
+                    disabled={previewMode}
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2.5 disabled:bg-stone-50"
                   >
                     {stages.map((stage) => <option key={stage.name} value={stage.name}>{stage.name}{stage.pendingRequestId ? " (pending)" : ""}</option>)}
                   </select>
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium text-ink">New contact name</span>
-                  <input required disabled={Boolean(selectedStage?.pendingRequestId)} value={proposedName} onChange={(event) => setProposedName(event.target.value)} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
+                  <input required disabled={previewMode || Boolean(selectedStage?.pendingRequestId)} value={proposedName} onChange={(event) => setProposedName(event.target.value)} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium text-ink">New contact email</span>
-                  <input required type="email" disabled={Boolean(selectedStage?.pendingRequestId)} value={proposedEmail} onChange={(event) => setProposedEmail(event.target.value)} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
+                  <input required type="email" disabled={previewMode || Boolean(selectedStage?.pendingRequestId)} value={proposedEmail} onChange={(event) => setProposedEmail(event.target.value)} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
                 </label>
                 <label className="space-y-1 text-sm sm:col-span-2">
                   <span className="font-medium text-ink">Note (optional)</span>
-                  <textarea disabled={Boolean(selectedStage?.pendingRequestId)} value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
+                  <textarea disabled={previewMode || Boolean(selectedStage?.pendingRequestId)} value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full rounded-lg border border-line px-3 py-2.5 disabled:bg-stone-50" />
                 </label>
                 {selectedStage?.pendingRequestId ? <p className="text-sm text-amber-800 sm:col-span-2">A request for this stage is already pending review.</p> : null}
                 {notice ? <p className="text-sm text-sub sm:col-span-2">{notice}</p> : null}
                 <div className="sm:col-span-2">
-                  <button type="submit" disabled={submitting || Boolean(selectedStage?.pendingRequestId)} className="rounded-lg border border-crimson bg-crimson px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
+                  <button type="submit" disabled={previewMode || submitting || Boolean(selectedStage?.pendingRequestId)} className="rounded-lg border border-crimson bg-crimson px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
                     {submitting ? "Submitting…" : "Submit for review"}
                   </button>
                 </div>

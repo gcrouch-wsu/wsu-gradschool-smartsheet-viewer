@@ -25,7 +25,7 @@ export const USERS_TOUR_STEPS: ProductTourStep[] = [
     id: "add",
     target: '[data-tour="au-add"]',
     title: "Add a user",
-    body: "Invite someone by email and role. They set a password on first sign-in.",
+    body: "Invite someone by email and role. With Okta enabled they sign in with WSU; otherwise they set a password on first access.",
   },
   {
     id: "table",

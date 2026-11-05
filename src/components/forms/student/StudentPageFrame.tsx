@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/layout/Breadcrumbs";
+import { HeaderLogoutLink } from "@/components/auth/HeaderLogoutLink";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
+import { StudentPreviewBanner } from "@/components/forms/student/StudentPreviewBanner";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function StudentPageFrame({
@@ -10,6 +12,9 @@ export function StudentPageFrame({
   description,
   actions,
   headingTourId,
+  showSignOut = true,
+  signOutHref = "/api/auth/okta/logout?next=/student",
+  previewEmail = null,
   children,
 }: {
   breadcrumbs?: BreadcrumbItem[];
@@ -18,17 +23,33 @@ export function StudentPageFrame({
   description?: string;
   actions?: ReactNode;
   headingTourId?: string;
+  /** Hide on the signed-out student login screen. */
+  showSignOut?: boolean;
+  /** Shared Okta-aware logout URL; override for contributor sessions. */
+  signOutHref?: string;
+  /** When set, show the admin preview banner and hide account tools. */
+  previewEmail?: string | null;
   children: ReactNode;
 }) {
+  const previewMode = Boolean(previewEmail);
+
   return (
     <div className="min-h-screen bg-[color:var(--wsu-stone,#f7f5f2)] text-[color:var(--wsu-ink)]">
       <FormBrandHeader
         maxWidthClassName="max-w-6xl"
         actionsLabel="Account"
-        actions={<NotificationBell />}
+        actions={
+          previewMode ? null : (
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              {showSignOut ? <HeaderLogoutLink href={signOutHref} labeled /> : null}
+            </div>
+          )
+        }
       />
       <main className="px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
+          {previewEmail ? <StudentPreviewBanner email={previewEmail} /> : null}
           {breadcrumbs && breadcrumbs.length > 0 ? <Breadcrumbs items={breadcrumbs} /> : null}
           <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div data-tour={headingTourId}>

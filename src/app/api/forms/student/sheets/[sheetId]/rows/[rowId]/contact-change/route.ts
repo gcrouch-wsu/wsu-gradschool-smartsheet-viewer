@@ -16,6 +16,10 @@ import {
   listContactChangeRequests,
 } from "@/lib/forms/store/contact-change-requests";
 import { loadFormFields } from "@/lib/forms/store/field-config";
+import {
+  hasStudentPreviewCookie,
+  resolveStudentPortalAccess,
+} from "@/lib/forms/student-portal-access";
 import { requireStudentSession } from "@/lib/forms/student-auth";
 import { assertOwnedRow, loadOwnedSheetContext } from "@/lib/forms/student-rows";
 import { getStudentUserByEmail } from "@/lib/forms/student-users";
@@ -27,7 +31,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ sheetId: string; rowId: string }> },
 ) {
-  const session = await requireStudentSession();
+  const session = await resolveStudentPortalAccess();
   if (!session.ok) return session.response;
 
   await ensureBootstrapped();
@@ -98,6 +102,13 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ sheetId: string; rowId: string }> },
 ) {
+  if (await hasStudentPreviewCookie()) {
+    return NextResponse.json(
+      { error: "View-only preview cannot submit contact changes." },
+      { status: 403 },
+    );
+  }
+
   const session = await requireStudentSession();
   if (!session.ok) return session.response;
 

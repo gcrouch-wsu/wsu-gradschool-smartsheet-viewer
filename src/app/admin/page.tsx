@@ -9,8 +9,10 @@ import {
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
+import { isDatabaseConfigEnabled } from "@/lib/config/config-db";
 import { listSourceConfigs, listViewConfigs } from "@/lib/config/store";
 import { listForms } from "@/lib/forms/registry";
+import { isSmartsheetApiEnabled } from "@/lib/smartsheet-api-gate";
 
 function DataIcon({ kind }: { kind: "sources" | "views" | "published" | "forms" }) {
   const paths = {
@@ -30,6 +32,8 @@ export default async function AdminDashboardPage() {
     listForms(),
   ]);
   const publicViews = views.filter((view) => view.public);
+  const allowSmartsheetSource =
+    !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
 
   return (
     <div className="space-y-6">
@@ -62,7 +66,7 @@ export default async function AdminDashboardPage() {
         />
       </section>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-3">
         <SmartsheetApiKillSwitchCard />
         <SmartsheetImportCard />
       </div>
@@ -82,8 +86,16 @@ export default async function AdminDashboardPage() {
               <EmptyState
                 icon={<DataIcon kind="sources" />}
                 title="No sources yet"
-                description="Register a Smartsheet sheet or report to make its data available to views."
-                action={{ href: "/admin/sources/new", label: "Register a source" }}
+                description={
+                  allowSmartsheetSource
+                    ? "Register a Smartsheet sheet or report, or create a form from template, scratch, or Excel."
+                    : "Create a form from template, scratch, or Excel on the Sources page. Smartsheet registration is off while the API is disabled."
+                }
+                action={
+                  allowSmartsheetSource
+                    ? { href: "/admin/sources/new", label: "Register a source" }
+                    : { href: "/admin/sources", label: "Create a form" }
+                }
               />
             ) : (
               <div className="space-y-2">

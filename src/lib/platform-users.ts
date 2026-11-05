@@ -10,6 +10,7 @@ import {
   ALL_CAPABILITIES,
   ASSIGNABLE_ROLES,
   type AssignablePlatformRole,
+  applyStudentPortalCapabilityLock,
   OWNER_LOCKED_CAPABILITIES,
   PLATFORM_ROLES,
   type PlatformUserSummary,
@@ -28,9 +29,12 @@ export {
   ALL_CAPABILITIES,
   ADMIN_MANAGED_ROLES,
   ASSIGNABLE_ROLES,
+  applyStudentPortalCapabilityLock,
+  isStudentPortalCapabilityLocked,
   OWNER_LOCKED_CAPABILITIES,
   PLATFORM_ROLES,
   STAFF_ROLES,
+  STUDENT_PORTAL_CAPABILITY,
 } from "@/lib/platform-user-types";
 
 export interface PlatformUserRecord {
@@ -225,6 +229,49 @@ export async function addUserRole(userId: string, role: AssignablePlatformRole) 
     userId,
     role,
   ]);
+}
+
+/**
+ * Ensure a platform user exists for Okta (and similar SSO) flows.
+ * Creates the account without a local password when missing, then grants the role.
+ */
+export async function ensurePlatformUserWithRole(
+  email: string,
+  role: AssignablePlatformRole,
+  displayName?: string,
+): Promise<PlatformUserRecord> {
+  await ensureTables();
+  const normalized = normalizeEmail(email);
+  if (!normalized) {
+    throw new Error("Email is required.");
+  }
+
+  const existing = await getPlatformUserByEmail(normalized);
+  if (existing) {
+    if (displayName?.trim() && !existing.displayName) {
+      await queryConfigDb(`UPDATE users SET display_name = $1, updated_at = now() WHERE id = $2`, [
+        displayName.trim(),
+        existing.id,
+      ]);
+    }
+    await addUserRole(existing.id, role);
+    const updated = await getPlatformUserById(existing.id);
+    if (!updated) throw new Error("User not found after role grant.");
+    return updated;
+  }
+
+  const { rows } = await queryConfigDb<{ id: string }>(
+    `INSERT INTO users (email, display_name, password_hash, password_salt, is_active)
+     VALUES ($1, $2, $3, $4, true)
+     RETURNING id`,
+    [normalized, displayName?.trim() || null, "", ""],
+  );
+  const id = rows[0]?.id;
+  if (!id) throw new Error("Failed to create user.");
+  await addUserRole(id, role);
+  const created = await getPlatformUserById(id);
+  if (!created) throw new Error("User not found after create.");
+  return created;
 }
 
 export interface SavePlatformUserInput {
@@ -462,6 +509,13 @@ export async function getRolePermissionMatrix(): Promise<RolePermissionMatrix> {
       matrix[row.role_id][row.capability] = true;
     }
   }
+  for (const role of roles) {
+    const enforced = applyStudentPortalCapabilityLock(
+      role.id,
+      ALL_CAPABILITIES.filter((c) => matrix[role.id]?.[c]),
+    );
+    matrix[role.id] = Object.fromEntries(ALL_CAPABILITIES.map((c) => [c, enforced.includes(c)]));
+  }
   return { roles, capabilities: [...ALL_CAPABILITIES], matrix };
 }
 
@@ -471,12 +525,13 @@ export async function saveRolePermissionMatrix(
   await ensureTables();
   for (const [roleId, caps] of Object.entries(updates)) {
     if (!(PLATFORM_ROLES as readonly string[]).includes(roleId)) continue;
-    const nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
+    let nextCaps = [...new Set(caps.filter((c) => (ALL_CAPABILITIES as readonly string[]).includes(c)))];
     if (roleId === "owner") {
       for (const locked of OWNER_LOCKED_CAPABILITIES) {
         if (!nextCaps.includes(locked)) nextCaps.push(locked);
       }
     }
+    nextCaps = applyStudentPortalCapabilityLock(roleId, nextCaps);
     await queryConfigDb(`DELETE FROM role_permissions WHERE role_id = $1`, [roleId]);
     for (const cap of nextCaps) {
       await queryConfigDb(

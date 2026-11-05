@@ -108,13 +108,16 @@ export function DataListDetail({
           : "border-t border-[color:var(--wsu-border)] pt-4"
       : "";
 
+  const isEditingActiveRow =
+    editingRowId === activeRow.id || (activeRow.mergedSourceRowIds?.includes(editingRowId ?? -1) ?? false);
+
   const detailTitleId = `list-detail-record-title-${activeRow.id}`;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
       <aside
         aria-label="Records list"
-        className={`overflow-hidden rounded-[1.75rem] ${cardBorderClass} bg-[color:var(--wsu-paper)] shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
+        className={`view-record-scroll rounded-[1.75rem] ${cardBorderClass} bg-[color:var(--wsu-paper)] shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
       >
         <ul className={listDividerClass}>
           {view.rows.map((row) => {
@@ -161,10 +164,10 @@ export function DataListDetail({
 
       <article
         aria-labelledby={detailTitleId}
-        className={`rounded-[1.75rem] border border-[color:var(--wsu-border)] ${getContributorRowAccentClass(activeRowEditable)} bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
+        className={`${isEditingActiveRow && onCancelEdit ? "" : "view-record-scroll "}rounded-[1.75rem] border border-[color:var(--wsu-border)] ${getContributorRowAccentClass(activeRowEditable)} bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]`}
       >
         {(() => {
-          const isEditingThisRow = editingRowId === activeRow.id || (activeRow.mergedSourceRowIds?.includes(editingRowId ?? -1) ?? false);
+          const isEditingThisRow = isEditingActiveRow;
           if (isEditingThisRow && onCancelEdit) {
             return (
               <ContributorCardEditShell

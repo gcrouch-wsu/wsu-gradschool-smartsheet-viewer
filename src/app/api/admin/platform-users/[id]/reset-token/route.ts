@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
+import { auditFromAdminPrincipal } from "@/lib/audit";
 import { createPlatformResetToken, getPlatformUserById } from "@/lib/platform-users";
 
 export const runtime = "nodejs";
@@ -13,5 +14,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ message: "User not found." }, { status: 404 });
   }
   const token = await createPlatformResetToken(id);
+  await auditFromAdminPrincipal(auth.principal, "user.reset_token", "user", id, {
+    email: user.email,
+  });
   return NextResponse.json({ token });
 }
