@@ -7,6 +7,11 @@ import { IconCheck, IconFile } from "@/components/forms/icons";
 import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 import { RichTextHtml } from "@/components/forms/submission/RichTextHtml";
 import {
+  FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS,
+  FORM_BRAND_HEADER_ACTION_SOLID_CLASS,
+} from "@/components/layout/AppBrandHeader";
+import { StatusPage } from "@/components/StatusPage";
+import {
   buildSubmitPayload,
   conditionalTargetTitles,
   fieldKind,
@@ -724,6 +729,24 @@ export function SubmissionSuccessView({
   );
 }
 
+function publicFormUnavailableCopy(error: string): { code: string; title: string; description: string } {
+  const lower = error.toLowerCase();
+  if (lower.includes("not found") || lower.includes("not published") || lower.includes("not available")) {
+    return {
+      code: "Unavailable",
+      title: "This form isn’t available",
+      description:
+        "The link may be incorrect, or this form hasn’t been published yet. Double-check the URL, or ask the form owner to publish it from Sources.",
+    };
+  }
+  return {
+    code: "Error",
+    title: "We couldn’t load this form",
+    description: error || "Something went wrong while loading the form. Please try again.",
+  };
+}
+
+/** Public form missing/unpublished/error state — reuses the shared StatusPage panel. */
 export function SubmissionFormEmptyState({
   error,
   onRetry,
@@ -733,27 +756,36 @@ export function SubmissionFormEmptyState({
   onRetry?: () => void;
   hideManageLink?: boolean;
 }) {
+  const copy = publicFormUnavailableCopy(error);
+
   return (
-    <div className="mx-auto max-w-lg rounded-xl border border-[color:var(--wsu-border)] bg-white px-6 py-10 text-center">
-      <p className="text-sm text-red-700">{error}</p>
-      {!hideManageLink ? (
-        <p className="mt-3 text-sm text-[color:var(--wsu-muted)]">
-          Set up a form on{" "}
-          <Link href="/admin/sources" className="font-medium text-wsu-crimson hover:underline">
-            Sources
-          </Link>
-          .
-        </p>
-      ) : null}
-      {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-4 rounded-lg border border-[color:var(--wsu-border)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--wsu-stone)]"
-        >
-          Try again
-        </button>
-      ) : null}
-    </div>
+    <StatusPage
+      variant="panel"
+      code={copy.code}
+      title={copy.title}
+      description={
+        hideManageLink
+          ? copy.description
+          : `${copy.description} You can also open Sources to create or publish a form.`
+      }
+      actions={
+        <>
+          {onRetry ? (
+            <button type="button" onClick={onRetry} className={FORM_BRAND_HEADER_ACTION_SOLID_CLASS}>
+              Try again
+            </button>
+          ) : null}
+          {!hideManageLink ? (
+            <Link href="/admin/sources" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
+              Go to Sources
+            </Link>
+          ) : (
+            <Link href="/" className={FORM_BRAND_HEADER_ACTION_OUTLINE_CLASS}>
+              Back to home
+            </Link>
+          )}
+        </>
+      }
+    />
   );
 }

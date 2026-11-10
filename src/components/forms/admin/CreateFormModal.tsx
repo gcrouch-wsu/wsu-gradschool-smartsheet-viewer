@@ -403,7 +403,7 @@ export function CreateFormModal({
                   Excel import creates columns and data only — no Approval Request automations.
                   {allowTemplateMode
                     ? " Use a template if you need post-submission workflows."
-                    : " Configure workflows in-app after create."}
+                    : " Configure workflows in-app after creating the form."}
                 </p>
               </div>
             ) : null}

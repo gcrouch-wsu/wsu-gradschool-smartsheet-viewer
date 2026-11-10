@@ -97,6 +97,29 @@ describe("forms sources unification", () => {
     expect(await registry.activeSourceId()).toBe(forms[0]!.sourceConfigId);
   });
 
+  it("registerForm accepts negative local sheet ids (Smartsheet API off)", { timeout: 15_000 }, async () => {
+    await writeFile(
+      path.join(tempDir, "config", "forms", "registry.json"),
+      `${JSON.stringify({ activeSheetId: "", forms: [], migratedToSourcesAt: "2026-01-01T00:00:00.000Z" }, null, 2)}\n`,
+      "utf8",
+    );
+
+    const registry = await import("@/lib/forms/registry");
+    await registry.registerForm(
+      {
+        id: "-42",
+        name: "Offline Leave Form",
+        createdAt: "2026-02-01T00:00:00.000Z",
+        source: "scratch",
+      },
+      true,
+    );
+
+    expect(await registry.activeSheetId()).toBe("-42");
+    const forms = await registry.listForms();
+    expect(forms.some((f) => f.id === "-42" && f.name === "Offline Leave Form")).toBe(true);
+  });
+
   it("rejects publishing a report source as a form via validation", async () => {
     const { validateSourceConfig } = await import("@/lib/config/validation");
     const result = validateSourceConfig({

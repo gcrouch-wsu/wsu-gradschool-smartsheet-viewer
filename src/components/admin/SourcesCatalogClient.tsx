@@ -98,7 +98,7 @@ export function SourcesCatalogClient({
     [rows, duplicateSourceId],
   );
 
-  async function refreshCatalog() {
+  async function refreshCatalog(): Promise<SourceCatalogRow[]> {
     setLoading(true);
     setError("");
     try {
@@ -137,8 +137,10 @@ export function SourcesCatalogClient({
 
       setRows(nextRows);
       router.refresh();
+      return nextRows;
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not refresh sources.");
+      return [];
     } finally {
       setLoading(false);
     }
@@ -359,13 +361,21 @@ export function SourcesCatalogClient({
       setExcelFile(null);
       setExcelColumns(null);
       setExcelRowCount(0);
-      const sheet = d.sheet as { name?: string } | undefined;
-      setCreateMsg({
-        ok: true,
-        text: `Created "${sheet?.name ?? "form"}" and set it active.${d.note ? ` ${d.note}` : ""}`,
-      });
-      await refreshCatalog();
+      setCreateMsg(null);
       setCreateModalOpen(false);
+      const catalog = await refreshCatalog();
+      const form = d.form as { sourceConfigId?: string } | undefined;
+      const sheet = d.sheet as { id?: string | number } | undefined;
+      const sourceConfigId =
+        form?.sourceConfigId ||
+        (sheet?.id != null
+          ? catalog.find((row) => String(row.sheetId) === String(sheet.id))?.id
+          : undefined);
+      if (sourceConfigId) {
+        router.push(`/admin/sources/${encodeURIComponent(sourceConfigId)}/builder`);
+      } else {
+        router.push("/admin/sources");
+      }
     } catch (e: unknown) {
       setCreateMsg({ ok: false, text: e instanceof Error ? e.message : "Create failed." });
     } finally {

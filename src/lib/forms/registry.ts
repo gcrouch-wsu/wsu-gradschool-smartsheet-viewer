@@ -371,7 +371,8 @@ export async function registerForm(entry: FormEntry, makeActive = true): Promise
   await ensureFormsSourcesMigrated();
   const withDefaults = ensureFormEntryDefaults(entry);
   const sheetId = Number(withDefaults.id);
-  if (!Number.isFinite(sheetId) || sheetId <= 0) {
+  // Local/offline sheets use negative IDs; reject only non-numeric or zero.
+  if (!Number.isFinite(sheetId) || sheetId === 0) {
     throw Object.assign(new Error("Invalid sheet id."), { status: 400 });
   }
 

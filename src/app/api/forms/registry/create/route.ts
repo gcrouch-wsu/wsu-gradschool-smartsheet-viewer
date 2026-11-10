@@ -17,7 +17,30 @@ import { resolveAdminPrincipal } from "@/lib/identity";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Unwrap Smartsheet `{ result }` or a bare local sheet object. */
+function createdSheetFromResponse(raw: unknown): { id: number | string; name: string } {
+  if (!raw || typeof raw !== "object") {
+    throw Object.assign(new Error("Sheet create returned an empty response."), { status: 502 });
+  }
+  const record = raw as { result?: { id?: unknown; name?: unknown }; id?: unknown; name?: unknown };
+  const sheet = record.result && typeof record.result === "object" ? record.result : record;
+  const id = sheet.id;
+  const name = typeof sheet.name === "string" ? sheet.name : "";
+  if (id == null || id === "" || !Number.isFinite(Number(id)) || Number(id) === 0) {
+    throw Object.assign(new Error("Sheet create did not return a valid id."), { status: 502 });
+  }
+  return { id: id as number | string, name: name || `Sheet ${id}` };
+}
+
+function isLocalSheetId(sheetId: string | number): boolean {
+  const n = Number(sheetId);
+  return Number.isFinite(n) && n < 0;
+}
+
 async function shareCreatedSheet(sheetId: string | number, shareEmails: string[]) {
+  // Offline / local sheets are not shared through Smartsheet.
+  if (isLocalSheetId(sheetId)) return;
+
   const emailsToShare: string[] = [...shareEmails];
   if (config.autoShareGroupIds.length) {
     try {
@@ -85,11 +108,9 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
     createCols[0]!.primary = true;
   }
 
-  const sheet = (
-    (await ss.createSheet(name, createCols)) as { result: { id: number | string; name: string } }
-  ).result;
+  const sheet = createdSheetFromResponse(await ss.createSheet(name, createCols));
 
-  if (destinationFolderId || config.defaultFolderId) {
+  if (!isLocalSheetId(sheet.id) && (destinationFolderId || config.defaultFolderId)) {
     try {
       await ss.moveSheet(sheet.id, destinationFolderId || config.defaultFolderId);
     } catch {
@@ -150,6 +171,7 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
     { id: String(sheet.id), name: sheet.name, createdAt: new Date().toISOString(), source: "excel" },
     true,
   );
+  const form = await registry.getFormById(String(sheet.id));
 
   await auditFromPrincipal(await resolveAdminPrincipal(), "forms.registry.create", "form", String(sheet.id), {
     name: sheet.name,
@@ -166,12 +188,17 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
     importedRows ? `${importedRows} row${importedRows === 1 ? "" : "s"}` : "no data rows",
   ];
   if (formulaCount) noteParts.push(`${formulaCount} formula column${formulaCount === 1 ? "" : "s"}`);
-  noteParts.push("no automations (same as from-scratch)");
+  if (isLocalSheetId(sheet.id)) {
+    noteParts.push("saved in the app database (Smartsheet API is off)");
+  } else {
+    noteParts.push("no automations (same as from-scratch)");
+  }
   if (rowNote) noteParts.push(`row import issue: ${rowNote}`);
 
   return Response.json({
     ok: true,
     sheet: { id: sheet.id, name: sheet.name },
+    form: form ? { id: form.id, name: form.name, sourceConfigId: form.sourceConfigId } : undefined,
     note: noteParts.join("; ") + ".",
     importedRows,
   });
@@ -221,32 +248,28 @@ export async function POST(request: Request) {
       if (!tid) return Response.json({ error: "Choose a template sheet first." }, { status: 400 });
       const include = ["forms", "rules", "ruleRecipients", "filters"];
       try {
-        sheet = (
-          (await ss.copySheetToFolder(tid, name, include, destinationFolderId)) as {
-            result: { id: number | string; name: string };
-          }
-        ).result;
+        sheet = createdSheetFromResponse(
+          await ss.copySheetToFolder(tid, name, include, destinationFolderId),
+        );
       } catch {
-        sheet = (
-          (await ss.copySheetToFolder(tid, name, ["rules", "ruleRecipients", "filters"], destinationFolderId)) as {
-            result: { id: number | string; name: string };
-          }
-        ).result;
+        sheet = createdSheetFromResponse(
+          await ss.copySheetToFolder(tid, name, ["rules", "ruleRecipients", "filters"], destinationFolderId),
+        );
         note =
           "Cloned without the native form (forms include failed on this account); columns, rules, and recipients were carried over.";
       }
     } else {
-      sheet = ((await ss.createSheet(name, ss.DEFAULT_COLUMNS)) as { result: { id: number | string; name: string } })
-        .result;
-      if (destinationFolderId || config.defaultFolderId) {
+      sheet = createdSheetFromResponse(await ss.createSheet(name, ss.DEFAULT_COLUMNS));
+      if (!isLocalSheetId(sheet.id) && (destinationFolderId || config.defaultFolderId)) {
         try {
           await ss.moveSheet(sheet.id, destinationFolderId || config.defaultFolderId);
         } catch {
           /* non-fatal */
         }
       }
-      note =
-        "From-scratch sheet has no automations (the API cannot create them). Use a template if you need post-submission workflows.";
+      note = isLocalSheetId(sheet.id)
+        ? "Created in the app database (Smartsheet API is off). Publish from Sources when ready."
+        : "From-scratch sheet has no automations (the API cannot create them). Use a template if you need post-submission workflows.";
     }
 
     await shareCreatedSheet(sheet.id, Array.isArray(shareEmails) ? shareEmails.map(String) : []);
@@ -256,6 +279,7 @@ export async function POST(request: Request) {
       { id: String(sheet.id), name: sheet.name, createdAt: new Date().toISOString(), source },
       true,
     );
+    const form = await registry.getFormById(String(sheet.id));
 
     await auditFromPrincipal(await resolveAdminPrincipal(), "forms.registry.create", "form", String(sheet.id), {
       name: sheet.name,
@@ -263,7 +287,12 @@ export async function POST(request: Request) {
       mode: mode === "template" ? "template" : "scratch",
     });
 
-    return Response.json({ ok: true, sheet: { id: sheet.id, name: sheet.name }, note });
+    return Response.json({
+      ok: true,
+      sheet: { id: sheet.id, name: sheet.name },
+      form: form ? { id: form.id, name: form.name, sourceConfigId: form.sourceConfigId } : undefined,
+      note,
+    });
   } catch (e) {
     return formsAuthErrorResponse(e);
   }

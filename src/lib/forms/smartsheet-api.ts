@@ -214,7 +214,9 @@ export type CreateSheetColumn = {
 export async function createSheet(name: string, columns: CreateSheetColumn[]): Promise<unknown> {
   return withFormsErrors(async () => {
     if (!(await isSmartsheetApiEnabled())) {
-      return sheetStore.createImportedSheet(name, columns);
+      // Match Smartsheet create response shape so registry/create can always use `.result`.
+      const sheet = await sheetStore.createImportedSheet(name, columns);
+      return { result: { id: sheet.id, name: sheet.name } };
     }
     return api("/sheets", {
       method: "POST",
