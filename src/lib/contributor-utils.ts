@@ -36,7 +36,7 @@ const CONTRIBUTOR_EDITABLE_RENDER_TYPES = new Set<RenderType>([
 ]);
 
 /** True if this display row or any merged source row is contributor-editable. */
-export function isContributorRowOrMergedEditable(row: ResolvedViewRow, editableRowIds: Set<number> | undefined): boolean {
+export function isContributorRowOrMergedEditable(row: ResolvedViewRow, editableRowIds: Set<string | number> | undefined): boolean {
   if (!editableRowIds?.size) {
     return false;
   }
@@ -47,7 +47,7 @@ export function isContributorRowOrMergedEditable(row: ResolvedViewRow, editableR
 }
 
 /** Smartsheet row id to open in the edit drawer (primary row, or first merged id the contributor may edit). */
-export function contributorEditTargetRowId(row: ResolvedViewRow, editableRowIds: Set<number> | undefined): number {
+export function contributorEditTargetRowId(row: ResolvedViewRow, editableRowIds: Set<string | number> | undefined): string | number {
   if (editableRowIds?.has(row.id)) {
     return row.id;
   }
@@ -707,14 +707,13 @@ export function getEditableRowIdsForView(rows: SmartsheetRow[], view: ViewConfig
  * Display row ids plus merged source ids — every Smartsheet row id that may be selected as an edit target
  * for this rendered view. Used when administrators edit with no per-row contact restriction.
  */
-export function collectResolvableRowIdsForUnrestrictedEditing(rows: ResolvedViewRow[]): number[] {
-  const set = new Set<number>();
+export function collectResolvableRowIdsForUnrestrictedEditing(rows: ResolvedViewRow[]): Array<string | number> {
+  const set = new Set<string | number>();
   for (const row of rows) {
     set.add(row.id);
     for (const id of row.mergedSourceRowIds ?? []) {
-      if (typeof id === "number" && Number.isFinite(id)) {
-        set.add(id);
-      }
+      if (id === undefined || id === null || id === "") continue;
+      set.add(id);
     }
   }
   return [...set];
@@ -935,7 +934,7 @@ export function getFieldsForMultiPersonGroup(
 ): Array<{ columnId: number; fieldKey: string; label: string; columnType: string }> {
   const columnsById = new Map(columns.map((c) => [c.id, c]));
   const result: Array<{ columnId: number; fieldKey: string; label: string; columnType: string }> = [];
-  const seenNonContact = new Set<number>();
+  const seenNonContact = new Set<string | number>();
   const seenContact = new Set<string>();
 
   for (const field of view.fields) {

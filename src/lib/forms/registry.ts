@@ -205,10 +205,10 @@ async function listFormSources(): Promise<SourceConfig[]> {
 }
 
 async function findSourceBySheetId(sheetId: string): Promise<SourceConfig | null> {
-  const num = Number(sheetId);
-  if (!Number.isFinite(num)) return null;
+  const key = String(sheetId).trim();
+  if (!key) return null;
   const sources = await listFormSources();
-  return sources.find((s) => s.smartsheetId === num) ?? null;
+  return sources.find((s) => String(s.smartsheetId) === key) ?? null;
 }
 
 async function getActiveSource(): Promise<SourceConfig | null> {
@@ -370,20 +370,21 @@ export async function selectFormBySourceId(sourceId: string): Promise<boolean> {
 export async function registerForm(entry: FormEntry, makeActive = true): Promise<void> {
   await ensureFormsSourcesMigrated();
   const withDefaults = ensureFormEntryDefaults(entry);
-  const sheetId = Number(withDefaults.id);
-  // Local/offline sheets use negative IDs; reject only non-numeric or zero.
-  if (!Number.isFinite(sheetId) || sheetId === 0) {
+  const { parseResourceId } = await import("@/lib/local-sheets/ids");
+  const sheetId = parseResourceId(withDefaults.id);
+  // Local/offline sheets use UUID (or legacy negative ids); reject only empty/zero/invalid.
+  if (sheetId === undefined) {
     throw Object.assign(new Error("Invalid sheet id."), { status: 400 });
   }
 
   const sources = await listSourceConfigs();
   const usedIds = new Set(sources.map((s) => s.id));
-  let source = sources.find((s) => s.smartsheetId === sheetId) ?? null;
+  let source = sources.find((s) => String(s.smartsheetId) === String(sheetId)) ?? null;
 
   let slug = withDefaults.slug || slugFromFormName(withDefaults.name, withDefaults.id);
   const usedSlugs = new Set(
     sources
-      .filter((s) => s.smartsheetId !== sheetId && s.formSlug)
+      .filter((s) => String(s.smartsheetId) !== String(sheetId) && s.formSlug)
       .map((s) => s.formSlug as string),
   );
   if (usedSlugs.has(slug)) {

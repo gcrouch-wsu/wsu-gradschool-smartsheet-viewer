@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
   sheet_id TEXT NOT NULL,
-  row_id BIGINT,
+  row_id TEXT,
   event_key TEXT NOT NULL,
   status TEXT NOT NULL,
   error TEXT,
@@ -466,9 +466,10 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Former 007/008: imported Smartsheet sheets/reports for standalone mode
+-- Former 007/008: imported Smartsheet sheets/reports for standalone mode.
+-- Ids are TEXT so local creates can use UUID v4 while imported Smartsheet ids stay numeric strings.
 CREATE TABLE IF NOT EXISTS sheets (
-  sheet_id BIGINT PRIMARY KEY,
+  sheet_id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   columns JSONB NOT NULL DEFAULT '[]'::jsonb,
   total_row_count INTEGER NOT NULL DEFAULT 0,
@@ -477,8 +478,8 @@ CREATE TABLE IF NOT EXISTS sheets (
 );
 
 CREATE TABLE IF NOT EXISTS rows (
-  sheet_id BIGINT NOT NULL REFERENCES sheets(sheet_id) ON DELETE CASCADE,
-  row_id BIGINT NOT NULL,
+  sheet_id TEXT NOT NULL REFERENCES sheets(sheet_id) ON DELETE CASCADE,
+  row_id TEXT NOT NULL,
   row_number INTEGER,
   cells JSONB NOT NULL DEFAULT '[]'::jsonb,
   origin TEXT NOT NULL DEFAULT 'import',
@@ -491,7 +492,7 @@ CREATE TABLE IF NOT EXISTS rows (
 CREATE INDEX IF NOT EXISTS idx_rows_sheet ON rows (sheet_id);
 
 CREATE TABLE IF NOT EXISTS reports (
-  report_id BIGINT PRIMARY KEY,
+  report_id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   columns JSONB NOT NULL DEFAULT '[]'::jsonb,
   imported_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -499,9 +500,9 @@ CREATE TABLE IF NOT EXISTS reports (
 );
 
 CREATE TABLE IF NOT EXISTS report_rows (
-  report_id BIGINT NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
-  row_id BIGINT NOT NULL,
-  sheet_id BIGINT,
+  report_id TEXT NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
+  row_id TEXT NOT NULL,
+  sheet_id TEXT,
   cells JSONB NOT NULL DEFAULT '[]'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (report_id, row_id)
@@ -510,9 +511,9 @@ CREATE TABLE IF NOT EXISTS report_rows (
 CREATE INDEX IF NOT EXISTS idx_report_rows_report ON report_rows (report_id);
 
 CREATE TABLE IF NOT EXISTS attachments (
-  sheet_id BIGINT NOT NULL,
-  attachment_id BIGINT NOT NULL,
-  row_id BIGINT,
+  sheet_id TEXT NOT NULL,
+  attachment_id TEXT NOT NULL,
+  row_id TEXT,
   name TEXT NOT NULL,
   mime_type TEXT,
   size_bytes INTEGER,
@@ -526,9 +527,9 @@ CREATE TABLE IF NOT EXISTS attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_row ON attachments (sheet_id, row_id);
 
 CREATE TABLE IF NOT EXISTS discussions (
-  sheet_id BIGINT NOT NULL,
-  discussion_id BIGINT NOT NULL,
-  row_id BIGINT NOT NULL,
+  sheet_id TEXT NOT NULL,
+  discussion_id TEXT NOT NULL,
+  row_id TEXT NOT NULL,
   title TEXT,
   comments JSONB NOT NULL DEFAULT '[]'::jsonb,
   meta JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -539,7 +540,7 @@ CREATE TABLE IF NOT EXISTS discussions (
 CREATE INDEX IF NOT EXISTS idx_discussions_row ON discussions (sheet_id, row_id);
 
 CREATE TABLE IF NOT EXISTS sheet_automations (
-  sheet_id BIGINT NOT NULL,
+  sheet_id TEXT NOT NULL,
   rule_id BIGINT NOT NULL,
   name TEXT,
   enabled BOOLEAN NOT NULL DEFAULT true,
@@ -550,6 +551,9 @@ CREATE TABLE IF NOT EXISTS sheet_automations (
 
 CREATE INDEX IF NOT EXISTS idx_sheet_automations_sheet ON sheet_automations (sheet_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sheets_name_lower ON sheets (lower(trim(name)));
+
+-- Legacy counter kept for older installs; new local ids use UUID v4 instead.
 CREATE TABLE IF NOT EXISTS id_counters (
   kind TEXT PRIMARY KEY,
   next_id BIGINT NOT NULL

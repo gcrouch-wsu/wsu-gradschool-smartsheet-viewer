@@ -14,7 +14,7 @@ import { IconPlus } from "@/components/forms/icons";
 import type { ExcelImportColumn } from "@/lib/forms/excel-import-types";
 
 interface SheetOption {
-  id: number;
+  id: string | number;
   name: string;
 }
 

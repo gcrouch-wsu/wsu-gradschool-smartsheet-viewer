@@ -13,6 +13,7 @@ import * as registry from "@/lib/forms/registry";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { formsAuthErrorResponse, requireFormsAdminAccess } from "@/lib/forms/forms-api";
 import { resolveAdminPrincipal } from "@/lib/identity";
+import { isLocalResourceId, parseResourceId } from "@/lib/local-sheets/ids";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,15 +27,15 @@ function createdSheetFromResponse(raw: unknown): { id: number | string; name: st
   const sheet = record.result && typeof record.result === "object" ? record.result : record;
   const id = sheet.id;
   const name = typeof sheet.name === "string" ? sheet.name : "";
-  if (id == null || id === "" || !Number.isFinite(Number(id)) || Number(id) === 0) {
+  const parsed = parseResourceId(id);
+  if (parsed === undefined) {
     throw Object.assign(new Error("Sheet create did not return a valid id."), { status: 502 });
   }
-  return { id: id as number | string, name: name || `Sheet ${id}` };
+  return { id: parsed, name: name || `Sheet ${parsed}` };
 }
 
 function isLocalSheetId(sheetId: string | number): boolean {
-  const n = Number(sheetId);
-  return Number.isFinite(n) && n < 0;
+  return isLocalResourceId(sheetId);
 }
 
 async function shareCreatedSheet(sheetId: string | number, shareEmails: string[]) {
@@ -171,7 +172,7 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
     { id: String(sheet.id), name: sheet.name, createdAt: new Date().toISOString(), source: "excel" },
     true,
   );
-  const form = await registry.getFormById(String(sheet.id));
+  const registered = await registry.getFormById(String(sheet.id));
 
   await auditFromPrincipal(await resolveAdminPrincipal(), "forms.registry.create", "form", String(sheet.id), {
     name: sheet.name,
@@ -198,7 +199,9 @@ async function createFromExcelForm(form: FormData): Promise<Response> {
   return Response.json({
     ok: true,
     sheet: { id: sheet.id, name: sheet.name },
-    form: form ? { id: form.id, name: form.name, sourceConfigId: form.sourceConfigId } : undefined,
+    form: registered
+      ? { id: registered.id, name: registered.name, sourceConfigId: registered.sourceConfigId }
+      : undefined,
     note: noteParts.join("; ") + ".",
     importedRows,
   });

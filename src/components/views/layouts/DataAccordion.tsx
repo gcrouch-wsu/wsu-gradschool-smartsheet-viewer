@@ -27,7 +27,7 @@ import { contributorEditTargetRowId, isContributorRowOrMergedEditable } from "@/
 import { fieldBlockOuterClassName } from "@/components/views/layouts/FieldBlock";
 import type { ResolvedFieldValue, ResolvedView } from "@/lib/config/types";
 
-function FieldBlock({ rowId, field }: { rowId: number; field: ResolvedFieldValue }) {
+function FieldBlock({ rowId, field }: { rowId: string | number; field: ResolvedFieldValue }) {
   return (
     <div key={`${rowId}-${field.key}`} className={fieldBlockOuterClassName(field, undefined, { inCssGrid: true })}>
       {!field.hideLabel && (
@@ -49,9 +49,9 @@ export function DataAccordion({
 }: {
   view: ResolvedView;
   programGroups?: ProgramGroup[];
-  editableRowIds?: Set<number>;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
-  editingRowId?: number | null;
+  editableRowIds?: Set<string | number>;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
+  editingRowId?: string | number | null;
   onCancelEdit?: () => void;
   slug?: string;
 }) {

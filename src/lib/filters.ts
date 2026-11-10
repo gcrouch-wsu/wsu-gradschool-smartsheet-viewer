@@ -63,7 +63,7 @@ function normalizeFilterValues(value: ViewFilterConfig["value"]) {
   return normalized ? [normalized] : [];
 }
 
-function parseComparableDate(value: string): number | null {
+function parseComparableDate(value: string): string | number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (trimmed.toLowerCase() === "today") {
@@ -149,6 +149,6 @@ export function sortResolvedRows(rows: ResolvedViewRow[], sorts?: ViewSortConfig
     }
 
     // Stable tiebreaker: preserve deterministic order when all sort keys are equal.
-    return left.id - right.id;
+    return String(left.id).localeCompare(String(right.id), undefined, { numeric: true });
   });
 }

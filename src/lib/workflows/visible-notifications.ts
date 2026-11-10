@@ -45,7 +45,7 @@ function readTarget(item: UserNotification): { sheetId: string; sourceId: string
 
 export function notificationHref(
   source: Pick<SourceConfig, "id" | "smartsheetId">,
-  rowId: number | null | undefined,
+  rowId: string | number | null | undefined,
   audience: NotificationAudience,
 ): string {
   if (audience === "student") {

@@ -35,7 +35,7 @@ import type { ResolvedFieldValue, ResolvedView } from "@/lib/config/types";
 import { fieldBlockOuterClassName } from "@/components/views/layouts/FieldBlock";
 import { fieldLabelClassName } from "@/lib/field-typography";
 
-function FieldBlock({ rowId, field }: { rowId: number; field: ResolvedFieldValue }) {
+function FieldBlock({ rowId, field }: { rowId: string | number; field: ResolvedFieldValue }) {
   return (
     <div key={`${rowId}-${field.key}`} className={fieldBlockOuterClassName(field, undefined, { inCssGrid: true })}>
       {!field.hideLabel && (
@@ -57,13 +57,13 @@ export function DataListDetail({
 }: {
   view: ResolvedView;
   programGroups?: ProgramGroup[];
-  editableRowIds?: Set<number>;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
-  editingRowId?: number | null;
+  editableRowIds?: Set<string | number>;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
+  editingRowId?: string | number | null;
   onCancelEdit?: () => void;
   slug?: string;
 }) {
-  const [activeRowId, setActiveRowId] = useState<number | null>(view.rows[0]?.id ?? null);
+  const [activeRowId, setActiveRowId] = useState<string | number | null>(view.rows[0]?.id ?? null);
 
   if (programGroups && programGroups.length > 0) {
     return (

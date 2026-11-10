@@ -1207,7 +1207,21 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
   const id = asTrimmedString(input.id);
   const label = asTrimmedString(input.label);
   const sourceType = asTrimmedString(input.sourceType);
-  const smartsheetId = asOptionalNumber(input.smartsheetId);
+  const smartsheetIdRaw = input.smartsheetId;
+  let smartsheetId: string | number | undefined;
+  if (typeof smartsheetIdRaw === "number" && Number.isFinite(smartsheetIdRaw) && smartsheetIdRaw !== 0) {
+    smartsheetId = smartsheetIdRaw;
+  } else if (typeof smartsheetIdRaw === "string" && smartsheetIdRaw.trim()) {
+    const trimmed = smartsheetIdRaw.trim();
+    const uuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed);
+    if (uuid) {
+      smartsheetId = trimmed;
+    } else {
+      const parsed = Number(trimmed);
+      if (Number.isFinite(parsed) && parsed !== 0) smartsheetId = parsed;
+    }
+  }
   const fetchOptionsInput = isRecord(input.fetchOptions) ? input.fetchOptions : {};
 
   if (!id) {
@@ -1225,7 +1239,7 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
     errors.push('sourceType must be "sheet" or "report".');
   }
   if (smartsheetId === undefined) {
-    errors.push("smartsheetId must be a number.");
+    errors.push("smartsheetId must be a non-zero number or a UUID.");
   }
 
   const connectionKey = asOptionalString(input.connectionKey);
@@ -1316,7 +1330,7 @@ export function validateSourceConfig(input: unknown): ValidationResult<SourceCon
           id,
           label,
           sourceType: sourceType as SourceConfig["sourceType"],
-          smartsheetId: smartsheetId as number,
+          smartsheetId: smartsheetId as string | number,
           connectionKey,
           apiBaseUrl: asOptionalString(input.apiBaseUrl),
           cacheTtlSeconds: asOptionalNumber(input.cacheTtlSeconds),

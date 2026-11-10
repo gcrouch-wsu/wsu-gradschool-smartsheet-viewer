@@ -58,7 +58,8 @@ export interface SourceConfig {
   id: string;
   label: string;
   sourceType: SourceType;
-  smartsheetId: number;
+  /** Smartsheet numeric id, or local UUID / legacy negative id (string). */
+  smartsheetId: string | number;
   connectionKey?: string;
   apiBaseUrl?: string;
   cacheTtlSeconds?: number;
@@ -573,15 +574,15 @@ export interface SmartsheetCell {
 }
 
 export interface SmartsheetRow {
-  id: number;
-  sheetId?: number;
+  id: string | number;
+  sheetId?: string | number;
   cellsById: Record<number, SmartsheetCell>;
   cellsByTitle: Record<string, SmartsheetCell>;
 }
 
 export interface SmartsheetDataset {
   sourceType: SourceType;
-  id: number;
+  id: string | number;
   name: string;
   columns: SmartsheetColumn[];
   rows: SmartsheetRow[];
@@ -643,11 +644,11 @@ export interface ResolvedRecordSuppression {
 }
 
 export interface ResolvedViewRow {
-  id: number;
+  id: string | number;
   fields: ResolvedFieldValue[];
   fieldMap: Record<string, ResolvedFieldValue>;
   /** Smartsheet row ids merged into this display row (same program + matching emails). */
-  mergedSourceRowIds?: number[];
+  mergedSourceRowIds?: Array<string | number>;
   /** Canonical campus labels for merged row badge strip (and campus cell text). */
   mergedCampuses?: string[];
   /** Row-level file/link suppression for public + contributor UX. */

@@ -858,7 +858,7 @@ describe("public view resolution", () => {
     const rows = page?.views[0]?.rows ?? [];
     expect(rows).toHaveLength(2);
     const mergedBio = rows.find((r) => r.fieldMap.programName?.textValue === "Biology");
-    expect(mergedBio?.mergedSourceRowIds?.slice().sort((a, b) => a - b)).toEqual([1, 2]);
+    expect(mergedBio?.mergedSourceRowIds?.slice().sort((a, b) => Number(a) - Number(b))).toEqual([1, 2]);
     expect(mergedBio?.mergedCampuses?.slice().sort((a, b) => a.localeCompare(b, "en"))).toEqual(["Pullman", "Spokane"]);
     expect(mergedBio?.fieldMap.campus?.textValue).toContain("Pullman");
     expect(mergedBio?.fieldMap.campus?.textValue).toContain("Spokane");

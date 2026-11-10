@@ -15,8 +15,8 @@ export function DataTable({
 }: {
   view: ResolvedView;
   programGroups?: ProgramGroup[];
-  editableRowIds?: Set<number>;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
+  editableRowIds?: Set<string | number>;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
 }) {
   if (view.rows.length === 0) {
     return <EmptyState label={`No ${view.label.toLowerCase()} records found.`} />;

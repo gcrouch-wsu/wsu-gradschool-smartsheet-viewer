@@ -40,9 +40,9 @@ export function DataStacked({
 }: {
   view: ResolvedView;
   programGroups?: ProgramGroup[];
-  editableRowIds?: Set<number>;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
-  editingRowId?: number | null;
+  editableRowIds?: Set<string | number>;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
+  editingRowId?: string | number | null;
   onCancelEdit?: () => void;
   slug?: string;
 }) {

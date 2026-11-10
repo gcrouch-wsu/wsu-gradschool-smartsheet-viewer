@@ -114,7 +114,7 @@ describe("collectResolvableRowIdsForUnrestrictedEditing", () => {
       { id: 1, fields: [], fieldMap: {}, mergedSourceRowIds: [1, 2] },
       { id: 3, fields: [], fieldMap: {} },
     ];
-    expect(collectResolvableRowIdsForUnrestrictedEditing(rows).sort((a, b) => a - b)).toEqual([1, 2, 3]);
+    expect(collectResolvableRowIdsForUnrestrictedEditing(rows).sort((a, b) => Number(a) - Number(b))).toEqual([1, 2, 3]);
   });
 });
 

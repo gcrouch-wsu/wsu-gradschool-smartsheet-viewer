@@ -13,8 +13,8 @@ export function ContributorEditButton({
   compact = false,
   stopPropagation = false,
 }: {
-  rowId: number;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
+  rowId: string | number;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
   className?: string;
   compact?: boolean;
   stopPropagation?: boolean;

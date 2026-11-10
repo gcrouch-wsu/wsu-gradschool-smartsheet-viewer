@@ -489,7 +489,7 @@ export function getEditDrawerOrderedFields(
  */
 export function findResolvedViewRowByIdOrMergedSource(
   rows: ResolvedViewRow[],
-  rowId: number | null,
+  rowId: string | number | null,
 ): ResolvedViewRow | null {
   if (rows.length === 0) {
     return null;

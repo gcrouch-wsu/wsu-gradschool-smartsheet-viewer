@@ -56,7 +56,7 @@ interface SmartsheetApiResponse {
 
 export interface SmartsheetSchemaSummary {
   sourceType: SourceConfig["sourceType"];
-  id: number;
+  id: string | number;
   name: string;
   columns: SmartsheetColumn[];
   rowCount: number;
@@ -148,9 +148,12 @@ export function extractSmartsheetErrorMessage(body: string | undefined, maxLen =
 export function resolveSheetIdForRowUpdate(
   source: Pick<SourceConfig, "sourceType" | "smartsheetId">,
   row: Pick<SmartsheetRow, "sheetId">,
-): number | null {
-  if (typeof row.sheetId === "number" && Number.isFinite(row.sheetId) && row.sheetId > 0) {
+): string | number | null {
+  if (typeof row.sheetId === "number" && Number.isFinite(row.sheetId) && row.sheetId !== 0) {
     return row.sheetId;
+  }
+  if (typeof row.sheetId === "string" && row.sheetId.trim()) {
+    return row.sheetId.trim();
   }
   if (source.sourceType === "sheet") {
     return source.smartsheetId;
@@ -662,8 +665,8 @@ export function formatCellsForSmartsheetRowPut(
 
 export async function updateSmartsheetRow(
   source: SourceConfig,
-  sheetId: number,
-  rowId: number,
+  sheetId: string | number,
+  rowId: string | number,
   cells: Array<{ columnId: number; value?: unknown; objectValue?: unknown }>,
   columnTypeById: Map<number, string>,
 ) {
@@ -716,6 +719,25 @@ export async function updateSmartsheetRow(
 }
 
 export async function testSourceConnection(source: SourceConfig): Promise<{ ok: boolean; error?: string }> {
+  const { hasImportedReport, hasImportedSheet } = await import("@/lib/local-sheets/store");
+  const { isSmartsheetApiEnabled } = await import("@/lib/smartsheet-api-gate");
+  const hasLocal =
+    source.sourceType === "report"
+      ? await hasImportedReport(source.smartsheetId)
+      : await hasImportedSheet(source.smartsheetId);
+
+  // Local/imported copy is enough — do not require a live Smartsheet token.
+  if (hasLocal) {
+    return { ok: true };
+  }
+
+  if (!(await isSmartsheetApiEnabled())) {
+    return {
+      ok: false,
+      error: `No local ${source.sourceType} found for id ${source.smartsheetId}. Create the form in-app or import data first.`,
+    };
+  }
+
   try {
     const connection = resolveConnection(source.connectionKey, source.apiBaseUrl);
     const response = await fetchCurrentUser(connection);

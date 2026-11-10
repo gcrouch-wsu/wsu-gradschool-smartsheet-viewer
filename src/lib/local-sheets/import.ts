@@ -237,8 +237,8 @@ async function importOneReport(reportId: number, nameHint?: string): Promise<{
 }
 
 async function resolveImportTargets(scope: ImportScope): Promise<{
-  sheets: Array<{ id: number; name: string }>;
-  reports: Array<{ id: number; name: string }>;
+  sheets: Array<{ id: string | number; name: string }>;
+  reports: Array<{ id: string | number; name: string }>;
 }> {
   if (scope === "registered") {
     const sources = await listSourceConfigs();
@@ -287,8 +287,13 @@ export async function importSmartsheetData(scope: ImportScope = "registered"): P
   }
 
   for (const item of sheets) {
+    const sheetId = typeof item.id === "number" ? item.id : Number(item.id);
+    if (!Number.isFinite(sheetId) || sheetId <= 0) {
+      // Local UUID sheets are already in the DB; live Smartsheet import does not apply.
+      continue;
+    }
     try {
-      const result = await importOneSheet(item.id, item.name);
+      const result = await importOneSheet(sheetId, item.name);
       summary.sheetsProcessed += 1;
       summary.rowsAdded += result.rowsAdded;
       summary.rowsSkipped += result.rowsSkipped;
@@ -304,8 +309,12 @@ export async function importSmartsheetData(scope: ImportScope = "registered"): P
   }
 
   for (const item of reports) {
+    const reportId = typeof item.id === "number" ? item.id : Number(item.id);
+    if (!Number.isFinite(reportId) || reportId <= 0) {
+      continue;
+    }
     try {
-      const result = await importOneReport(item.id, item.name);
+      const result = await importOneReport(reportId, item.name);
       summary.reportsProcessed += 1;
       summary.rowsAdded += result.rowsAdded;
       summary.rowsSkipped += result.rowsSkipped;

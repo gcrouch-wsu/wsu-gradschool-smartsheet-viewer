@@ -152,7 +152,7 @@ export default async function PublicViewPage({
   let signedInContributorEmail: string | null = null;
   let signedInContributorName: string | null = null;
   let editingConfig = null;
-  let editableRowIds: number[] = [];
+  let editableRowIds: Array<string | number> = [];
   let adminUnrestrictedEditing = false;
   let adminEditingLabel: string | null = null;
 

@@ -10,11 +10,11 @@ import { insertWorkflowRun, listEnabledRunnableWorkflows, updateWorkflowRun } fr
 import type { TriggerEvent, WorkflowRecord } from "@/lib/workflows/types";
 
 export interface WebhookWorkflowEvent {
-  sheetId: number;
+  sheetId: string | number;
   eventType: string;
   objectType?: string;
-  objectId: number;
-  rowId?: number;
+  objectId: string | number;
+  rowId?: string | number;
   columnId?: number;
   timestamp?: string;
 }
@@ -32,11 +32,17 @@ function mapEventToTrigger(event: WebhookWorkflowEvent): TriggerEvent | null {
   return "row_updated";
 }
 
-function resolveRowId(event: WebhookWorkflowEvent, mapped: TriggerEvent): number | null {
-  if (event.rowId && event.rowId > 0) return event.rowId;
-  if (mapped !== "columns_changed" && event.objectId > 0) return event.objectId;
-  if (event.objectId > 0 && !event.columnId) return event.objectId;
-  return event.objectId > 0 ? event.objectId : null;
+function isPresentId(value: string | number | undefined): value is string | number {
+  if (value === undefined || value === null || value === "") return false;
+  if (typeof value === "number") return Number.isFinite(value) && value !== 0;
+  return Boolean(String(value).trim());
+}
+
+function resolveRowId(event: WebhookWorkflowEvent, mapped: TriggerEvent): string | number | null {
+  if (isPresentId(event.rowId)) return event.rowId;
+  if (mapped !== "columns_changed" && isPresentId(event.objectId)) return event.objectId;
+  if (isPresentId(event.objectId) && !event.columnId) return event.objectId;
+  return isPresentId(event.objectId) ? event.objectId : null;
 }
 
 function triggerMatches(workflow: WorkflowRecord, mapped: TriggerEvent, columnId?: number): boolean {
@@ -53,7 +59,7 @@ function triggerMatches(workflow: WorkflowRecord, mapped: TriggerEvent, columnId
 }
 
 function toFilterRow(
-  rowId: number,
+  rowId: string | number,
   cells: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>,
 ): SmartsheetRow {
   const cellsById: Record<number, SmartsheetCell> = {};
@@ -67,10 +73,15 @@ function toFilterRow(
       objectValue: cell.objectValue,
     };
   }
-  return { id: rowId, cellsById, cellsByTitle: {} };
+  const numericId = typeof rowId === "number" ? rowId : Number(rowId);
+  return {
+    id: Number.isFinite(numericId) ? numericId : 0,
+    cellsById,
+    cellsByTitle: {},
+  };
 }
 
-function eventKey(event: WebhookWorkflowEvent, rowId: number | null): string {
+function eventKey(event: WebhookWorkflowEvent, rowId: string | number | null): string {
   const stamp = event.timestamp ? Date.parse(event.timestamp) : Date.now();
   const bucket = Number.isFinite(stamp) ? Math.floor(stamp / 60_000) : Math.floor(Date.now() / 60_000);
   return `${event.eventType}:${event.objectType ?? "row"}:${event.objectId}:${rowId ?? 0}:${event.columnId ?? 0}:${bucket}`;
@@ -92,8 +103,7 @@ export async function evaluateWebhookEvents(events: WebhookWorkflowEvent[]): Pro
 }
 
 async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
-  // Allow negative sheet ids for sheets created in the imported store.
-  if (!Number.isFinite(event.sheetId) || event.sheetId === 0) return;
+  if (!isPresentId(event.sheetId)) return;
   const mapped = mapEventToTrigger(event);
   if (!mapped) return;
 
@@ -105,7 +115,7 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
   if (!rowId) return;
 
   let raw: {
-    id?: number;
+    id?: string | number;
     cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>;
   };
   try {

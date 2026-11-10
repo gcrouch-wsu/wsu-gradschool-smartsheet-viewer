@@ -83,7 +83,7 @@ export interface WorkflowTemplate {
 
 export interface NotificationPayload {
   sheetId: string;
-  rowId: number | null;
+  rowId: string | number | null;
   href?: string;
   fields: Array<{ title: string; value: string }>;
   templateKind: TemplateKind;

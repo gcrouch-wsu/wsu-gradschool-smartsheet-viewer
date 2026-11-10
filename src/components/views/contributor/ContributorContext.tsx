@@ -7,7 +7,7 @@ export interface ContributorContextValue {
   email: string | null;
   viewId: string;
   editingConfig: ContributorEditingClientConfig | null;
-  editableRowIds: number[];
+  editableRowIds: Array<string | number>;
   /** Public view: valid admin session — same field contracts as contributors, any row may be saved. */
   isAdminUnrestrictedEditing?: boolean;
   signOut: () => Promise<void>;

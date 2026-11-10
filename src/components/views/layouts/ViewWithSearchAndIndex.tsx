@@ -63,7 +63,7 @@ export function ViewWithSearchAndIndex({
   viewId?: string;
   contributorEmail?: string | null;
   editingConfig?: ContributorEditingClientConfig | null;
-  editableRowIds?: number[];
+  editableRowIds?: Array<string | number>;
   adminUnrestrictedEditing?: boolean;
   contributorRowsFiltered?: boolean;
 }) {
@@ -71,7 +71,7 @@ export function ViewWithSearchAndIndex({
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
-  const [editingRowId, setEditingRowId] = useState<number | null>(null);
+  const [editingRowId, setEditingRowId] = useState<string | number | null>(null);
   const editReturnFocusRef = useRef<HTMLElement | null>(null);
   /** `null` = All campuses */
   const [selectedCampus, setSelectedCampus] = useState<string | null>(null);
@@ -156,7 +156,7 @@ export function ViewWithSearchAndIndex({
   }, [fullProgramGroups, filteredRows]);
 
   const letterToRowId = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, string | number>();
     for (const row of filteredView.rows) {
       const letter = getIndexLetter(view, row);
       if (!map.has(letter)) {
@@ -247,7 +247,7 @@ export function ViewWithSearchAndIndex({
     window.location.assign("/api/auth/okta/logout?next=/");
   }
 
-  function handleEditRow(rowId: number, triggerElement?: HTMLElement | null) {
+  function handleEditRow(rowId: string | number, triggerElement?: HTMLElement | null) {
     if (!editableRowIdSet.has(rowId)) {
       return;
     }

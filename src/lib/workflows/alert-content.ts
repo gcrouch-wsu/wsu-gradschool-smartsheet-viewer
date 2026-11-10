@@ -57,7 +57,7 @@ export function columnIndexFromList(columns: Array<{ id: number; title?: string;
   return { titles, idByTitle, primaryTitle };
 }
 
-export async function loadColumnIndex(sheetId: number): Promise<ColumnIndex> {
+export async function loadColumnIndex(sheetId: string | number): Promise<ColumnIndex> {
   const key = String(sheetId);
   const cached = columnCache.get(key);
   if (cached && Date.now() - cached.at < 60_000) return cached.index;
@@ -96,18 +96,18 @@ export function renderAlertCopy(input: {
 
 export async function loadAlertRow(
   sheetId: string,
-  rowId: number | null,
-): Promise<{ rowId: number | null; columns: ColumnIndex; cells: Cell[] } | null> {
-  const numericId = Number(sheetId);
-  if (!Number.isFinite(numericId) || numericId <= 0) return null;
-  if (rowId && rowId > 0) {
-    const columns = await loadColumnIndex(numericId);
-    const raw = (await ss.getRow(numericId, rowId)) as { id?: number; cells?: Cell[] };
+  rowId: string | number | null,
+): Promise<{ rowId: string | number | null; columns: ColumnIndex; cells: Cell[] } | null> {
+  const id = String(sheetId).trim();
+  if (!id || id === "0") return null;
+  if (rowId !== null && rowId !== undefined && String(rowId).trim() !== "" && String(rowId) !== "0") {
+    const columns = await loadColumnIndex(id);
+    const raw = (await ss.getRow(id, rowId)) as { id?: string | number; cells?: Cell[] };
     return { rowId: raw.id ?? rowId, columns, cells: raw.cells ?? [] };
   }
-  const head = await ss.getSheetHead(numericId);
+  const head = await ss.getSheetHead(id);
   const columns = columnIndexFromList(head.columns);
-  columnCache.set(String(numericId), { at: Date.now(), index: columns });
+  columnCache.set(id, { at: Date.now(), index: columns });
   if (!head.row) return { rowId: null, columns, cells: [] };
   return { rowId: head.row.id, columns, cells: head.row.cells ?? [] };
 }

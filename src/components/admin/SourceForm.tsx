@@ -22,7 +22,12 @@ import type { SmartsheetSchemaSummary } from "@/lib/smartsheet";
 import type { FieldSourceSelector, SmartsheetColumn, SourceConfig, SourceRoleGroupConfig } from "@/lib/config/types";
 import { slugify } from "@/lib/utils";
 
-type CatalogItem = { id: number; name: string };
+type CatalogItem = { id: string | number; name: string };
+
+function isBoundSheetId(id: string | number): boolean {
+  if (typeof id === "string") return id.trim() !== "";
+  return Number.isFinite(id) && id !== 0;
+}
 
 function SmartsheetResourcePicker({
   sourceType,
@@ -30,12 +35,15 @@ function SmartsheetResourcePicker({
   apiBaseUrl,
   smartsheetId,
   onSelect,
+  localOnly = false,
 }: {
   sourceType: SourceConfig["sourceType"];
   connectionKey?: string;
   apiBaseUrl?: string;
-  smartsheetId: number;
+  smartsheetId: string | number;
   onSelect: (item: CatalogItem) => void;
+  /** When true, catalog is local DB sheets/reports (Smartsheet API off). */
+  localOnly?: boolean;
 }) {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,8 +51,16 @@ function SmartsheetResourcePicker({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [manualMode, setManualMode] = useState(false);
-  const [manualId, setManualId] = useState(smartsheetId > 0 ? String(smartsheetId) : "");
+  const [manualId, setManualId] = useState(isBoundSheetId(smartsheetId) ? String(smartsheetId) : "");
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const resourceLabel = localOnly
+    ? sourceType === "report"
+      ? "Local report"
+      : "Local sheet"
+    : sourceType === "report"
+      ? "Smartsheet report"
+      : "Smartsheet sheet";
 
   const selected = useMemo(
     () => items.find((item) => item.id === smartsheetId) ?? null,
@@ -108,7 +124,7 @@ function SmartsheetResourcePicker({
   }, [sourceType]);
 
   useEffect(() => {
-    setManualId(smartsheetId > 0 ? String(smartsheetId) : "");
+    setManualId(isBoundSheetId(smartsheetId) ? String(smartsheetId) : "");
   }, [smartsheetId]);
 
   useEffect(() => {
@@ -125,7 +141,7 @@ function SmartsheetResourcePicker({
     ? query
     : selected
       ? `${selected.name} (ID ${selected.id})`
-      : smartsheetId > 0
+      : isBoundSheetId(smartsheetId)
         ? `ID ${smartsheetId}`
         : "";
 
@@ -133,7 +149,7 @@ function SmartsheetResourcePicker({
     return (
       <div className="flex flex-col gap-2" ref={rootRef}>
         <div className="flex h-6 items-center justify-between gap-2">
-          <span className="text-sm font-medium text-ink">Smartsheet ID</span>
+          <span className="text-sm font-medium text-ink">{localOnly ? "Sheet ID" : "Smartsheet ID"}</span>
           <button
             type="button"
             className="shrink-0 whitespace-nowrap text-xs font-medium text-crimson hover:underline"
@@ -143,21 +159,28 @@ function SmartsheetResourcePicker({
           </button>
         </div>
         <input
-          type="number"
+          type={localOnly ? "text" : "number"}
           value={manualId}
           onChange={(event) => {
             const next = event.target.value;
             setManualId(next);
+            if (localOnly) {
+              const trimmed = next.trim();
+              if (trimmed) onSelect({ id: trimmed, name: selected?.name ?? "" });
+              return;
+            }
             const id = Number(next);
-            if (Number.isFinite(id) && id > 0) {
+            if (Number.isFinite(id) && id !== 0) {
               onSelect({ id, name: selected?.name ?? "" });
             }
           }}
-          placeholder="From sheet/report URL"
+          placeholder={localOnly ? "Local sheet UUID or id" : "From sheet/report URL"}
           className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink"
         />
         <p className="min-h-4 text-xs text-sub">
-          Numeric ID from the Smartsheet URL when the resource isn&apos;t in the list.
+          {localOnly
+            ? "Use the UUID from a form created in-app, or an imported sheet id."
+            : "Numeric ID from the Smartsheet URL when the resource isn’t in the list."}
         </p>
       </div>
     );
@@ -166,9 +189,7 @@ function SmartsheetResourcePicker({
   return (
     <div className="flex flex-col gap-2" ref={rootRef}>
       <div className="flex h-6 items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium text-ink">
-          {sourceType === "report" ? "Smartsheet report" : "Smartsheet sheet"}
-        </span>
+        <span className="truncate text-sm font-medium text-ink">{resourceLabel}</span>
         <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
@@ -260,8 +281,12 @@ function SmartsheetResourcePicker({
       ) : (
         <p className="min-h-4 text-xs text-sub">
           {items.length
-            ? `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
-            : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
+            ? localOnly
+              ? `${items.length} local ${sourceType}${items.length === 1 ? "" : "s"} in the app database.`
+              : `${items.length} ${sourceType}${items.length === 1 ? "" : "s"} available for this connection.`
+            : localOnly
+              ? `No local ${sourceType}s yet. Create a form from Sources, or enter an id manually.`
+              : `Pick a ${sourceType} from your Smartsheet account, or enter the ID manually.`}
         </p>
       )}
     </div>
@@ -414,10 +439,13 @@ export function SourceForm({
   initialSource,
   connectionKeys,
   isNew,
+  smartsheetApiEnabled = true,
 }: {
   initialSource: SourceConfig | null;
   connectionKeys: string[];
   isNew: boolean;
+  /** When false, hide live Smartsheet connection fields and use local sheet catalog. */
+  smartsheetApiEnabled?: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -560,9 +588,20 @@ export function SourceForm({
     }
 
     setSchema(payload.schema);
-    const noticeMsg = payload.connection?.ok === false ? "Connection warning returned during schema fetch." : "Connection verified and schema loaded.";
+    const noticeMsg = !smartsheetApiEnabled
+      ? "Schema loaded from the local database."
+      : payload.connection?.ok === false
+        ? "Connection warning returned during schema fetch."
+        : "Connection verified and schema loaded.";
     setNotice(noticeMsg);
-    toast.addToast(payload.connection?.ok === false ? "Schema loaded with connection warning." : "Connection verified.", "success");
+    toast.addToast(
+      !smartsheetApiEnabled
+        ? "Schema loaded."
+        : payload.connection?.ok === false
+          ? "Schema loaded with connection warning."
+          : "Connection verified.",
+      "success",
+    );
   }
 
   function mergeDetectedRoleGroupsFromSchema() {
@@ -786,10 +825,12 @@ export function SourceForm({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-crimson">
-              Connection
+              {smartsheetApiEnabled ? "Connection" : "Data source"}
             </p>
             <p className="mt-1 max-w-[58ch] text-[13px] leading-6 text-sub">
-              Register the Smartsheet source once, then point one or more views at it.
+              {smartsheetApiEnabled
+                ? "Register the Smartsheet source once, then point one or more views at it."
+                : "Point this source at a sheet in the app database, then configure views and form settings."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -813,7 +854,7 @@ export function SourceForm({
               })}
               className={outlineBtnClass}
             >
-              {isPending ? "Working..." : "Test + Fetch Schema"}
+              {isPending ? "Working..." : smartsheetApiEnabled ? "Test + Fetch Schema" : "Fetch Schema"}
             </button>
             <button
               type="button"
@@ -887,9 +928,10 @@ export function SourceForm({
             </div>
             <SmartsheetResourcePicker
               sourceType={form.sourceType}
-              connectionKey={form.connectionKey}
-              apiBaseUrl={form.apiBaseUrl}
+              connectionKey={smartsheetApiEnabled ? form.connectionKey : undefined}
+              apiBaseUrl={smartsheetApiEnabled ? form.apiBaseUrl : undefined}
               smartsheetId={form.smartsheetId}
+              localOnly={!smartsheetApiEnabled}
               onSelect={(item) => {
                 setForm((current) => {
                   const canAutofillName = Boolean(item.name?.trim()) && !/^Smartsheet \d+$/i.test(item.name.trim());
@@ -910,66 +952,72 @@ export function SourceForm({
               }}
             />
           </div>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-ink">Connection key</span>
-            <input
-              list="connection-keys"
-              value={form.connectionKey ?? ""}
-              onChange={(event) => update("connectionKey", event.target.value)}
-              className={fieldClass}
-            />
-            <datalist id="connection-keys">
-              {connectionOptions.map((key) => (
-                <option key={key} value={key} />
-              ))}
-            </datalist>
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-ink">API base URL</span>
-            <input
-              value={form.apiBaseUrl ?? ""}
-              onChange={(event) => update("apiBaseUrl", event.target.value)}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-ink">Cache TTL seconds</span>
-            <input
-              type="number"
-              value={form.cacheTtlSeconds ?? 120}
-              onChange={(event) => update("cacheTtlSeconds", Number(event.target.value) || 0)}
-              className={fieldClass}
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-ink">Fetch level</span>
-            <input
-              type="number"
-              value={form.fetchOptions?.level ?? 2}
-              onChange={(event) => updateFetchOption("level", Number(event.target.value) || 0)}
-              className={fieldClass}
-            />
-          </label>
+          {smartsheetApiEnabled ? (
+            <>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-ink">Connection key</span>
+                <input
+                  list="connection-keys"
+                  value={form.connectionKey ?? ""}
+                  onChange={(event) => update("connectionKey", event.target.value)}
+                  className={fieldClass}
+                />
+                <datalist id="connection-keys">
+                  {connectionOptions.map((key) => (
+                    <option key={key} value={key} />
+                  ))}
+                </datalist>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-ink">API base URL</span>
+                <input
+                  value={form.apiBaseUrl ?? ""}
+                  onChange={(event) => update("apiBaseUrl", event.target.value)}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-ink">Cache TTL seconds</span>
+                <input
+                  type="number"
+                  value={form.cacheTtlSeconds ?? 120}
+                  onChange={(event) => update("cacheTtlSeconds", Number(event.target.value) || 0)}
+                  className={fieldClass}
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-ink">Fetch level</span>
+                <input
+                  type="number"
+                  value={form.fetchOptions?.level ?? 2}
+                  onChange={(event) => updateFetchOption("level", Number(event.target.value) || 0)}
+                  className={fieldClass}
+                />
+              </label>
+            </>
+          ) : null}
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-4 text-sm text-sub">
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.fetchOptions?.includeObjectValue ?? true}
-              onChange={(event) => updateFetchOption("includeObjectValue", event.target.checked)}
-            />
-            Include objectValue
-          </label>
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.fetchOptions?.includeColumnOptions ?? true}
-              onChange={(event) => updateFetchOption("includeColumnOptions", event.target.checked)}
-            />
-            Include column options
-          </label>
-        </div>
+        {smartsheetApiEnabled ? (
+          <div className="mt-5 flex flex-wrap gap-4 text-sm text-sub">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.fetchOptions?.includeObjectValue ?? true}
+                onChange={(event) => updateFetchOption("includeObjectValue", event.target.checked)}
+              />
+              Include objectValue
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.fetchOptions?.includeColumnOptions ?? true}
+                onChange={(event) => updateFetchOption("includeColumnOptions", event.target.checked)}
+              />
+              Include column options
+            </label>
+          </div>
+        ) : null}
       </section>
 
       {form.sourceType === "sheet" ? (

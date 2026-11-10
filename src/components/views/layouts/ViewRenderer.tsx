@@ -13,9 +13,9 @@ import type { ProgramGroup } from "@/lib/campus-grouping";
 import type { LayoutType, ResolvedView } from "@/lib/config/types";
 
 export interface PublicRowEditingProps {
-  editableRowIds?: Set<number>;
-  onEditRow?: (rowId: number, triggerElement?: HTMLElement | null) => void;
-  editingRowId?: number | null;
+  editableRowIds?: Set<string | number>;
+  onEditRow?: (rowId: string | number, triggerElement?: HTMLElement | null) => void;
+  editingRowId?: string | number | null;
   onCancelEdit?: () => void;
   slug?: string;
 }

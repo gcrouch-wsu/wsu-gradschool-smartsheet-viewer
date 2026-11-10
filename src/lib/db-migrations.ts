@@ -12,6 +12,9 @@ import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 
 const BASELINE = "001_platform_schema.sql";
 
+/** Applied after the baseline on every migrate (idempotent SQL). */
+const FOLLOW_ON = ["009_text_resource_ids.sql"] as const;
+
 /** Former incremental migration ids — recorded so history stays consistent. */
 const SUPERSEDED = [
   "002_admin_reset_nonce.sql",
@@ -118,6 +121,19 @@ export async function runDatabaseMigrations(): Promise<void> {
         BASELINE,
       ]);
       for (const file of SUPERSEDED) {
+        await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
+          file,
+        ]);
+      }
+      const dir = await migrationsDir();
+      for (const file of FOLLOW_ON) {
+        const { rows } = await queryConfigDb<{ id: string }>(
+          `SELECT id FROM schema_migrations WHERE id = $1`,
+          [file],
+        );
+        if (rows.length) continue;
+        const followSql = await readFile(join(dir, file), "utf8");
+        await queryConfigDb(followSql);
         await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
           file,
         ]);

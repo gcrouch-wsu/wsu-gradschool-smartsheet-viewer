@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import type { ExcelEditableType, ExcelImportColumn, ExcelImportOverride } from "@/lib/forms/excel-import-types";
 
 interface SheetOption {
-  id: number;
+  id: string | number;
   name: string;
 }
 

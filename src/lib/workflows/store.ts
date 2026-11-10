@@ -170,7 +170,7 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
 export async function insertWorkflowRun(input: {
   workflowId: string;
   sheetId: string;
-  rowId: number | null;
+  rowId: string | number | null;
   eventKey: string;
   status: string;
   error?: string | null;

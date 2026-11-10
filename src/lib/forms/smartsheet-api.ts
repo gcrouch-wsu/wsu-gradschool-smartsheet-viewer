@@ -82,7 +82,7 @@ async function listAllTokenPages(path: string, maxItems = 100): Promise<unknown[
 }
 
 export interface SheetSummary {
-  id: number;
+  id: string | number;
   name: string;
 }
 
@@ -243,8 +243,8 @@ export async function addRows(
       fromImported: async () => {
         const created = await sheetStore.addImportedRows(sheetId, rows);
         for (const row of created) {
-          const id = Number((row as { id?: number }).id);
-          if (Number.isFinite(id)) {
+          const id = (row as { id?: string | number }).id;
+          if (id !== undefined && id !== null && String(id).trim() !== "") {
             await sheetStore.emitLocalRowEvents(sheetId, [
               { eventType: "created", objectId: id, rowId: id },
             ]);
@@ -308,7 +308,7 @@ export async function getRow(sheetId: string | number, rowId: string | number): 
 export async function getSheetHead(sheetId: string | number): Promise<{
   columns: Array<{ id: number; title?: string; primary?: boolean }>;
   row: {
-    id: number;
+    id: string | number;
     cells?: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>;
   } | null;
 }> {

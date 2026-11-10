@@ -24,8 +24,8 @@ export type SheetCellJson = {
 };
 
 export type SheetRowJson = {
-  id: number;
-  sheetId?: number;
+  id: string | number;
+  sheetId?: string | number;
   rowNumber?: number;
   createdAt?: string;
   modifiedAt?: string;

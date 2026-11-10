@@ -13,12 +13,10 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
   const { id } = await params;
   await requireAdminPageAccess(`/admin/sources/${id}`);
   const isNew = id === "new";
-  if (isNew) {
-    const allowSmartsheetSource =
-      !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
-    if (!allowSmartsheetSource) {
-      redirect("/admin/sources");
-    }
+  const smartsheetApiEnabled =
+    !isDatabaseConfigEnabled() || (await isSmartsheetApiEnabled());
+  if (isNew && !smartsheetApiEnabled) {
+    redirect("/admin/sources");
   }
   const source = isNew ? null : await getSourceConfigById(id);
 
@@ -34,7 +32,9 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
         description={
           isNew
             ? "Register a Smartsheet sheet or report for views and forms."
-            : "Update source connection, schema, role groups, and form publish settings."
+            : smartsheetApiEnabled
+              ? "Update source connection, schema, role groups, and form publish settings."
+              : "Update the linked sheet, schema, role groups, and form publish settings."
         }
         actions={
           <Link href="/admin/sources">
@@ -42,7 +42,12 @@ export default async function SourceEditorPage({ params }: { params: Promise<{ i
           </Link>
         }
       />
-      <SourceForm initialSource={source} connectionKeys={listConfiguredConnectionKeys()} isNew={isNew} />
+      <SourceForm
+        initialSource={source}
+        connectionKeys={listConfiguredConnectionKeys()}
+        isNew={isNew}
+        smartsheetApiEnabled={smartsheetApiEnabled}
+      />
     </div>
   );
 }
