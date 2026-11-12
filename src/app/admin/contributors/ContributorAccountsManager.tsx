@@ -8,6 +8,7 @@ import {
   resolveAdminTablePage,
 } from "@/components/admin/AdminDataTable";
 import { Button, EmptyState } from "@/components/admin/WorkspacePrimitives";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 
 interface ContributorUser {
   id: string;
@@ -44,6 +45,7 @@ export function ContributorAccountsManager({
   query?: string;
 }) {
   const router = useRouter();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [users, setUsers] = useState<ContributorUser[]>(initialUsers);
   const [query, setQuery] = useState(initialQuery);
   const [resetLink, setResetLink] = useState<ResetLinkState | null>(null);
@@ -108,7 +110,13 @@ export function ContributorAccountsManager({
   }
 
   async function handleRemove(user: ContributorUser) {
-    if (!window.confirm(`Remove contributor account for ${user.email}?`)) return;
+    const confirmed = await confirm({
+      title: "Remove contributor",
+      message: `Remove contributor account for ${user.email}?`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!confirmed) return;
     setActionError(null);
     setRemovingId(user.id);
     try {
@@ -134,6 +142,7 @@ export function ContributorAccountsManager({
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <form onSubmit={applySearch} className="flex flex-wrap items-center gap-2" data-tour="ac-search">
         <label className="relative block min-w-[14rem] max-w-md flex-1">
           <span className="sr-only">Search contributors</span>

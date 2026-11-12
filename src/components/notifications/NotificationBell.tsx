@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { IconBell, IconChevronDown, IconChevronUp } from "@/components/forms/icons";
+import { ensureOverlayPolyfills } from "@/lib/overlay-polyfills";
 
 interface NotificationItem {
   id: string;
@@ -37,8 +38,8 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   const [markingAll, setMarkingAll] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const rootRef = useRef<HTMLDivElement>(null);
-  const panelId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const panelId = useId().replace(/:/g, "");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,20 +86,8 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   }, [open, load]);
 
   useEffect(() => {
-    if (!open) return;
-    function onPointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
+    void ensureOverlayPolyfills();
+  }, []);
 
   async function markRead(id: string) {
     await fetch(`/api/notifications/${id}/read`, { method: "POST" });
@@ -129,14 +118,14 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   }
 
   return (
-    <div ref={rootRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       <button
         type="button"
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-white text-ink hover:border-crimson"
+        popoverTarget={panelId}
+        className="notification-bell-trigger relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong bg-white text-ink hover:border-crimson"
         aria-label={count ? `${count} unread notifications` : "Notifications"}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
       >
         <IconBell className="h-4 w-4" />
         {count > 0 ? (
@@ -146,13 +135,18 @@ export function NotificationBell({ className = "" }: { className?: string }) {
         ) : null}
       </button>
 
-      {open ? (
-        <div
-          id={panelId}
-          role="dialog"
-          aria-label="Notifications"
-          className="absolute right-0 z-[10050] mt-2 w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-white shadow-[0_12px_32px_rgba(35,31,32,0.16)]"
-        >
+      <div
+        ref={panelRef}
+        id={panelId}
+        popover="auto"
+        aria-label="Notifications"
+        className="notification-panel"
+        onToggle={(event) => {
+          const next = event.newState === "open";
+          setOpen(next);
+          if (!next) setExpandedId(null);
+        }}
+      >
           <div className="flex items-center justify-between gap-3 border-b border-[color:var(--wsu-border)] px-3 py-2.5">
             <p className="min-w-0 text-sm font-medium text-[color:var(--wsu-ink)]">
               Notifications
@@ -247,13 +241,12 @@ export function NotificationBell({ className = "" }: { className?: string }) {
             <Link
               href="/notifications"
               className="text-xs font-medium text-[color:var(--wsu-muted)] hover:text-[color:var(--wsu-crimson)]"
-              onClick={() => setOpen(false)}
+              onClick={() => panelRef.current?.hidePopover()}
             >
               View all notifications
             </Link>
           </div>
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }

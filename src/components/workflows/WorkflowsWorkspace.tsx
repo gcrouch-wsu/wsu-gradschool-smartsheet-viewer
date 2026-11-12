@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert } from "@/components/forms/admin/AdminCard";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import { WorkflowEditorForm } from "@/components/workflows/WorkflowEditorForm";
 import { WorkflowList } from "@/components/workflows/WorkflowList";
 import { WorkflowTemplatePicker } from "@/components/workflows/WorkflowTemplatePicker";
@@ -30,6 +31,7 @@ export function WorkflowsWorkspace({
   sourceId?: string;
   sourceLabel?: string;
 }) {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [payload, setPayload] = useState<WorkflowsPayload | null>(null);
   const [sheetName, setSheetName] = useState("");
   const [error, setError] = useState("");
@@ -140,7 +142,13 @@ export function WorkflowsWorkspace({
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this workflow?")) return;
+    const confirmed = await confirm({
+      title: "Delete workflow",
+      message: "Delete this workflow?",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
     await fetch(`/api/forms/workflows/${id}`, { method: "DELETE" });
     if (draft?.id === id) setDraft(null);
     await load();
@@ -165,6 +173,7 @@ export function WorkflowsWorkspace({
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">

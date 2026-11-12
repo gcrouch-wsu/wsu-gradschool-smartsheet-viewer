@@ -736,6 +736,140 @@ a {
   pointer-events: none;
 }
 
+/* Native modal dialog. Display is only set while open so the UA can hide it when closed. */
+.wsu-modal {
+  margin: auto;
+  padding: 0;
+  max-height: min(90vh, calc(100% - 2rem));
+  overflow: hidden;
+}
+.wsu-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+.wsu-modal:modal {
+  overscroll-behavior: contain;
+}
+.wsu-modal::backdrop {
+  background: color-mix(in srgb, var(--wsu-ink) 40%, transparent);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Right-edge modal drawer. Display stays under the user agent so a closed dialog stays hidden. */
+.edge-drawer {
+  --drawer-width: min(36rem, 100dvw - 24px);
+  --drawer-backdrop: 0;
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.edge-drawer::backdrop {
+  background: rgb(35 31 32);
+  opacity: calc(var(--drawer-backdrop) * 0.4);
+}
+.edge-drawer-scroller {
+  position: relative;
+  display: grid;
+  grid-template-columns: 100% var(--drawer-width);
+  height: 100%;
+  overflow-x: scroll;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+.edge-drawer-scroller::-webkit-scrollbar {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .edge-drawer-scroller {
+    scroll-behavior: smooth;
+  }
+}
+.edge-drawer-scroller::before {
+  content: "";
+  scroll-snap-align: start;
+  scroll-initial-target: nearest;
+}
+.edge-drawer-sheet {
+  display: flex;
+  min-width: 0;
+  height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  scroll-snap-align: end;
+  border-left: 1px solid var(--wsu-border);
+  background: var(--wsu-paper);
+  color: var(--wsu-ink);
+  box-shadow: -16px 0 40px rgba(35, 31, 32, 0.12);
+}
+@supports (animation-timeline: scroll()) {
+  .edge-drawer {
+    timeline-scope: --drawer-fade;
+    animation: edge-drawer-fade linear both;
+    animation-timeline: --drawer-fade;
+  }
+  .edge-drawer-scroller {
+    scroll-timeline: --drawer-fade x;
+  }
+  @property --drawer-backdrop {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+  }
+  @keyframes edge-drawer-fade {
+    0% { --drawer-backdrop: 0; }
+    100% { --drawer-backdrop: 1; }
+  }
+}
+
+.notification-bell-trigger {
+  anchor-name: --notification-bell;
+}
+.notification-panel {
+  position-anchor: --notification-bell;
+  inset: auto;
+  top: anchor(bottom);
+  right: anchor(right);
+  margin: 0.5rem 0 0;
+  width: min(100vw - 2rem, 22rem);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--wsu-border);
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(35, 31, 32, 0.16);
+  position-try-fallbacks: flip-block;
+}
+.notification-panel:is(:popover-open, .\:popover-open) {
+  display: block;
+}
+
+.product-tour-popover {
+  position-anchor: --product-tour-target;
+  inset: auto;
+  top: anchor(bottom);
+  left: clamp(0.75rem, anchor(left), calc(100vw - min(360px, 100vw - 1.5rem) - 0.75rem));
+  margin: 1rem 0 0;
+  width: min(100vw - 1.5rem, 360px);
+  padding: 0;
+  border: 1px solid var(--wsu-border);
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(35, 31, 32, 0.22);
+  position-try-fallbacks: flip-block;
+}
+.product-tour-popover:is(:popover-open, .\:popover-open) {
+  display: block;
+}
+
 /* Record suppression: collapsed on screen; full body when printing */
 @media print {
   .rsup-collapsible > .rsup-collapsible-summary {

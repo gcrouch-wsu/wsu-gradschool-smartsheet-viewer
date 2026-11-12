@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast";
 import { getEligibleEditableFieldDefinitions, getFieldsForMultiPersonGroup } from "@/lib/contributor-utils";
 import { applyViewTemplate } from "@/lib/config/templates";
@@ -58,6 +59,7 @@ export function ViewBuilder({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -461,9 +463,13 @@ export function ViewBuilder({
         config = { ...config, id: editorViewId, slug: view.slug, public: view.public };
       }
 
-      const saveNow = window.confirm(
-        "Save this backup to the server now?\n\nOK = restore and save (replaces the saved view).\nCancel = load into the editor only — review the tabs, then click Save yourself.",
-      );
+      const saveNow = await confirm({
+        title: "Save this backup?",
+        message:
+          "Save now restores and replaces the saved view. Load into the editor only lets you review the tabs, then click Save yourself.",
+        confirmLabel: "Save now",
+        cancelLabel: "Load into editor",
+      });
 
       if (saveNow) {
         const endpoint = isNew ? "/api/admin/views" : `/api/admin/views/${editorViewId}`;
@@ -515,9 +521,13 @@ export function ViewBuilder({
       return;
     }
 
-    if (!window.confirm(`Delete view \"${viewId}\"? This cannot be undone.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Delete view",
+      message: `Delete view "${viewId}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     setErrors([]);
     setNotice("");
@@ -770,6 +780,7 @@ export function ViewBuilder({
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <section className="rounded-[1.75rem] border border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] p-6 shadow-[0_16px_40px_rgba(35,31,32,0.06)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div data-tour="vb-heading">

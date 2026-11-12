@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { EdgeDrawer } from "@/components/ui/EdgeDrawer";
 import { HeaderCustomTextEditor } from "@/components/ui/HeaderCustomTextEditor";
 import { ProductTour } from "@/components/ui/ProductTour";
 import { TourHowToButton } from "@/components/ui/ProductTourHost";
@@ -1091,7 +1092,17 @@ export function FormBuilderView({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [mobileRailOpen, setMobileRailOpen] = useState(false);
+  const closeMobileRailRef = useRef<(() => void) | null>(null);
   const tour = useProductTour(FORM_BUILDER_TOUR_STORAGE_KEY, { enabled: Boolean(builder.state) });
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    function closeOnDesktop() {
+      if (media.matches) setMobileRailOpen(false);
+    }
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   // Keep mode / panels in sync with the active tour step.
   useEffect(() => {
@@ -1324,6 +1335,8 @@ export function FormBuilderView({
               <button
                 type="button"
                 className={secondaryBtn}
+                aria-expanded={mobileRailOpen}
+                aria-controls="form-builder-mobile-rail"
                 onClick={() => {
                   setRailTab("add");
                   setMobileRailOpen(true);
@@ -1334,6 +1347,8 @@ export function FormBuilderView({
               <button
                 type="button"
                 className={secondaryBtn}
+                aria-expanded={mobileRailOpen}
+                aria-controls="form-builder-mobile-rail"
                 onClick={() => {
                   setRailTab("field");
                   setMobileRailOpen(true);
@@ -1383,20 +1398,28 @@ export function FormBuilderView({
         </div>
       )}
 
-      {mobileRailOpen && mode === "edit" ? (
-        <div className="fixed inset-0 z-[10000] lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[color:var(--wsu-ink)]/40"
-            aria-label="Close panel"
-            onClick={() => setMobileRailOpen(false)}
-          />
-          <div className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-white shadow-[0_20px_50px_rgba(35,31,32,0.2)]">
+      {builder.confirmDialog}
+      {mode === "edit" ? (
+        <EdgeDrawer
+          open={mobileRailOpen}
+          onClose={() => setMobileRailOpen(false)}
+          id="form-builder-mobile-rail"
+          labelledBy="form-builder-mobile-rail-title"
+          lightDismiss
+          width="min(24rem, 100dvw - 24px)"
+          closeRef={closeMobileRailRef}
+        >
+          <div className="flex h-full min-h-0 w-full flex-col bg-white">
             <div className="flex items-center justify-between border-b border-[color:var(--wsu-border)] px-3 py-2">
-              <p className="text-sm font-medium text-[color:var(--wsu-ink)]">
+              <p id="form-builder-mobile-rail-title" className="text-sm font-medium text-[color:var(--wsu-ink)]">
                 {railTab === "add" ? "Add elements" : "Field settings"}
               </p>
-              <button type="button" className={secondaryBtn} onClick={() => setMobileRailOpen(false)}>
+              <button
+                type="button"
+                className={secondaryBtn}
+                autoFocus
+                onClick={() => closeMobileRailRef.current?.()}
+              >
                 Done
               </button>
             </div>
@@ -1410,7 +1433,7 @@ export function FormBuilderView({
               inspector={inspector}
             />
           </div>
-        </div>
+        </EdgeDrawer>
       ) : null}
 
       <ProductTour

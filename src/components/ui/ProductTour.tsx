@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ensureOverlayPolyfills } from "@/lib/overlay-polyfills";
 
 export type ProductTourStep = {
   id: string;
@@ -18,20 +19,10 @@ type SpotlightRect = {
   height: number;
 };
 
-type CardPlacement = {
-  top: number;
-  left: number;
-};
-
 const SPOTLIGHT_PADDING = 8;
-const CARD_GAP = 16;
-const CARD_WIDTH = 360;
 const TARGET_WAIT_ATTEMPTS = 24;
 const TARGET_WAIT_MS = 50;
-
-function cx(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
-}
+const TOUR_ANCHOR = "--product-tour-target";
 
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
@@ -48,7 +39,15 @@ function openContainingDetails(el: Element): void {
   }
 }
 
-function measureTarget(selector: string): SpotlightRect | null {
+function clearTourAnchor() {
+  for (const node of document.querySelectorAll("[data-tour-anchor]")) {
+    if (!(node instanceof HTMLElement)) continue;
+    node.style.removeProperty("anchor-name");
+    node.removeAttribute("data-tour-anchor");
+  }
+}
+
+function measureTarget(selector: string): { rect: SpotlightRect; element: HTMLElement } | null {
   const nodes = document.querySelectorAll(selector);
   for (const el of nodes) {
     if (!(el instanceof HTMLElement)) continue;
@@ -63,45 +62,23 @@ function measureTarget(selector: string): SpotlightRect | null {
     const after = el.getBoundingClientRect();
     if (after.width === 0 && after.height === 0) continue;
     return {
-      top: after.top - SPOTLIGHT_PADDING,
-      left: after.left - SPOTLIGHT_PADDING,
-      width: after.width + SPOTLIGHT_PADDING * 2,
-      height: after.height + SPOTLIGHT_PADDING * 2,
+      element: el,
+      rect: {
+        top: after.top - SPOTLIGHT_PADDING,
+        left: after.left - SPOTLIGHT_PADDING,
+        width: after.width + SPOTLIGHT_PADDING * 2,
+        height: after.height + SPOTLIGHT_PADDING * 2,
+      },
     };
   }
   return null;
 }
 
-function placeCard(spotlight: SpotlightRect, cardHeight: number): CardPlacement {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const margin = 12;
-
-  let left = spotlight.left + spotlight.width / 2 - CARD_WIDTH / 2;
-  left = Math.max(margin, Math.min(left, vw - CARD_WIDTH - margin));
-
-  const belowTop = spotlight.top + spotlight.height + CARD_GAP;
-  const aboveTop = spotlight.top - cardHeight - CARD_GAP;
-  const fitsBelow = belowTop + cardHeight <= vh - margin;
-  const fitsAbove = aboveTop >= margin;
-
-  let top: number;
-  if (fitsBelow) {
-    top = belowTop;
-  } else if (fitsAbove) {
-    top = aboveTop;
-  } else {
-    top = Math.max(margin, Math.min(belowTop, vh - cardHeight - margin));
-  }
-
-  return { top, left };
-}
-
-async function waitForTarget(selector: string): Promise<SpotlightRect | null> {
+async function waitForTarget(selector: string) {
   for (let i = 0; i < TARGET_WAIT_ATTEMPTS; i++) {
-    const rect = measureTarget(selector);
-    if (rect) return rect;
-    await new Promise((r) => setTimeout(r, TARGET_WAIT_MS));
+    const found = measureTarget(selector);
+    if (found) return found;
+    await new Promise((resolve) => setTimeout(resolve, TARGET_WAIT_MS));
   }
   return null;
 }
@@ -123,9 +100,13 @@ export function ProductTour({
 }) {
   const [mounted, setMounted] = useState(false);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
-  const [cardPos, setCardPos] = useState<CardPlacement>({ top: 80, left: 24 });
   const [missing, setMissing] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const spotRef = useRef<HTMLDivElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
+  const targetRef = useRef<HTMLElement | null>(null);
+  const focusedStepRef = useRef<string | null>(null);
+  const inertedRef = useRef<HTMLElement[]>([]);
   const titleId = useId();
   const bodyId = useId();
   const resolveGen = useRef(0);
@@ -135,8 +116,38 @@ export function ProductTour({
   const isFirst = stepIndex <= 0;
   const isLast = stepIndex >= total - 1;
 
+  const setPageInert = useCallback((active: boolean, target?: HTMLElement | null) => {
+    for (const el of inertedRef.current) el.inert = false;
+    inertedRef.current = [];
+    if (!active || !target) return;
+    const dialog = dialogRef.current;
+    const spot = spotRef.current;
+    const keep = new Set<HTMLElement>();
+    let node: HTMLElement | null = target;
+    while (node && node !== document.body) {
+      keep.add(node);
+      node = node.parentElement;
+    }
+    const next: HTMLElement[] = [];
+    const walk = (parent: HTMLElement) => {
+      for (const child of Array.from(parent.children)) {
+        if (!(child instanceof HTMLElement)) continue;
+        if (child === dialog || child === spot) continue;
+        if (keep.has(child)) {
+          walk(child);
+          continue;
+        }
+        child.inert = true;
+        next.push(child);
+      }
+    };
+    walk(document.body);
+    inertedRef.current = next;
+  }, []);
+
   useEffect(() => {
     setMounted(true);
+    void ensureOverlayPolyfills();
   }, []);
 
   const refreshPosition = useCallback(async () => {
@@ -146,28 +157,39 @@ export function ProductTour({
     }
     const gen = ++resolveGen.current;
     setMissing(false);
-    setSpotlight(null);
-    const rect = await waitForTarget(step.target);
+    const found = await waitForTarget(step.target);
     if (gen !== resolveGen.current) return;
-    if (!rect) {
+    if (!found) {
       setSpotlight(null);
       setMissing(true);
       return;
     }
     setMissing(false);
-    setSpotlight(rect);
-  }, [open, step]);
+    setSpotlight(found.rect);
+    clearTourAnchor();
+    found.element.style.setProperty("anchor-name", TOUR_ANCHOR);
+    found.element.setAttribute("data-tour-anchor", "");
+    targetRef.current = found.element;
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.matches(":popover-open")) {
+      try {
+        dialog.showPopover();
+      } catch {
+        /* already open */
+      }
+    }
+    setPageInert(true, found.element);
+    const focusKey = `${step.id}:${stepIndex}`;
+    if (focusedStepRef.current !== focusKey) {
+      focusedStepRef.current = focusKey;
+      nextRef.current?.focus();
+    }
+  }, [open, setPageInert, step, stepIndex]);
 
   useEffect(() => {
     if (!open) return;
     void refreshPosition();
   }, [open, stepIndex, refreshPosition]);
-
-  useLayoutEffect(() => {
-    if (!spotlight || !cardRef.current) return;
-    const height = cardRef.current.getBoundingClientRect().height;
-    setCardPos(placeCard(spotlight, height));
-  }, [spotlight, stepIndex]);
 
   useEffect(() => {
     if (!open) return;
@@ -184,15 +206,6 @@ export function ProductTour({
 
   useEffect(() => {
     if (!open) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    cardRef.current?.focus();
-    return () => {
-      previouslyFocused?.focus?.();
-    };
-  }, [open, stepIndex]);
-
-  useEffect(() => {
-    if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -203,7 +216,18 @@ export function ProductTour({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  // Skip missing targets automatically (e.g. Publish on a new view).
+  useEffect(() => {
+    if (open) return;
+    const dialog = dialogRef.current;
+    if (dialog?.matches(":popover-open")) dialog.hidePopover();
+    focusedStepRef.current = null;
+    setPageInert(false);
+    clearTourAnchor();
+    const target = targetRef.current;
+    targetRef.current = null;
+    target?.focus();
+  }, [open, setPageInert]);
+
   useEffect(() => {
     if (!open || !missing || !step) return;
     if (isLast) {
@@ -214,57 +238,41 @@ export function ProductTour({
     return () => clearTimeout(timer);
   }, [open, missing, step, isLast, stepIndex, onStepIndexChange, onComplete]);
 
-  if (!mounted || !open || !step || total === 0) return null;
+  if (!mounted || total === 0) return null;
 
   const reduced = prefersReducedMotion();
 
   return createPortal(
-    <div className="fixed inset-0 z-[9000]" role="presentation">
-      {/* Click-catcher: transparent so the spotlight cutout stays bright */}
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default bg-transparent"
-        aria-label="Skip tour"
-        onClick={onClose}
-      />
-
-      {/* Full dim while waiting for a target; spotlight uses box-shadow dim when ready */}
-      {!spotlight ? (
-        <div className="pointer-events-none absolute inset-0 bg-[color:var(--wsu-ink)]/55" aria-hidden />
-      ) : (
+    <>
+      {open && step ? (
         <div
-          className="pointer-events-none absolute rounded-[1rem] ring-2 ring-[color:var(--wsu-crimson)] ring-offset-2"
-          style={{
-            top: spotlight.top,
-            left: spotlight.left,
-            width: spotlight.width,
-            height: spotlight.height,
-            boxShadow: "0 0 0 9999px rgba(33, 27, 30, 0.55)",
-            transition: reduced ? undefined : "top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease",
-          }}
+          ref={spotRef}
+          data-tour-spotlight=""
+          className="pointer-events-none fixed z-[9000] rounded-[1rem] ring-2 ring-[color:var(--wsu-crimson)] ring-offset-2"
+          style={
+            spotlight
+              ? {
+                  top: spotlight.top,
+                  left: spotlight.left,
+                  width: spotlight.width,
+                  height: spotlight.height,
+                  boxShadow: "0 0 0 9999px rgba(33, 27, 30, 0.55)",
+                  transition: reduced ? undefined : "top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease",
+                }
+              : { inset: 0, background: "rgba(33, 27, 30, 0.55)" }
+          }
           aria-hidden
         />
-      )}
-
-      <div
-        ref={cardRef}
-        role="dialog"
-        aria-modal="true"
+      ) : null}
+      <dialog
+        ref={dialogRef}
+        popover="manual"
+        className="product-tour-popover"
         aria-labelledby={titleId}
-        aria-describedby={bodyId}
-        tabIndex={-1}
-        className={cx(
-          "absolute w-[min(100vw-24px,360px)] outline-none",
-          "rounded-[1.25rem] border border-[color:var(--wsu-border)] bg-white",
-          "shadow-[0_20px_50px_rgba(35,31,32,0.22)]",
-        )}
-        style={{
-          top: cardPos.top,
-          left: cardPos.left,
-          transition: reduced ? undefined : "top 0.2s ease, left 0.2s ease",
-        }}
-        onClick={(e) => e.stopPropagation()}
+        aria-describedby={step ? bodyId : undefined}
       >
+        {step ? (
+        <>
         <div className="border-b border-[color:var(--wsu-border)] px-5 py-4">
           <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
             How to use · Step {stepIndex + 1} of {total}
@@ -294,13 +302,11 @@ export function ProductTour({
               Back
             </button>
             <button
+              ref={nextRef}
               type="button"
               onClick={() => {
-                if (isLast) {
-                  onComplete();
-                } else {
-                  onStepIndexChange(stepIndex + 1);
-                }
+                if (isLast) onComplete();
+                else onStepIndexChange(stepIndex + 1);
               }}
               className="rounded-full bg-[color:var(--wsu-crimson)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--wsu-crimson-dark)]"
             >
@@ -308,8 +314,10 @@ export function ProductTour({
             </button>
           </div>
         </div>
-      </div>
-    </div>,
+        </>
+        ) : null}
+      </dialog>
+    </>,
     document.body,
   );
 }

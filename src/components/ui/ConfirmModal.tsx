@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { primaryBtnClass, secondaryBtnClass } from "@/components/forms/admin/AdminCard";
 
@@ -38,7 +39,7 @@ export function ConfirmModal({
       <div className="space-y-4">
         <p className="text-sm text-[color:var(--wsu-muted)]">{message}</p>
         <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--wsu-border)] pt-4">
-          <button type="button" className={secondaryBtnClass} disabled={busy} onClick={handleClose}>
+          <button type="button" className={secondaryBtnClass} disabled={busy} onClick={handleClose} autoFocus>
             {cancelLabel}
           </button>
           <button
@@ -57,4 +58,48 @@ export function ConfirmModal({
       </div>
     </Modal>
   );
+}
+
+type ConfirmRequest = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  danger?: boolean;
+};
+
+/** Promise-based confirm dialog for actions that used to call `window.confirm`. */
+export function useConfirmDialog() {
+  const resolver = useRef<((value: boolean) => void) | null>(null);
+  const [request, setRequest] = useState<ConfirmRequest | null>(null);
+
+  function confirm(options: ConfirmRequest) {
+    return new Promise<boolean>((resolve) => {
+      resolver.current?.(false);
+      resolver.current = resolve;
+      setRequest(options);
+    });
+  }
+
+  function finish(value: boolean) {
+    const resolve = resolver.current;
+    resolver.current = null;
+    setRequest(null);
+    resolve?.(value);
+  }
+
+  const dialog = (
+    <ConfirmModal
+      open={request !== null}
+      title={request?.title ?? "Confirm"}
+      message={request?.message ?? ""}
+      confirmLabel={request?.confirmLabel}
+      cancelLabel={request?.cancelLabel}
+      danger={request?.danger}
+      onClose={() => finish(false)}
+      onConfirm={() => finish(true)}
+    />
+  );
+
+  return { confirm, dialog };
 }

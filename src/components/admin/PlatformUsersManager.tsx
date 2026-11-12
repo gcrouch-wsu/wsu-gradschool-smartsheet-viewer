@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
 import { IconPencil, IconRefresh, IconTrash } from "@/components/forms/icons";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -102,6 +103,7 @@ export function PlatformUsersManager({
   initialUsers,
 }: PlatformUsersManagerProps) {
   const { addToast } = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [users, setUsers] = useState(initialUsers);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<AssignablePlatformRole | "all">("all");
@@ -193,7 +195,13 @@ export function PlatformUsersManager({
   }
 
   async function removeUser(id: string) {
-    if (!window.confirm("Remove this user account?")) return;
+    const confirmed = await confirm({
+      title: "Remove user",
+      message: "Remove this user account?",
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/platform-users/${id}`, { method: "DELETE" });
@@ -236,6 +244,7 @@ export function PlatformUsersManager({
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       {bootstrapEmail ? (
         <div className="rounded-2xl border border-line bg-white px-4 py-3 text-sm text-ink">
           <span className="font-semibold">{bootstrapLabel}</span>

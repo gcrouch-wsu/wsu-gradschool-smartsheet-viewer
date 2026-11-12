@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import type {
   FormFieldDefinition,
   FormFieldKindHint,
@@ -127,6 +128,7 @@ function isLayoutPaletteType(type: BuilderElementType): type is FormLayoutElemen
 }
 
 export function useFormBuilder(options?: { sheetId?: string }) {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const sheetIdParam = options?.sheetId?.trim() || "";
   const builderUrl = useCallback(
     (path = "/api/forms/builder") => {
@@ -408,7 +410,13 @@ export function useFormBuilder(options?: { sheetId?: string }) {
     }
     const col = state.columns.find((c) => c.title === columnTitle);
     if (!col) return;
-    if (!window.confirm(`Delete column “${columnTitle}” from Smartsheet? This cannot be undone.`)) return;
+    const confirmed = await confirm({
+      title: "Delete column",
+      message: `Delete column “${columnTitle}” from Smartsheet? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     try {
       const r = await fetch(`/api/forms/platform/sheets/${state.sheetId}/columns/${col.id}`, { method: "DELETE" });
@@ -508,6 +516,7 @@ export function useFormBuilder(options?: { sheetId?: string }) {
     updatePicklistOptions,
     updateColumnType,
     deleteField,
+    confirmDialog,
     setFormPresentation,
     setConditionalLogic,
     previewSchema,

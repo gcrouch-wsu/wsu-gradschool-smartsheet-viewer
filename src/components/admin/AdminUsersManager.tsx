@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, TableShell } from "@/components/admin/WorkspacePrimitives";
 import { IconMore } from "@/components/forms/icons";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import type { AdminAccountSummary, ManagedAdminStorageMode, ManagedAdminUserSummary } from "@/lib/admin-users";
@@ -213,6 +214,7 @@ export function AdminUsersManager({
   storageMode,
 }: AdminUsersManagerProps) {
   const toast = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [users, setUsers] = useState(() => sortUsers(initialUsers));
   const [form, setForm] = useState<UserFormState>(() => emptyForm());
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -321,7 +323,12 @@ export function AdminUsersManager({
   }
 
   async function handleDelete(user: ManagedAdminUserSummary) {
-    const confirmed = window.confirm(`Delete admin account ${user.displayName ?? user.username}?`);
+    const confirmed = await confirm({
+      title: "Delete admin account",
+      message: `Delete admin account ${user.displayName ?? user.username}?`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!confirmed) return;
 
     setIsPending(true);
@@ -385,6 +392,7 @@ export function AdminUsersManager({
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="rounded-xl bg-[color:var(--wsu-stone)] px-4 py-4 sm:px-5" data-tour="au-bootstrap">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

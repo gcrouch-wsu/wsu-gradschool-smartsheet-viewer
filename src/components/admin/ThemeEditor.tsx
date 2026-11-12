@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import {
   BORDER_RADIUS_OPTIONS,
   FONT_OPTIONS,
@@ -70,6 +71,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 type DesignTabId = "palette" | "typography" | "chips" | "effects" | "header";
 
 export function ThemeEditor({ view, update }: ThemeEditorProps) {
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [isExpanded, setIsExpanded] = useState(false);
   const [designTab, setDesignTab] = useState<DesignTabId>("palette");
   const currentPresetId = view.themePresetId ?? "wsu_crimson";
@@ -82,9 +84,16 @@ export function ThemeEditor({ view, update }: ThemeEditorProps) {
 
   const handlePresetSelect = (themeId: string) => {
     if (hasOverrides && themeId !== currentPresetId) {
-      if (!window.confirm("Switching presets will reset your custom overrides. Continue?")) {
-        return;
-      }
+      void confirm({
+        title: "Switch preset",
+        message: "Switching presets will reset your custom overrides. Continue?",
+        confirmLabel: "Continue",
+      }).then((confirmed) => {
+        if (!confirmed) return;
+        update("themePresetId", themeId);
+        update("style", undefined);
+      });
+      return;
     }
     update("themePresetId", themeId);
     update("style", undefined);
@@ -211,6 +220,7 @@ export function ThemeEditor({ view, update }: ThemeEditorProps) {
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/15 p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--wsu-muted)]">Base theme</p>
         <p className="mt-1 text-sm text-[color:var(--wsu-ink)]">Pick a starting palette and page chrome. Fine-tune in the designer below.</p>

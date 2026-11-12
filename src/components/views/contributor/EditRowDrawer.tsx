@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useRouter } from "next/navigation";
+import { EdgeDrawer } from "@/components/ui/EdgeDrawer";
 import { useToast } from "@/components/ui/Toast";
 import { getContributorEditRowHeading, getEditDrawerOrderedFields } from "@/components/views/layouts/layout-utils";
 import {
@@ -42,8 +43,11 @@ export function EditRowDrawer({
   const [groupValues, setGroupValues] = useState<Record<string, MultiPersonEntry[]>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const drawerSurfaceRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const requestCloseRef = useRef<(() => void) | null>(null);
+  const lastRowRef = useRef(row);
+  if (row) lastRowRef.current = row;
+  const displayRow = row ?? lastRowRef.current;
 
   const editableFieldGroups = useMemo(
     () => contributor?.editingConfig?.editableFieldGroups ?? [],
@@ -83,8 +87,8 @@ export function EditRowDrawer({
   }, [editableFields]);
 
   const orderedFields = useMemo(
-    () => (row ? getEditDrawerOrderedFields(view, row, contributorFieldKeys, editableByFieldKey) : []),
-    [view, row, contributorFieldKeys, editableByFieldKey],
+    () => (displayRow ? getEditDrawerOrderedFields(view, displayRow, contributorFieldKeys, editableByFieldKey) : []),
+    [view, displayRow, contributorFieldKeys, editableByFieldKey],
   );
 
   const groupByFieldKey = useMemo(() => {
@@ -103,15 +107,15 @@ export function EditRowDrawer({
   );
 
   const editDrawerTitle = useMemo(() => {
-    if (!row) {
+    if (!displayRow) {
       return { visible: "Edit entry", srOnlySuffix: "" as string };
     }
-    const heading = getContributorEditRowHeading(view, row);
+    const heading = getContributorEditRowHeading(view, displayRow);
     return {
       visible: heading ? `Edit: ${heading}` : "Edit your entry",
-      srOnlySuffix: ` Smartsheet row ${row.id}`,
+      srOnlySuffix: ` Smartsheet row ${displayRow.id}`,
     };
-  }, [view, row]);
+  }, [view, displayRow]);
 
   useEffect(() => {
     if (!row || !contributor?.editingConfig || !open) {
@@ -133,65 +137,17 @@ export function EditRowDrawer({
     setError(null);
   }, [contributor?.editingConfig, editableFieldGroups, editableFields, open, row]);
 
-  useEffect(() => {
-    if (!open) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  function handleClosed() {
+    const target = returnFocusRef?.current ?? null;
+    if (returnFocusRef) returnFocusRef.current = null;
+    onClose();
+    queueMicrotask(() => target?.focus());
+  }
 
-  useEffect(() => {
-    if (!open || !contributor || !row) {
-      return;
-    }
-
-    const previousActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const surface = drawerSurfaceRef.current;
-    closeButtonRef.current?.focus();
-
-    function cycleTabFocus(event: KeyboardEvent) {
-      if (event.key !== "Tab" || !surface) {
-        return;
-      }
-      const selector =
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-      const nodes = Array.from(surface.querySelectorAll(selector)).filter(
-        (el): el is HTMLElement => el instanceof HTMLElement,
-      );
-      if (nodes.length === 0) {
-        return;
-      }
-      const first = nodes[0]!;
-      const last = nodes[nodes.length - 1]!;
-      if (event.shiftKey) {
-        if (document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", cycleTabFocus);
-    return () => {
-      document.removeEventListener("keydown", cycleTabFocus);
-      const target = returnFocusRef?.current ?? previousActive;
-      if (target && typeof target.focus === "function") {
-        try {
-          target.focus();
-        } catch {
-          /* ignore */
-        }
-      }
-      if (returnFocusRef) {
-        returnFocusRef.current = null;
-      }
-    };
-  }, [open, contributor, row, returnFocusRef]);
+  function requestClose() {
+    if (requestCloseRef.current) requestCloseRef.current();
+    else handleClosed();
+  }
 
   const dividerStyle = view.presentation?.rowDividerStyle ?? "default";
   const cardBorderClass =
@@ -201,11 +157,11 @@ export function EditRowDrawer({
         ? "border border-[color:var(--wsu-border)]/40"
         : "border border-[color:var(--wsu-border)]";
 
-  if (!contributor || !open || !row) {
+  if (!contributor || !displayRow) {
     return null;
   }
 
-  const patchRowId = contributorEditTargetRowId(row, new Set(contributor.editableRowIds));
+  const patchRowId = contributorEditTargetRowId(displayRow, new Set(contributor.editableRowIds));
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -222,7 +178,7 @@ export function EditRowDrawer({
     const isContactColumn = (colType: string) =>
       colType === "CONTACT_LIST" || colType === "MULTI_CONTACT_LIST";
 
-    const redactedKeys = new Set(row.recordSuppression?.redactedFieldKeys ?? []);
+    const redactedKeys = new Set((row ?? displayRow).recordSuppression?.redactedFieldKeys ?? []);
     const cells: Array<{ columnId: number; value?: string; objectValue?: unknown }> = [
       ...editableFields
         .filter((field) => !redactedKeys.has(field.fieldKey))
@@ -281,15 +237,14 @@ export function EditRowDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-[rgba(35,31,32,0.28)]" role="presentation">
-      <aside
-        ref={drawerSurfaceRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="edit-row-drawer-title"
-        className="flex h-full w-full max-w-xl flex-col border-l border-[color:var(--wsu-border)] bg-[color:var(--wsu-paper)] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <EdgeDrawer
+      open={open && row != null}
+      onClose={handleClosed}
+      labelledBy="edit-row-drawer-title"
+      closeRef={requestCloseRef}
+      width="min(36rem, 100dvw - 24px)"
+    >
+      <div className="flex h-full min-h-0 w-full flex-col bg-[color:var(--wsu-paper)]">
         <div className="flex items-start justify-between gap-4 border-b border-[color:var(--wsu-border)] px-6 py-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--wsu-crimson)]">
@@ -313,7 +268,8 @@ export function EditRowDrawer({
           <button
             ref={closeButtonRef}
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
+            autoFocus
             className="rounded-full border border-[color:var(--wsu-border)] bg-white px-3 py-1.5 text-sm text-[color:var(--wsu-muted)]"
           >
             Close
@@ -348,7 +304,7 @@ export function EditRowDrawer({
                         groupsRendered.add(group.id);
                         if (group.readOnly) {
                           const rf = group.fromRoleGroupViewFieldKey
-                            ? row.fieldMap[group.fromRoleGroupViewFieldKey]
+                            ? displayRow.fieldMap[group.fromRoleGroupViewFieldKey]
                             : undefined;
                           return (
                             <div
@@ -412,7 +368,7 @@ export function EditRowDrawer({
           <div className="flex items-center justify-between gap-3 border-t border-[color:var(--wsu-border)] px-6 py-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-muted)]"
             >
               Cancel
@@ -426,7 +382,7 @@ export function EditRowDrawer({
             </button>
           </div>
         </form>
-      </aside>
-    </div>
+      </div>
+    </EdgeDrawer>
   );
 }

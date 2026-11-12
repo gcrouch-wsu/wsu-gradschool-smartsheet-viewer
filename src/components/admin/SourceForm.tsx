@@ -8,6 +8,7 @@ import {
 } from "@/components/admin/tours/source-form-tour";
 import { ProductTour } from "@/components/ui/ProductTour";
 import { TourHowToButton } from "@/components/ui/ProductTourHost";
+import { useConfirmDialog } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/components/ui/Toast";
 import { DataTable } from "@/components/ui/Table";
 import { useProductTour } from "@/hooks/useProductTour";
@@ -449,6 +450,7 @@ export function SourceForm({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState<SourceConfig>(() => buildInitialState(initialSource, connectionKeys));
   const [errors, setErrors] = useState<string[]>([]);
@@ -537,9 +539,13 @@ export function SourceForm({
       return;
     }
 
-    if (!window.confirm(`Delete source \"${sourceId}\"? This cannot be undone.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Delete source",
+      message: `Delete source "${sourceId}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!confirmed) return;
 
     setErrors([]);
     setNotice("");
@@ -821,6 +827,7 @@ export function SourceForm({
 
   return (
     <div className="space-y-6" data-tour="asf-heading">
+      {confirmDialog}
       <section className={sectionClass}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1289,14 +1296,14 @@ export function SourceForm({
                     <button
                       type="button"
                       onClick={() => {
-                        if (
-                          !window.confirm(
-                            `Remove role group "${roleGroup.label}" from this source? Smartsheet columns are not deleted. Save source to persist.`,
-                          )
-                        ) {
-                          return;
-                        }
-                        removeEntireRoleGroup(roleGroup.id);
+                        void confirm({
+                          title: "Remove role group",
+                          message: `Remove role group "${roleGroup.label}" from this source? Smartsheet columns are not deleted. Save source to persist.`,
+                          confirmLabel: "Remove",
+                          danger: true,
+                        }).then((confirmed) => {
+                          if (confirmed) removeEntireRoleGroup(roleGroup.id);
+                        });
                       }}
                       className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-800 hover:bg-rose-100"
                     >
