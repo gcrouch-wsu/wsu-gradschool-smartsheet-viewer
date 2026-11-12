@@ -551,6 +551,17 @@ CREATE TABLE IF NOT EXISTS sheet_automations (
 
 CREATE INDEX IF NOT EXISTS idx_sheet_automations_sheet ON sheet_automations (sheet_id);
 
+-- Remove duplicate names before unique index (keep lowest sheet_id).
+-- DELETE FROM sheets
+-- WHERE sheet_id IN (
+--   SELECT sheet_id FROM (
+--     SELECT sheet_id,
+--            ROW_NUMBER() OVER (PARTITION BY lower(trim(name)) ORDER BY sheet_id) AS rn
+--     FROM sheets
+--   ) ranked
+--   WHERE rn > 1
+-- );
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sheets_name_lower ON sheets (lower(trim(name)));
 
 -- Legacy counter kept for older installs; new local ids use UUID v4 instead.

@@ -39,10 +39,9 @@ BEGIN
   END IF;
 END $$;
 
--- Disambiguate existing duplicate names before unique index.
-UPDATE sheets AS s
-SET name = s.name || ' (' || s.sheet_id || ')'
-WHERE s.sheet_id IN (
+-- Remove duplicate names before unique index (keep lowest sheet_id).
+DELETE FROM sheets
+WHERE sheet_id IN (
   SELECT sheet_id FROM (
     SELECT sheet_id,
            ROW_NUMBER() OVER (PARTITION BY lower(trim(name)) ORDER BY sheet_id) AS rn
