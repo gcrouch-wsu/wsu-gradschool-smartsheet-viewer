@@ -340,7 +340,7 @@ export async function getSheetHead(sheetId: string | number): Promise<{
 export async function updateRows(
   sheetId: string | number,
   rows: {
-    id: number;
+    id: number | string;
     cells: Array<
       | { columnId: number; value: string | boolean }
       | { columnId: number; objectValue: unknown }
@@ -653,6 +653,17 @@ export async function copyRows(
   return api(`/sheets/${sheetId}/rows/copy${q}`, {
     method: "POST",
     body: JSON.stringify({ rowIds, to: { sheetId: toSheetId } }),
+  });
+}
+
+export async function setRowsLocked(
+  sheetId: string | number,
+  rowIds: number[],
+  locked: boolean,
+): Promise<unknown> {
+  return api(`/sheets/${sheetId}/rows`, {
+    method: "PUT",
+    body: JSON.stringify(rowIds.map((id) => ({ id, locked }))),
   });
 }
 

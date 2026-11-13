@@ -8,6 +8,7 @@
  */
 import { resolveAlertChannels } from "@/lib/workflows/channels";
 import { insertNotifications } from "@/lib/workflows/notifications";
+import { insertWorkflowDeliveries, listRunDeliveries } from "@/lib/workflows/store";
 import type { NotificationChannel, NotificationPayload } from "@/lib/workflows/types";
 
 export type { NotificationChannel };
@@ -28,6 +29,10 @@ export type DeliverWorkflowNotificationsResult = {
   inAppCreated: number;
   /** Reserved for a future mailer; always 0 until email is implemented. */
   emailQueued: number;
+  emailFailed: number;
+  emailError: string | null;
+  /** In-app notices already recorded for this run, so a retry does not send them again. */
+  inAppAlready: number;
 };
 
 /**
@@ -51,30 +56,57 @@ export async function deliverWorkflowNotifications(
   input: DeliverWorkflowNotificationsInput,
 ): Promise<DeliverWorkflowNotificationsResult> {
   const channels = resolveAlertChannels(input.channels);
+  const prior = await listRunDeliveries([input.runId]);
+  const already = new Set(prior.map((delivery) => `${delivery.channel}:${delivery.recipientEmail}`));
   let inAppCreated = 0;
   let emailQueued = 0;
+  let emailFailed = 0;
+  let emailError: string | null = null;
+  const inAppAlready = input.emails.filter((email) => already.has(`in_app:${email}`)).length;
 
   if (channels.includes("in_app")) {
-    inAppCreated = await insertNotifications({
-      emails: input.emails,
-      title: input.title,
-      body: input.body,
-      payload: input.payload,
-      workflowId: input.workflowId,
-      runId: input.runId,
-    });
+    const emails = input.emails.filter((email) => !already.has(`in_app:${email}`));
+    inAppCreated = emails.length
+      ? await insertNotifications({
+          emails,
+          title: input.title,
+          body: input.body,
+          payload: input.payload,
+          workflowId: input.workflowId,
+          runId: input.runId,
+        })
+      : 0;
+    if (inAppCreated > 0) {
+      await insertWorkflowDeliveries({ runId: input.runId, emails, channel: "in_app", status: "sent" });
+    }
   }
 
   if (channels.includes("email")) {
-    emailQueued = await deliverEmailNotifications({
-      emails: input.emails,
-      title: input.title,
-      body: input.body,
-      payload: input.payload,
-      workflowId: input.workflowId,
-      runId: input.runId,
-    });
+    const emails = input.emails.filter((email) => !already.has(`email:${email}`));
+    emailQueued = emails.length
+      ? await deliverEmailNotifications({
+          emails,
+          title: input.title,
+          body: input.body,
+          payload: input.payload,
+          workflowId: input.workflowId,
+          runId: input.runId,
+        })
+      : 0;
+    if (emails.length && emailQueued === 0) {
+      emailFailed = emails.length;
+      emailError = "Email is not configured.";
+      await insertWorkflowDeliveries({
+        runId: input.runId,
+        emails,
+        channel: "email",
+        status: "failed",
+        error: emailError,
+      });
+    } else if (emailQueued > 0) {
+      await insertWorkflowDeliveries({ runId: input.runId, emails, channel: "email", status: "sent" });
+    }
   }
 
-  return { channels, inAppCreated, emailQueued };
+  return { channels, inAppCreated, emailQueued, emailFailed, emailError, inAppAlready };
 }

@@ -10,6 +10,7 @@ import {
   type ResourceId,
 } from "@/lib/local-sheets/ids";
 import type { RowOrigin, SheetCellJson, SheetColumnJson, SheetRowJson } from "@/lib/local-sheets/types";
+import { isWorkflowWrite } from "@/lib/workflows/write-context";
 
 async function assertUniqueSheetName(name: string, exceptSheetId?: ResourceId): Promise<void> {
   const trimmed = name.trim();
@@ -637,6 +638,10 @@ export async function updateImportedRows(
     if (!existing[0]) {
       throw new Error(`Row ${row.id} was not found on imported sheet ${id}.`);
     }
+    const { isWorkflowRowLocked } = await import("@/lib/workflows/store");
+    if (await isWorkflowRowLocked(id, rowKey)) {
+      throw new Error("This row is locked by a workflow.");
+    }
     const merged = mergeCells(cellsFromJson(existing[0].cells), row.cells);
     await querySheetsDb(
       `UPDATE rows SET cells = $3::jsonb, modified_at = $4, updated_at = now()
@@ -831,6 +836,7 @@ export async function emitLocalRowEvents(
         rowId: event.rowId ?? event.objectId,
         columnId: event.columnId,
         timestamp: new Date().toISOString(),
+        origin: isWorkflowWrite() ? "workflow" : undefined,
       })),
     );
   } catch {

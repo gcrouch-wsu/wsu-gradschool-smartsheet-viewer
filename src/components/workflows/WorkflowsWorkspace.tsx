@@ -11,10 +11,11 @@ import {
   workflowSecondaryBtnClass,
   type WorkflowSheetColumn,
 } from "@/components/workflows/shared";
-import type { WorkflowRecord, WorkflowTemplate } from "@/lib/workflows/types";
+import type { WorkflowRecord, WorkflowRunRecord, WorkflowTemplate } from "@/lib/workflows/types";
 
 interface WorkflowsPayload {
   workflows: WorkflowRecord[];
+  failures?: WorkflowRunRecord[];
   catalog: Array<{ id: string; label: string; templates: WorkflowTemplate[] }>;
   sheetId?: string;
   people?: string[];
@@ -130,7 +131,7 @@ export function WorkflowsWorkspace({
       setDraft(null);
       setNotice(
         nextEnabled
-          ? "Workflow enabled. Matching row changes will create Notifications for recipients."
+          ? "Workflow enabled. A failure stays on this list and retries after 60 seconds."
           : "Workflow saved as a draft.",
       );
       await load();
@@ -189,8 +190,8 @@ export function WorkflowsWorkspace({
       </div>
 
       <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
-        Alert workflows notify people in the <strong className="font-medium text-[color:var(--wsu-ink)]">Notifications</strong>{" "}
-        inbox when rows change. Email can use the same delivery path later. Grid Approve/Decline is unchanged.
+        Workflows notify people in the <strong className="font-medium text-[color:var(--wsu-ink)]">Notifications</strong>{" "}
+        inbox, and a failed run retries itself after 60 seconds. Open a workflow’s runs to see the error.
       </div>
 
       {error ? <Alert text={error} /> : null}
@@ -220,8 +221,7 @@ export function WorkflowsWorkspace({
               </p>
               <h2 className="mt-1 text-lg font-medium text-[color:var(--wsu-ink)]">Choose a template</h2>
               <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-                Options and steps stay on this page — no nested modals. Ready templates can send in-app notifications
-                today.
+                Options and steps stay on this page. Enabled workflows run when their trigger matches.
               </p>
             </div>
             <WorkflowTemplatePicker catalog={payload?.catalog ?? []} onUse={startFromTemplate} />
@@ -231,9 +231,11 @@ export function WorkflowsWorkspace({
             <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Workflows on this sheet</h2>
             <WorkflowList
               workflows={payload?.workflows ?? []}
+              failures={payload?.failures ?? []}
               onEdit={editExisting}
               onPreview={(id) => void preview(id)}
               onDelete={(id) => void remove(id)}
+              onChanged={() => void load().catch(() => undefined)}
             />
           </section>
         </>

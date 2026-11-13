@@ -36,11 +36,11 @@ export function WorkflowActionFields({
     <div className="space-y-4">
       {!runnable ? (
         <p className="rounded-lg bg-[color:var(--wsu-stone)] px-3 py-2 text-xs text-[color:var(--wsu-muted)]">
-          You can configure this now; it will not run until a later plan.
+          This template can be saved, and it runs once it is enabled.
         </p>
       ) : null}
 
-      {templateKind === "alert" ? (
+      {["alert", "request_update", "request_update_weekly", "request_approval", "assign_someone"].includes(templateKind) ? (
         <>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium text-[color:var(--wsu-ink)]">Deliver to</legend>
@@ -79,7 +79,7 @@ export function WorkflowActionFields({
                 <span>
                   <span className="font-medium text-[color:var(--wsu-ink)]">Email</span>
                   <span className="mt-0.5 block text-xs text-[color:var(--wsu-muted)]">
-                    Saved for later — uses the same delivery path once mail is configured.
+                    Recorded on the run. It sends when a mailer is configured; until then the run shows that email failed.
                   </span>
                 </span>
               </label>

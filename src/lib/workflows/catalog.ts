@@ -1,7 +1,5 @@
 import type { WorkflowTemplate, TemplateKind } from "@/lib/workflows/types";
 
-const later = "You can configure this now; it will not run until a later plan.";
-
 export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     kind: "alert",
@@ -17,11 +15,11 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     ],
     howTo: {
       trigger:
-        "Select the sheet change that triggers this workflow. Alerts are sent immediately. Batched delivery comes in a later plan.",
+        "Select the sheet change that triggers this workflow. Immediate delivery sends now. Batched delivery groups the day’s rows and sends them at the scheduled time.",
       conditions:
         "Fine-tune which rows get sent in an alert, such as excluding completed tasks or only including rows with future start dates.",
       action:
-        "Alert specific people or people in a Contact cell. Customize the title, body, and which fields to include. Email, Slack, Teams, and everyone shared to the sheet come later.",
+        "Alert specific people or people in a Contact cell. In-app delivery is live. Email is recorded on the run and sends when a mailer is configured.",
     },
     defaults: {
       name: "Alert someone when something happens",
@@ -43,7 +41,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet to sheet",
     title: "Move a row to another sheet when specified criteria are met",
     summary: "Move matching rows to another sheet after conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Archive completed work onto a history sheet",
       "Hand a row to another team when a phase changes",
@@ -51,7 +49,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Choose the sheet change that should move the row.",
       conditions: "Define which rows are eligible to move.",
-      action: "Choose the destination sheet. Moving rows is not available yet — this saves as a draft.",
+      action: "Choose the destination sheet. A matching row is moved there.",
     },
     defaults: {
       name: "Move a row to another sheet",
@@ -66,7 +64,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet to sheet",
     title: "Copy a row to another sheet when specified criteria are met",
     summary: "Copy matching rows to another sheet without removing the original.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Start a related request on another sheet when a row is approved",
       "Share a snapshot of a row with another team",
@@ -74,7 +72,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Choose the sheet change that should copy the row.",
       conditions: "Define which rows should be copied.",
-      action: "Choose the destination sheet. Copying rows is not available yet — this saves as a draft.",
+      action: "Choose the destination sheet. A matching row is copied and the original stays.",
     },
     defaults: {
       name: "Copy a row to another sheet",
@@ -89,15 +87,15 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Update and approval requests",
     title: "Request an update every week",
     summary: "Ask someone for an update on a repeating schedule.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Ask owners for a weekly status on open work",
       "Remind contacts before a recurring deadline",
     ],
     howTo: {
-      trigger: "Specify the day and time this should run. Scheduling is saved but not executed yet.",
+      trigger: "Specify the Pacific day and time. After that time, matching rows are grouped into one request.",
       conditions: "Limit which rows are included, such as unfinished tasks.",
-      action: "Choose who should be asked. Weekly update requests are a later plan.",
+      action: "Choose who should be asked. They get one in-app notice listing the matching rows.",
     },
     defaults: {
       name: "Request an update every week",
@@ -112,7 +110,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Update and approval requests",
     title: "Request an update when specified criteria are met",
     summary: "Ask someone to fill in cells when a row matches your conditions.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Ask the assignee to complete missing fields",
       "Request a status update when a date slips",
@@ -120,7 +118,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should request an update.",
       conditions: "Fine-tune which rows need an update.",
-      action: "Choose the people or Contact cell to ask. Update requests in this app are a later plan.",
+      action: "Choose the people or Contact cell to ask. They are notified in the app.",
     },
     defaults: {
       name: "Request an update when criteria are met",
@@ -135,7 +133,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Update and approval requests",
     title: "Request an approval when specified criteria are met",
     summary: "Ask someone to approve or decline a row when conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Request approval when a submission is ready",
       "Notify the next approver when a stage is complete",
@@ -144,7 +142,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
       trigger: "Select the sheet change that should request approval.",
       conditions: "Include only rows that are ready for review.",
       action:
-        "Choose the approver. Smartsheet approval emails stay on until you turn them off. In-app approval requests are a later plan.",
+        "Choose the approver. They approve or decline in Notifications, and the decision can be written to the sheet’s approval column.",
     },
     defaults: {
       name: "Request an approval when criteria are met",
@@ -159,7 +157,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet changes",
     title: "Change a cell value when specified criteria are met",
     summary: "Write a value into a column when a row matches your conditions.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Set a status when another column changes",
       "Clear a field when a task is complete",
@@ -167,7 +165,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should update the cell.",
       conditions: "Define which rows should be updated.",
-      action: "Choose the column and value to write. Cell updates are a later plan.",
+      action: "Choose the column and value to write.",
     },
     defaults: {
       name: "Change a cell value",
@@ -182,7 +180,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet changes",
     title: "Record the date when specified criteria are met",
     summary: "Stamp today’s date into a date column when conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Record when a row first becomes at risk",
       "Stamp the date a phase changes",
@@ -190,7 +188,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should record the date.",
       conditions: "Define which rows should be stamped.",
-      action: "Choose the date column. Recording dates is a later plan.",
+      action: "Choose the date column. Today’s Pacific date is written there.",
     },
     defaults: {
       name: "Record the date",
@@ -205,7 +203,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet changes",
     title: "Assign someone when specified criteria are met",
     summary: "Put a person in a Contact cell when conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Assign a reviewer when a row reaches a phase",
       "Route work to a contact when a status changes",
@@ -213,7 +211,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should assign someone.",
       conditions: "Define which rows should be assigned.",
-      action: "Choose the Contact column and the person. Assigning people is a later plan.",
+      action: "Choose the Contact column and the person.",
     },
     defaults: {
       name: "Assign someone",
@@ -228,7 +226,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet changes",
     title: "Allow changes to a row when specified criteria are met",
     summary: "Unlock a row for editing when conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Unlock a row after it is returned for changes",
       "Allow edits only while a status is in progress",
@@ -236,7 +234,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should unlock the row.",
       conditions: "Define which rows should become editable.",
-      action: "Row locking is a later plan. This saves as a draft.",
+      action: "Matching rows become editable again.",
     },
     defaults: {
       name: "Allow changes to a row",
@@ -251,7 +249,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     categoryLabel: "Sheet changes",
     title: "Prevent changes to a row when specified criteria are met",
     summary: "Lock a row so it cannot be edited when conditions are met.",
-    runnable: false,
+    runnable: true,
     greatWays: [
       "Lock completed rows",
       "Prevent edits after a row is approved",
@@ -259,7 +257,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     howTo: {
       trigger: "Select the sheet change that should lock the row.",
       conditions: "Define which rows should be locked, such as completed tasks.",
-      action: "Row locking is a later plan. This saves as a draft.",
+      action: "Matching rows are locked so later edits are refused.",
     },
     defaults: {
       name: "Prevent changes to a row",
@@ -289,4 +287,3 @@ export function workflowCategories(): Array<{ id: WorkflowTemplate["category"]; 
   });
 }
 
-export { later as LATER_PLAN_NOTE };

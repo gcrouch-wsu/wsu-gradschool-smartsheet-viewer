@@ -74,11 +74,32 @@ export function WorkflowTriggerFields({
         </fieldset>
       ) : null}
 
+      <label className="block text-sm">
+        <span className="font-medium text-[color:var(--wsu-ink)]">Delivery</span>
+        <select
+          className={workflowFieldClass}
+          value={trigger.delivery}
+          onChange={(e) =>
+            onTrigger({
+              ...trigger,
+              delivery: e.target.value === "batched" ? "batched" : "immediate",
+              schedule:
+                e.target.value === "batched"
+                  ? { day: trigger.schedule?.day || "Every day", time: trigger.schedule?.time || "09:00" }
+                  : trigger.schedule,
+            })
+          }
+        >
+          <option value="immediate">Immediately</option>
+          <option value="batched">Once a day, grouped</option>
+        </select>
+      </label>
+
       <p className="rounded-lg bg-[color:var(--wsu-stone)]/50 px-3 py-2 text-xs text-[color:var(--wsu-muted)]">
-        Alerts deliver immediately to the in-app Notifications inbox. Batched delivery can be added later.
+        A failed run stays on the workflow list and tries again after 60 seconds, up to three times.
       </p>
 
-      {weekly ? (
+      {weekly || trigger.delivery === "batched" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="font-medium text-[color:var(--wsu-ink)]">Day</span>

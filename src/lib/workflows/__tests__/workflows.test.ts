@@ -27,10 +27,10 @@ function row(value: string, columnId = 1): SmartsheetRow {
 }
 
 describe("workflow catalog", () => {
-  it("keeps only alert runnable", () => {
+  it("runs every workflow template", () => {
     expect(isRunnableTemplateKind("alert")).toBe(true);
-    expect(isRunnableTemplateKind("move_row")).toBe(false);
-    expect(WORKFLOW_TEMPLATES.filter((template) => template.runnable).map((template) => template.kind)).toEqual(["alert"]);
+    expect(isRunnableTemplateKind("move_row")).toBe(true);
+    expect(WORKFLOW_TEMPLATES.filter((template) => template.runnable)).toHaveLength(WORKFLOW_TEMPLATES.length);
     expect(getWorkflowTemplate("alert")?.greatWays.length).toBeGreaterThan(0);
     expect(isWorkflowAuthorRole("coordinator")).toBe(true);
     expect(isWorkflowAuthorRole("admin")).toBe(true);
@@ -78,7 +78,7 @@ describe("workflow filters and recipients", () => {
     ).toBe("Update on Jane Cougar");
   });
 
-  it("rejects enabling a later-plan template and empty alert recipients", () => {
+  it("requires a destination before a move workflow can be enabled", () => {
     expect(
       validateWorkflowInput({
         sheetId: "1",
@@ -90,7 +90,7 @@ describe("workflow filters and recipients", () => {
         conditions: [],
         action: { kind: "move_row" },
       }),
-    ).toMatch(/later plan/i);
+    ).toMatch(/destination sheet/i);
     expect(
       validateWorkflowInput({
         sheetId: "1",

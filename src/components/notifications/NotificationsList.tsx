@@ -14,11 +14,14 @@ export interface NotificationListItem {
   body: string;
   readAt: string | null;
   createdAt: string;
+  runId?: string | null;
   payload?: {
     href?: string;
     sheetId?: string;
-    rowId?: number | null;
+    rowId?: number | string | null;
     templateKind?: string;
+    decision?: "pending" | "approved" | "declined";
+    runId?: string;
     fields?: Array<{ title: string; value: string }>;
   };
 }
@@ -43,6 +46,9 @@ export function NotificationsList() {
   const { items, error, loading, unreadCount, markRead } = useNotifications();
   const [filter, setFilter] = useState<FilterId>("all");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [deciding, setDeciding] = useState(false);
+  const [decisionError, setDecisionError] = useState("");
+  const [decisions, setDecisions] = useState<Record<string, "approved" | "declined">>({});
 
   const visibleItems = useMemo(() => {
     if (filter === "unread") return items.filter((item) => !item.readAt);
@@ -53,6 +59,27 @@ export function NotificationsList() {
     () => (detailId ? items.find((item) => item.id === detailId) ?? null : null),
     [detailId, items],
   );
+
+  async function decide(item: NotificationListItem, decision: "approved" | "declined") {
+    const runId = item.runId || item.payload?.runId;
+    if (!runId) return;
+    setDeciding(true);
+    setDecisionError("");
+    try {
+      const res = await fetch(`/api/forms/workflows/runs/${runId}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      const data = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) throw new Error(data.error || data.message || "Could not record the decision.");
+      setDecisions((current) => ({ ...current, [item.id]: decision }));
+    } catch (err) {
+      setDecisionError(err instanceof Error ? err.message : "Could not record the decision.");
+    } finally {
+      setDeciding(false);
+    }
+  }
 
   async function openDetails(item: NotificationListItem) {
     setDetailId(item.id);
@@ -208,6 +235,40 @@ export function NotificationsList() {
                 {detailItem.payload.rowId != null ? `Row ${detailItem.payload.rowId}` : null}
               </p>
             )}
+
+            {(() => {
+              const decision = detailItem.id in decisions ? decisions[detailItem.id] : detailItem.payload?.decision;
+              if (decision === "pending") {
+                return (
+                  <div className="space-y-2 border-t border-line pt-4">
+                    <p className="text-sm text-ink">This request is waiting for your decision.</p>
+                    {decisionError ? <p className="text-sm text-red-800">{decisionError}</p> : null}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={deciding}
+                        onClick={() => void decide(detailItem, "approved")}
+                        className="rounded-lg border border-crimson bg-crimson px-4 py-2 text-sm font-medium text-white hover:bg-[var(--crimson-deep)] disabled:opacity-60"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deciding}
+                        onClick={() => void decide(detailItem, "declined")}
+                        className="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-crimson disabled:opacity-60"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+              if (decision === "approved" || decision === "declined") {
+                return <p className="border-t border-line pt-4 text-sm text-ink">Decision: {decision}</p>;
+              }
+              return null;
+            })()}
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-line pt-4">
               <button

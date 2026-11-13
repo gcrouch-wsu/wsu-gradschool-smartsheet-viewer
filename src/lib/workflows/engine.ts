@@ -1,12 +1,9 @@
 import type { SmartsheetCell, SmartsheetRow, ViewFilterConfig } from "@/lib/config/types";
-import { listSourceConfigs } from "@/lib/config/store";
 import { applyViewFilters } from "@/lib/filters";
 import * as ss from "@/lib/forms/smartsheet-api";
-import { fieldsFromCells, loadColumnIndex, renderAlertCopy } from "@/lib/workflows/alert-content";
-import { emailsFromContactCell, extractEmails, normalizeEmail } from "@/lib/workflows/recipients";
-import { deliverWorkflowNotifications } from "@/lib/workflows/deliver";
-import { notificationHref } from "@/lib/workflows/visible-notifications";
-import { insertWorkflowRun, listEnabledRunnableWorkflows, updateWorkflowRun } from "@/lib/workflows/store";
+import { extractEmails } from "@/lib/workflows/recipients";
+import { performWorkflowAction } from "@/lib/workflows/execute-action";
+import { enqueuePendingRow, insertWorkflowRun, listEnabledRunnableWorkflows, markWorkflowRunFailed } from "@/lib/workflows/store";
 import type { TriggerEvent, WorkflowRecord } from "@/lib/workflows/types";
 
 export interface WebhookWorkflowEvent {
@@ -17,6 +14,8 @@ export interface WebhookWorkflowEvent {
   rowId?: string | number;
   columnId?: number;
   timestamp?: string;
+  /** Set when this process wrote the row while running a workflow. */
+  origin?: "workflow";
 }
 
 const DELETE_EVENTS = /delet/i;
@@ -92,7 +91,17 @@ export function rowMatchesConditions(row: SmartsheetRow, conditions: ViewFilterC
   return applyViewFilters([row], conditions).length === 1;
 }
 
+export function cellsMatchConditions(
+  rowId: string | number,
+  cells: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>,
+  conditions: ViewFilterConfig[],
+): boolean {
+  return rowMatchesConditions(toFilterRow(rowId, cells), conditions);
+}
+
 export async function evaluateWebhookEvents(events: WebhookWorkflowEvent[]): Promise<void> {
+  const { tickWorkflows } = await import("@/lib/workflows/scheduler");
+  void tickWorkflows();
   for (const event of events) {
     try {
       await evaluateOne(event);
@@ -103,6 +112,7 @@ export async function evaluateWebhookEvents(events: WebhookWorkflowEvent[]): Pro
 }
 
 async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
+  if (event.origin === "workflow") return;
   if (!isPresentId(event.sheetId)) return;
   const mapped = mapEventToTrigger(event);
   if (!mapped) return;
@@ -124,17 +134,15 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
     return;
   }
 
-  const columns = await loadColumnIndex(event.sheetId);
   const filterRow = toFilterRow(rowId, raw.cells ?? []);
-  const fields = fieldsFromCells(columns, raw.cells ?? []);
-  const sources = await listSourceConfigs();
-  const source = sources.find(
-    (entry) => entry.sourceType === "sheet" && String(entry.smartsheetId) === String(event.sheetId),
-  );
-  const href = source ? notificationHref(source, rowId, "staff") : undefined;
 
   for (const workflow of matching) {
+    if (workflow.templateKind === "request_update_weekly") continue;
     if (!rowMatchesConditions(filterRow, workflow.conditions)) continue;
+    if (workflow.trigger.delivery === "batched") {
+      await enqueuePendingRow(workflow.id, rowId);
+      continue;
+    }
     const key = eventKey(event, rowId);
     const run = await insertWorkflowRun({
       workflowId: workflow.id,
@@ -142,65 +150,21 @@ async function evaluateOne(event: WebhookWorkflowEvent): Promise<void> {
       rowId,
       eventKey: key,
       status: "pending",
+      source: "webhook",
     });
     if (!run) continue;
-
     try {
-      const emails = resolveRecipients(workflow, raw.cells ?? []);
-      if (!emails.length) {
-        await updateWorkflowRun(run.id, "skipped", "No recipients.");
-        continue;
-      }
-      const rendered = renderAlertCopy({
-        titleTemplate: workflow.action.title || workflow.name,
-        bodyTemplate: workflow.action.body || "",
-        fallbackTitle: workflow.name,
-        fields,
-        primaryTitle: columns.primaryTitle,
-        includeColumnIds: workflow.action.includeColumnIds,
-        idByTitle: columns.idByTitle,
-      });
-      const delivered = await deliverWorkflowNotifications({
-        emails,
-        title: rendered.title,
-        body: rendered.body,
-        payload: {
-          sheetId: String(event.sheetId),
-          rowId,
-          href,
-          fields: rendered.fields,
-          templateKind: workflow.templateKind,
-        },
-        workflowId: workflow.id,
+      await performWorkflowAction({
+        workflow,
         runId: run.id,
-        channels: workflow.action.channels,
+        attemptCount: run.attemptCount,
+        rowId,
+        cells: raw.cells ?? [],
       });
-      if (!delivered.inAppCreated && !delivered.emailQueued) {
-        await updateWorkflowRun(run.id, "skipped", "No notifications delivered.");
-        continue;
-      }
-      await updateWorkflowRun(run.id, "sent");
     } catch (error) {
-      await updateWorkflowRun(run.id, "failed", error instanceof Error ? error.message : "Workflow failed.");
+      await markWorkflowRunFailed(run.id, run.attemptCount, error instanceof Error ? error.message : "Workflow failed.");
     }
   }
-}
-
-function resolveRecipients(
-  workflow: WorkflowRecord,
-  cells: Array<{ columnId: number; value?: unknown; displayValue?: unknown; objectValue?: unknown }>,
-): string[] {
-  const emails = new Set<string>();
-  for (const email of workflow.action.recipients?.userEmails ?? []) {
-    const normalized = normalizeEmail(email);
-    if (normalized) emails.add(normalized);
-  }
-  const contactId = workflow.action.recipients?.contactColumnId;
-  if (contactId) {
-    const cell = cells.find((cell) => cell.columnId === contactId);
-    for (const email of emailsFromContactCell(cell)) emails.add(email);
-  }
-  return [...emails];
 }
 
 export function parseWebhookEvent(raw: unknown, fallbackSheetId: number): WebhookWorkflowEvent | null {

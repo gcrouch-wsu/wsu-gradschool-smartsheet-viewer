@@ -3,7 +3,8 @@ import { formsAuthErrorResponse, requireWorkflowAuthorAccess } from "@/lib/forms
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { WORKFLOW_TEMPLATES, workflowCategories } from "@/lib/workflows/catalog";
-import { createWorkflow, listWorkflows } from "@/lib/workflows/store";
+import { createWorkflow, listOpenFailures, listWorkflows } from "@/lib/workflows/store";
+import { tickWorkflows } from "@/lib/workflows/scheduler";
 import { listKnownEmails } from "@/lib/workflows/notifications";
 import { workflowBody } from "@/lib/workflows/workflow-body";
 
@@ -34,10 +35,13 @@ export async function GET(request: Request) {
     return Response.json({ error: "sheetId is required." }, { status: 400 });
   }
   try {
+    void tickWorkflows();
     const workflows = await listWorkflows(sheetId);
+    const failures = await listOpenFailures(sheetId);
     const people = url.searchParams.get("people") === "1" ? await listKnownEmails() : [];
     return Response.json({
       workflows,
+      failures,
       catalog: workflowCategories(),
       templates: WORKFLOW_TEMPLATES,
       sheetId,

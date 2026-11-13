@@ -9,7 +9,7 @@ import {
   workflowSecondaryBtnClass,
   type WorkflowSheetColumn,
 } from "@/components/workflows/shared";
-import type { WorkflowRecord } from "@/lib/workflows/types";
+import { isRunnableTemplateKind, type WorkflowRecord } from "@/lib/workflows/types";
 
 /** Single-page workflow editor: trigger, conditions, and action all visible. */
 export function WorkflowEditorForm({
@@ -33,7 +33,7 @@ export function WorkflowEditorForm({
   onSaveDraft: () => void;
   onSaveAndEnable: () => void;
 }) {
-  const canEnable = draft.templateKind === "alert";
+  const canEnable = isRunnableTemplateKind(draft.templateKind);
 
   return (
     <div className="space-y-4">
@@ -43,8 +43,7 @@ export function WorkflowEditorForm({
         </p>
         <h2 className="mt-1 text-lg font-medium text-[color:var(--wsu-ink)]">{draft.name || "Untitled workflow"}</h2>
         <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-          Configure everything below on one screen. Alert workflows write to Notifications now; email can use the same
-          delivery path later.
+          Configure everything below on one screen. A failed run is listed on the sheet and retries after 60 seconds.
         </p>
       </div>
 
@@ -79,9 +78,7 @@ export function WorkflowEditorForm({
         step="3 · Action"
         title="What should happen?"
         description={
-          canEnable
-            ? "Choose recipients, message copy, and delivery channels."
-            : "Configure the action now; this template will not run until a later plan."
+          "Choose who is notified, what changes on the sheet, or where the row goes."
         }
       >
         <WorkflowActionFields
