@@ -3,7 +3,7 @@ import path from "node:path";
 import type { PublicPageSummary, SourceConfig, ViewConfig } from "@/lib/config/types";
 import { normalizePublishedSlug } from "@/lib/slug-normalize";
 import { humanizeSlug } from "@/lib/utils";
-import { validateSourceConfig, validateViewConfig } from "@/lib/config/validation";
+import { validateViewConfig } from "@/lib/config/validation";
 
 const CONFIG_ROOT = path.join(process.cwd(), "config");
 const MAX_CONFIG_FILE_STEM_LEN = 120;
@@ -25,20 +25,20 @@ function stripBom(value: string) {
   return value.replace(/^\uFEFF/, "");
 }
 
-function configDir(folderName: "sources" | "views") {
+function configDir(folderName: "views") {
   return path.join(CONFIG_ROOT, folderName);
 }
 
-function configFilePath(folderName: "sources" | "views", id: string) {
+function configFilePath(folderName: "views", id: string) {
   assertSafeConfigFileStem(id, "Config id");
   return path.join(configDir(folderName), `${id}.json`);
 }
 
-async function ensureConfigDir(folderName: "sources" | "views") {
+async function ensureConfigDir(folderName: "views") {
   await mkdir(configDir(folderName), { recursive: true });
 }
 
-async function readConfigDir<T>(folderName: "sources" | "views", parser: (value: unknown, fileName: string) => T): Promise<T[]> {
+async function readConfigDir<T>(folderName: "views", parser: (value: unknown, fileName: string) => T): Promise<T[]> {
   const folderPath = configDir(folderName);
   const entries = await readdir(folderPath, { withFileTypes: true }).catch(() => []);
   const files = entries
@@ -70,14 +70,6 @@ async function readConfigDir<T>(folderName: "sources" | "views", parser: (value:
   return results.filter((item): item is T => item != null);
 }
 
-function parseSourceConfig(value: unknown, fileName: string): SourceConfig {
-  const result = validateSourceConfig(value);
-  if (!result.success || !result.data) {
-    throw new Error(`Invalid source config in ${fileName}: ${result.errors.join(" ")}`);
-  }
-  return result.data;
-}
-
 function parseViewConfig(value: unknown, fileName: string, knownSourceIds: string[], sources: SourceConfig[]): ViewConfig {
   const result = validateViewConfig(value, { knownSourceIds, sources });
   if (!result.success || !result.data) {
@@ -86,7 +78,7 @@ function parseViewConfig(value: unknown, fileName: string, knownSourceIds: strin
   return result.data;
 }
 
-async function writePrettyJson(folderName: "sources" | "views", id: string, value: unknown) {
+async function writePrettyJson(folderName: "views", id: string, value: unknown) {
   await ensureConfigDir(folderName);
   const target = configFilePath(folderName, id);
   const temp = `${target}.${process.pid}.${Date.now()}.tmp`;
@@ -100,7 +92,7 @@ async function writePrettyJson(folderName: "sources" | "views", id: string, valu
   }
 }
 
-async function deleteConfigFile(folderName: "sources" | "views", id: string) {
+async function deleteConfigFile(folderName: "views", id: string) {
   await unlink(configFilePath(folderName, id)).catch((error: NodeJS.ErrnoException) => {
     if (error.code === "ENOENT") {
       return;
@@ -109,8 +101,11 @@ async function deleteConfigFile(folderName: "sources" | "views", id: string) {
   });
 }
 
+const SOURCES_DATABASE_ONLY = "Sources are stored in Postgres. Set DATABASE_URL.";
+
+/** Sources are database rows. This fallback never reads config/sources. */
 export async function listSourceConfigs(): Promise<SourceConfig[]> {
-  return readConfigDir("sources", parseSourceConfig);
+  return [];
 }
 
 export async function listViewConfigs(): Promise<ViewConfig[]> {
@@ -119,9 +114,8 @@ export async function listViewConfigs(): Promise<ViewConfig[]> {
   return readConfigDir("views", (value, fileName) => parseViewConfig(value, fileName, knownSourceIds, sources));
 }
 
-export async function getSourceConfigById(sourceId: string) {
-  const sources = await listSourceConfigs();
-  return sources.find((source) => source.id === sourceId) ?? null;
+export async function getSourceConfigById(_sourceId: string): Promise<SourceConfig | null> {
+  return null;
 }
 
 export async function getViewConfigById(viewId: string) {
@@ -181,13 +175,8 @@ export async function listPublicPageSummaries(): Promise<PublicPageSummary[]> {
     });
 }
 
-export async function saveSourceConfig(config: SourceConfig) {
-  const result = validateSourceConfig(config);
-  if (!result.success || !result.data) {
-    throw new Error(result.errors.join(" "));
-  }
-
-  await writePrettyJson("sources", result.data.id, result.data);
+export async function saveSourceConfig(_config: SourceConfig): Promise<void> {
+  throw new Error(SOURCES_DATABASE_ONLY);
 }
 
 export async function saveViewConfig(config: ViewConfig) {
@@ -200,8 +189,8 @@ export async function saveViewConfig(config: ViewConfig) {
   await writePrettyJson("views", result.data.id, result.data);
 }
 
-export async function deleteSourceConfig(sourceId: string) {
-  await deleteConfigFile("sources", sourceId);
+export async function deleteSourceConfig(_sourceId: string): Promise<void> {
+  throw new Error(SOURCES_DATABASE_ONLY);
 }
 
 export async function deleteViewConfig(viewId: string) {

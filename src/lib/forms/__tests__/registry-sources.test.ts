@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,7 +10,6 @@ describe("forms sources unification", () => {
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(os.tmpdir(), "forms-sources-unify-"));
     process.chdir(tempDir);
-    await mkdir(path.join(tempDir, "config", "sources"), { recursive: true });
     await mkdir(path.join(tempDir, "config", "forms"), { recursive: true });
     await mkdir(path.join(tempDir, "config", "views"), { recursive: true });
     vi.resetModules();
@@ -24,8 +23,12 @@ describe("forms sources unification", () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  // File-mode registry + dynamic imports are slow under Windows vmForks load.
-  it("migrates legacy FormEntry rows into SourceConfig and resolves activeSheetId", { timeout: 15_000 }, async () => {
+  async function sourceFiles() {
+    const dir = path.join(tempDir, "config", "sources");
+    return readdir(dir).catch(() => [] as string[]);
+  }
+
+  it("does not write config/sources when migrating a legacy form without Postgres", async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify(
@@ -50,27 +53,11 @@ describe("forms sources unification", () => {
     );
 
     const registry = await import("@/lib/forms/registry");
-    await registry.ensureFormsSourcesMigrated();
-
-    const forms = await registry.listForms();
-    expect(forms).toHaveLength(1);
-    expect(forms[0]?.id).toBe("555001");
-    expect(forms[0]?.name).toBe("Parking Form");
-    expect(forms[0]?.public).toBe(true);
-    expect(forms[0]?.slug).toBe("parking-form");
-    expect(forms[0]?.sourceConfigId).toBeTruthy();
-
-    expect(await registry.activeSheetId()).toBe("555001");
-    expect(await registry.activeSourceId()).toBe(forms[0]?.sourceConfigId);
-
-    const { getSourceConfigById } = await import("@/lib/config/store");
-    const source = await getSourceConfigById(forms[0]!.sourceConfigId!);
-    expect(source?.smartsheetId).toBe(555001);
-    expect(source?.formPublic).toBe(true);
-    expect(source?.sourceType).toBe("sheet");
+    await expect(registry.ensureFormsSourcesMigrated()).rejects.toThrow(/DATABASE_URL/);
+    expect(await sourceFiles()).toEqual([]);
   });
 
-  it("registerForm upserts a sheet source and selectForm activates it", { timeout: 15_000 }, async () => {
+  it("does not write config/sources when registering a form without Postgres", async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify({ activeSheetId: "", forms: [], migratedToSourcesAt: "2026-01-01T00:00:00.000Z" }, null, 2)}\n`,
@@ -78,47 +65,41 @@ describe("forms sources unification", () => {
     );
 
     const registry = await import("@/lib/forms/registry");
-    await registry.registerForm(
-      {
-        id: "777002",
-        name: "Travel Request",
-        createdAt: "2026-02-01T00:00:00.000Z",
-        source: "scratch",
-      },
-      true,
-    );
-
-    expect(await registry.activeSheetId()).toBe("777002");
-    const forms = await registry.listForms();
-    expect(forms.some((f) => f.id === "777002")).toBe(true);
-
-    const ok = await registry.selectForm(forms[0]!.sourceConfigId!);
-    expect(ok).toBe(true);
-    expect(await registry.activeSourceId()).toBe(forms[0]!.sourceConfigId);
+    await expect(
+      registry.registerForm(
+        {
+          id: "777002",
+          name: "Travel Request",
+          createdAt: "2026-02-01T00:00:00.000Z",
+          source: "scratch",
+        },
+        true,
+      ),
+    ).rejects.toThrow(/DATABASE_URL/);
+    expect(await sourceFiles()).toEqual([]);
+    expect(await registry.listForms()).toEqual([]);
   });
 
-  it("registerForm accepts UUID local sheet ids (Smartsheet API off)", { timeout: 15_000 }, async () => {
+  it("does not write config/sources for a UUID sheet id without Postgres", async () => {
     await writeFile(
       path.join(tempDir, "config", "forms", "registry.json"),
       `${JSON.stringify({ activeSheetId: "", forms: [], migratedToSourcesAt: "2026-01-01T00:00:00.000Z" }, null, 2)}\n`,
       "utf8",
     );
 
-    const localId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
     const registry = await import("@/lib/forms/registry");
-    await registry.registerForm(
-      {
-        id: localId,
-        name: "Offline Leave Form",
-        createdAt: "2026-02-01T00:00:00.000Z",
-        source: "scratch",
-      },
-      true,
-    );
-
-    expect(await registry.activeSheetId()).toBe(localId);
-    const forms = await registry.listForms();
-    expect(forms.some((f) => f.id === localId && f.name === "Offline Leave Form")).toBe(true);
+    await expect(
+      registry.registerForm(
+        {
+          id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          name: "Offline Leave Form",
+          createdAt: "2026-02-01T00:00:00.000Z",
+          source: "scratch",
+        },
+        true,
+      ),
+    ).rejects.toThrow(/DATABASE_URL/);
+    expect(await sourceFiles()).toEqual([]);
   });
 
   it("rejects publishing a report source as a form via validation", async () => {
