@@ -13,7 +13,7 @@ import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 const BASELINE = "001_platform_schema.sql";
 
 /** Applied after the baseline on every migrate (idempotent SQL). */
-const FOLLOW_ON = ["009_text_resource_ids.sql", "010_workflow_execution.sql"] as const;
+const FOLLOW_ON = ["009_text_resource_ids.sql", "010_workflow_execution.sql", "011_ses_events.sql"] as const;
 
 /** Former incremental migration ids — recorded so history stays consistent. */
 const SUPERSEDED = [
@@ -71,6 +71,7 @@ const RLS_TABLES = [
   "discussions",
   "sheet_automations",
   "id_counters",
+  "ses_events",
 ] as const;
 
 let migratePromise: Promise<void> | null = null;

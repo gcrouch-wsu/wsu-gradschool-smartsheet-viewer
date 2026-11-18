@@ -44,6 +44,7 @@ ALTER TABLE IF EXISTS attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS discussions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS sheet_automations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS id_counters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ses_events ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
@@ -199,6 +200,29 @@ BEGIN
         'admin_login_attempts_app_role_access',
         'public',
         'admin_login_attempts',
+        current_user
+      );
+    END IF;
+  END IF;
+END
+$$;
+
+DO $$
+BEGIN
+  IF to_regclass('public.ses_events') IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'public'
+        AND tablename = 'ses_events'
+        AND policyname = 'ses_events_app_role_access'
+    ) THEN
+      EXECUTE format('ALTER POLICY %I ON %I.%I TO %I', 'ses_events_app_role_access', 'public', 'ses_events', current_user);
+    ELSE
+      EXECUTE format(
+        'CREATE POLICY %I ON %I.%I FOR ALL TO %I USING (true) WITH CHECK (true)',
+        'ses_events_app_role_access',
+        'public',
+        'ses_events',
         current_user
       );
     END IF;

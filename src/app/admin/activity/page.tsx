@@ -1,8 +1,11 @@
+import { headers } from "next/headers";
 import {
   AdminDataTable,
   resolveAdminTablePage,
 } from "@/components/admin/AdminDataTable";
 import { ActivityFilters } from "@/components/admin/ActivityFilters";
+import { ActivitySectionTabs } from "@/components/admin/ActivitySectionTabs";
+import { EmailDeliveryPanel } from "@/components/admin/EmailDeliveryPanel";
 import {
   ACTIVITY_TOUR_STEPS,
   ACTIVITY_TOUR_STORAGE_KEY,
@@ -12,6 +15,9 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ProductTourControls } from "@/components/ui/ProductTourHost";
 import { requireAdminPageAccess } from "@/lib/admin-page";
 import { listAuditEvents } from "@/lib/audit";
+import { getPublicOrigin } from "@/lib/request-ip";
+import { isSesEventKind } from "@/lib/ses/events";
+import { listSesEvents } from "@/lib/ses/store";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +29,26 @@ function activityBasePath(actorId: string, resourceType: string): string {
   return qs ? `/admin/activity?${qs}` : "/admin/activity";
 }
 
+function webhookUrlFrom(requestHeaders: Headers): string {
+  const origin = getPublicOrigin(requestHeaders);
+  if (origin) return `${origin}/api/webhooks/ses`;
+  const host = requestHeaders.get("host")?.trim();
+  if (host && !host.includes("/")) return `http://${host}/api/webhooks/ses`;
+  return "/api/webhooks/ses";
+}
+
 export default async function AdminActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ actorId?: string; resourceType?: string; page?: string }>;
+  searchParams: Promise<{ actorId?: string; resourceType?: string; page?: string; tab?: string; kind?: string; q?: string }>;
 }) {
   await requireAdminPageAccess("/admin/activity");
   const params = await searchParams;
+  const tab = params.tab === "email" ? "email" : "audit";
   const actorId = typeof params.actorId === "string" ? params.actorId : "";
   const resourceType = typeof params.resourceType === "string" ? params.resourceType : "";
+  const kind = typeof params.kind === "string" && isSesEventKind(params.kind) ? params.kind : null;
+  const query = typeof params.q === "string" ? params.q : "";
 
   const events = await listAuditEvents({
     limit: 100,
@@ -41,19 +58,41 @@ export default async function AdminActivityPage({
 
   const page = resolveAdminTablePage(params.page, events.length);
   const basePath = activityBasePath(actorId, resourceType);
+  const email = tab === "email" ? await listSesEvents({ kind, query }) : null;
+  const emailPage = email ? resolveAdminTablePage(params.page, email.events.length) : 1;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title="Activity"
-        description="Audit trail for admin clicks and page views, user and student preview access, form/source/view changes, publish actions, and related staff activity."
+        description={
+          tab === "email"
+            ? "Sends, deliveries, bounces, complaints, delays, rejects, rendering failures, and subscription changes reported by Amazon SES."
+            : "Audit trail for admin clicks and page views, user and student preview access, form/source/view changes, publish actions, and related staff activity."
+        }
         dataTour="aa-heading"
         actions={
-          <ProductTourControls storageKey={ACTIVITY_TOUR_STORAGE_KEY} steps={ACTIVITY_TOUR_STEPS} />
+          tab === "audit" ? (
+            <ProductTourControls storageKey={ACTIVITY_TOUR_STORAGE_KEY} steps={ACTIVITY_TOUR_STEPS} />
+          ) : null
         }
       />
 
+      <ActivitySectionTabs tab={tab} />
+
+      {tab === "email" && email ? (
+        <EmailDeliveryPanel
+          events={email.events}
+          counts={email.counts}
+          kind={kind}
+          query={query}
+          page={emailPage}
+          available={email.available}
+          webhookUrl={webhookUrlFrom(await headers())}
+        />
+      ) : (
+        <>
       <ActivityFilters actorId={actorId} resourceType={resourceType} />
 
       <div data-tour="aa-table">
@@ -98,6 +137,8 @@ export default async function AdminActivityPage({
           }}
         />
       </div>
+        </>
+      )}
     </div>
   );
 }
