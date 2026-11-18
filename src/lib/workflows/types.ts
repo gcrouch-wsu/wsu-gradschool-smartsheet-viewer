@@ -46,7 +46,7 @@ export interface WorkflowTrigger {
 export type RunSource = "webhook" | "schedule" | "manual" | "retry";
 export type RunStatus = "pending" | "sent" | "skipped" | "failed" | "waiting";
 
-/** Delivery channels for alert workflows. `in_app` is live; `email` is reserved for a later mailer. */
+/** Delivery channels for alert workflows. `in_app` is the inbox; `email` is Amazon SES. */
 export type NotificationChannel = "in_app" | "email";
 
 export interface WorkflowAction {

@@ -1,11 +1,11 @@
 /**
  * Server-only delivery entry point for workflow alerts.
- * Today: in-app notifications (Notifications inbox).
- * Later: plug email into deliverEmailNotifications without changing callers.
+ * In-app notices go to the Notifications inbox. Email goes out through Amazon SES.
  *
  * Do not import this module from client components — it pulls in Postgres (`pg`).
  * UI should import channel helpers from `@/lib/workflows/channels` instead.
  */
+import { sendWorkflowEmail } from "@/lib/ses/mail";
 import { resolveAlertChannels } from "@/lib/workflows/channels";
 import { insertNotifications } from "@/lib/workflows/notifications";
 import { insertWorkflowDeliveries, listRunDeliveries } from "@/lib/workflows/store";
@@ -27,7 +27,7 @@ export type DeliverWorkflowNotificationsInput = {
 export type DeliverWorkflowNotificationsResult = {
   channels: NotificationChannel[];
   inAppCreated: number;
-  /** Reserved for a future mailer; always 0 until email is implemented. */
+  /** Recipients whose SES message was accepted. */
   emailQueued: number;
   emailFailed: number;
   emailError: string | null;
@@ -35,20 +35,16 @@ export type DeliverWorkflowNotificationsResult = {
   inAppAlready: number;
 };
 
-/**
- * Future hook: send the same alert copy over email.
- * Keep this stub so engine/preview already call one place when mail ships.
- */
-export async function deliverEmailNotifications(_input: {
+/** Send the alert copy through SES. Callers record each recipient on the workflow run. */
+export async function deliverEmailNotifications(input: {
   emails: string[];
   title: string;
   body: string;
   payload: NotificationPayload;
   workflowId: string;
   runId: string;
-}): Promise<number> {
-  // Intentionally no-op until an outbound mail provider is configured.
-  return 0;
+}) {
+  return sendWorkflowEmail({ emails: input.emails, subject: input.title, text: input.body });
 }
 
 /** Deliver alert copy on the selected channels. Always safe to call from engine + preview. */
@@ -62,6 +58,11 @@ export async function deliverWorkflowNotifications(
   let emailQueued = 0;
   let emailFailed = 0;
   let emailError: string | null = null;
+  const sentEmail = new Set(
+    prior
+      .filter((delivery) => delivery.channel === "email" && delivery.status === "sent")
+      .map((delivery) => delivery.recipientEmail.toLowerCase()),
+  );
   const inAppAlready = input.emails.filter((email) => already.has(`in_app:${email}`)).length;
 
   if (channels.includes("in_app")) {
@@ -82,29 +83,36 @@ export async function deliverWorkflowNotifications(
   }
 
   if (channels.includes("email")) {
-    const emails = input.emails.filter((email) => !already.has(`email:${email}`));
-    emailQueued = emails.length
-      ? await deliverEmailNotifications({
-          emails,
-          title: input.title,
-          body: input.body,
-          payload: input.payload,
-          workflowId: input.workflowId,
-          runId: input.runId,
-        })
-      : 0;
-    if (emails.length && emailQueued === 0) {
-      emailFailed = emails.length;
-      emailError = "Email is not configured.";
-      await insertWorkflowDeliveries({
-        runId: input.runId,
+    const emails = input.emails.filter((email) => !sentEmail.has(email.trim().toLowerCase()));
+    if (emails.length) {
+      const result = await deliverEmailNotifications({
         emails,
-        channel: "email",
-        status: "failed",
-        error: emailError,
+        title: input.title,
+        body: input.body,
+        payload: input.payload,
+        workflowId: input.workflowId,
+        runId: input.runId,
       });
-    } else if (emailQueued > 0) {
-      await insertWorkflowDeliveries({ runId: input.runId, emails, channel: "email", status: "sent" });
+      emailQueued = result.sent.length;
+      emailFailed = result.failed.length;
+      emailError = result.failed[0]?.error ?? null;
+      if (result.sent.length) {
+        await insertWorkflowDeliveries({
+          runId: input.runId,
+          emails: result.sent,
+          channel: "email",
+          status: "sent",
+        });
+      }
+      for (const failure of result.failed) {
+        await insertWorkflowDeliveries({
+          runId: input.runId,
+          emails: [failure.email],
+          channel: "email",
+          status: "failed",
+          error: failure.error,
+        });
+      }
     }
   }
 

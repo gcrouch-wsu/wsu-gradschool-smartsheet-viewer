@@ -64,7 +64,7 @@ export function WorkflowActionFields({
                   </span>
                 </span>
               </label>
-              <label className="flex items-start gap-3 rounded-xl border border-dashed border-[color:var(--wsu-border)] bg-white p-3 text-sm opacity-90">
+              <label className="flex items-start gap-3 rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/30 p-3 text-sm">
                 <input
                   type="checkbox"
                   className="mt-0.5"
@@ -79,7 +79,7 @@ export function WorkflowActionFields({
                 <span>
                   <span className="font-medium text-[color:var(--wsu-ink)]">Email</span>
                   <span className="mt-0.5 block text-xs text-[color:var(--wsu-muted)]">
-                    Recorded on the run. It sends when a mailer is configured; until then the run shows that email failed.
+                    Sent through Amazon SES. Deliveries, bounces, and the other outcomes show under Activity, Email delivery.
                   </span>
                 </span>
               </label>
