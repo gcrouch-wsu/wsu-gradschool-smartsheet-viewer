@@ -178,6 +178,17 @@ export async function savePdfMappingFull(
   return toRecord(normalized, name, Boolean(template?.length));
 }
 
+export async function clearPdfTemplate(sheetId: string): Promise<PdfMappingRecord> {
+  const key = assertSheetId(sheetId);
+  const existing = await loadPdfMapping(key);
+  const config = normalizePdfMappingConfig({
+    ...(existing?.config ?? defaultPdfMappingConfig()),
+    source: "designed",
+    templateFields: null,
+  });
+  return savePdfMappingFull(key, config, null, null);
+}
+
 export async function deletePdfMapping(sheetId: string): Promise<void> {
   const key = assertSheetId(sheetId);
 

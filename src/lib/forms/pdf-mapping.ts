@@ -1,9 +1,22 @@
-import { PDFDocument, StandardFonts, degrees, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import {
+  PDFCheckBox,
+  PDFDocument,
+  PDFDropdown,
+  PDFOptionList,
+  PDFRadioGroup,
+  StandardFonts,
+  degrees,
+  rgb,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+} from "pdf-lib";
 import type {
   PdfCustomItem,
   PdfFieldDisplay,
   PdfFieldEntry,
   PdfMappingConfig,
+  PdfTemplateField,
   PdfTheme,
 } from "@/lib/forms/pdf-mapping-types";
 import { DEFAULT_PDF_FOOTER } from "@/lib/forms/pdf-mapping-types";
@@ -1012,11 +1025,155 @@ export function seedPdfItemsFromColumns(
   }));
 }
 
+function isCheckedValue(value: string): boolean {
+  return /^(yes|true|1|on|checked|y)$/i.test(value.trim());
+}
+
+function classifyPdfField(field: { getName(): string }): PdfTemplateField {
+  const name = field.getName();
+  if (field instanceof PDFCheckBox) return { name, kind: "checkbox", columnTitle: "" };
+  if (field instanceof PDFDropdown || field instanceof PDFOptionList) {
+    return { name, kind: "choice", options: field.getOptions(), columnTitle: "" };
+  }
+  if (field instanceof PDFRadioGroup) {
+    return { name, kind: "choice", options: field.getOptions(), columnTitle: "" };
+  }
+  return { name, kind: "text", columnTitle: "" };
+}
+
+/** Read fillable field names from an uploaded PDF. Rejects files that cannot be filled. */
+export async function inspectPdfTemplate(bytes: Uint8Array | Buffer): Promise<PdfTemplateField[]> {
+  let doc: PDFDocument;
+  try {
+    doc = await PDFDocument.load(bytes);
+  } catch {
+    throw new PdfMappingError("That file is not a readable PDF.");
+  }
+  let fields: ReturnType<ReturnType<PDFDocument["getForm"]>["getFields"]> = [];
+  try {
+    fields = doc.getForm().getFields();
+  } catch {
+    fields = [];
+  }
+  if (!fields.length) {
+    throw new PdfMappingError(
+      "This PDF has no fillable fields. Design the PDF in the app, or upload a fillable form.",
+    );
+  }
+  const seen = new Set<string>();
+  const out: PdfTemplateField[] = [];
+  for (const field of fields) {
+    const next = classifyPdfField(field);
+    if (!next.name || seen.has(next.name)) continue;
+    seen.add(next.name);
+    out.push(next);
+  }
+  if (!out.length) {
+    throw new PdfMappingError(
+      "This PDF has no fillable fields. Design the PDF in the app, or upload a fillable form.",
+    );
+  }
+  return out;
+}
+
+/** Write column answers into a saved fillable PDF and flatten it. */
+export async function fillUploadedPdf(
+  bytes: Uint8Array | Buffer,
+  fields: PdfTemplateField[],
+  valuesByColumnTitle: Record<string, string>,
+): Promise<Uint8Array> {
+  let doc: PDFDocument;
+  try {
+    doc = await PDFDocument.load(bytes);
+  } catch {
+    throw new PdfMappingError("The saved PDF could not be opened.");
+  }
+  const form = doc.getForm();
+  for (const field of fields) {
+    if (!field.columnTitle) continue;
+    const value = valuesByColumnTitle[field.columnTitle] ?? "";
+    try {
+      if (field.kind === "checkbox") {
+        const box = form.getCheckBox(field.name);
+        if (isCheckedValue(value)) box.check();
+        else box.uncheck();
+        continue;
+      }
+      if (field.kind === "choice") {
+        const selected = value.trim();
+        if (!selected) continue;
+        if (field.options?.some((option) => option === selected)) {
+          try {
+            form.getDropdown(field.name).select(selected);
+          } catch {
+            form.getRadioGroup(field.name).select(selected);
+          }
+          continue;
+        }
+        const match = field.options?.find((option) => option.toLowerCase() === selected.toLowerCase());
+        if (!match) continue;
+        try {
+          form.getDropdown(field.name).select(match);
+        } catch {
+          form.getRadioGroup(field.name).select(match);
+        }
+        continue;
+      }
+      form.getTextField(field.name).setText(value);
+    } catch {
+      // A renamed or read-only field should not block the rest of the PDF.
+    }
+  }
+  try {
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    form.updateFieldAppearances(font);
+    form.flatten();
+  } catch {
+    // Keep the filled fields if this PDF cannot be flattened.
+  }
+  return doc.save();
+}
+
+export async function renderConfiguredPdf(options: {
+  config: PdfMappingConfig;
+  templateBytes?: Uint8Array | Buffer | null;
+  entries: PdfFieldEntry[];
+  valuesByColumnTitle?: Record<string, string>;
+  formTitle: string;
+  formDescription?: string;
+  sheetName?: string;
+  logoSrc?: string | null;
+}): Promise<Uint8Array> {
+  const useUpload = options.config.source === "uploaded";
+  if (useUpload) {
+    if (!options.templateBytes?.length) {
+      throw new PdfMappingError("Upload a fillable PDF before using this layout.");
+    }
+    const values = { ...(options.valuesByColumnTitle ?? {}) };
+    for (const entry of options.entries) {
+      if (entry.kind && entry.kind !== "field") continue;
+      if (!(entry.columnTitle in values)) values[entry.columnTitle] = entry.value;
+    }
+    return fillUploadedPdf(options.templateBytes, options.config.templateFields ?? [], values);
+  }
+  return buildSubmissionPdf({
+    formTitle: options.formTitle,
+    formDescription: options.formDescription,
+    sheetName: options.sheetName,
+    entries: options.entries,
+    config: options.config,
+    logoSrc: options.logoSrc,
+  });
+}
+
 export async function fillPdfFromRow(
-  _bytes: Uint8Array | Buffer,
+  bytes: Uint8Array | Buffer,
   mapping: PdfMappingConfig,
   valuesByColumnTitle: Record<string, string>,
 ): Promise<Uint8Array> {
+  if (mapping.source === "uploaded") {
+    return fillUploadedPdf(bytes, mapping.templateFields ?? [], valuesByColumnTitle);
+  }
   const entries: PdfFieldEntry[] = Object.entries(valuesByColumnTitle).map(([columnTitle, value]) => ({
     label: mapping.fieldLabels?.[columnTitle] || columnTitle,
     columnTitle,
@@ -1028,12 +1185,6 @@ export async function fillPdfFromRow(
     entries: applyPdfCustomization(entries, mapping),
     config: mapping,
   });
-}
-
-export async function listPdfFields(): Promise<never> {
-  throw new PdfMappingError(
-    "Template PDF upload is no longer used. Generate the PDF from form columns instead.",
-  );
 }
 
 export function valuesByColumnFromPairs(

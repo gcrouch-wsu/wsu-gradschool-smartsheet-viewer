@@ -3,13 +3,13 @@ import { fieldMetaFromConfig } from "@/lib/forms/form-field-meta";
 import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import {
   applyPdfCustomization,
-  buildSubmissionPdf,
   formatPdfCellValue,
+  renderConfiguredPdf,
 } from "@/lib/forms/pdf-mapping";
 import type { PdfFieldEntry } from "@/lib/forms/pdf-mapping-types";
 import { ensureBootstrapped } from "@/lib/forms/init";
 import { loadFormFields } from "@/lib/forms/store/field-config";
-import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
+import { loadPdfMapping, loadPdfTemplateBytes } from "@/lib/forms/store/pdf-mapping";
 import { resolveStudentPortalAccess } from "@/lib/forms/student-portal-access";
 import { assertOwnedRow, loadOwnedSheetContext } from "@/lib/forms/student-rows";
 import { richTextPlainText } from "@/lib/rendering";
@@ -80,6 +80,11 @@ export async function GET(
     }
 
     const filtered = applyPdfCustomization(entries, mapping.config);
+    const valuesByColumnTitle: Record<string, string> = {};
+    for (const column of columns) {
+      valuesByColumnTitle[column.title] = formatPdfCellValue(values.get(column.id) ?? "");
+    }
+    const templateBytes = mapping.config.source === "uploaded" ? await loadPdfTemplateBytes(loaded.context.entry.sheetId) : null;
     const name = mapping.config.outputFileName || "Final PDF.pdf";
     const url = new URL(request.url);
     const wantMeta = url.searchParams.get("meta") === "1";
@@ -87,11 +92,13 @@ export async function GET(
       return NextResponse.json({ name, mimeType: "application/pdf", previewable: true });
     }
 
-    const pdfBytes = await buildSubmissionPdf({
+    const pdfBytes = await renderConfiguredPdf({
       formTitle: richTextPlainText(fieldConfig?.formTitle ?? "") || String(loaded.context.sheet.name ?? loaded.context.entry.name),
       formDescription: richTextPlainText(fieldConfig?.formDescription ?? ""),
       sheetName: String(loaded.context.sheet.name ?? loaded.context.entry.name),
       entries: filtered,
+      valuesByColumnTitle,
+      templateBytes,
       config: mapping.config,
       logoSrc: mapping.config.showLogo === false ? null : fieldConfig?.headerLogoDataUrl,
     });

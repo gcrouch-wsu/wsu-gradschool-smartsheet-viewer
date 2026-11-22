@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { PdfCustomItem, PdfFieldDisplay, PdfMappingConfig, PdfTheme } from "@/lib/forms/pdf-mapping-types";
 import {
   DEFAULT_PDF_DRAFT_BANNER,
@@ -248,6 +248,90 @@ function KindBadge({ kind }: { kind: PdfCustomItem["kind"] }) {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tone}`}>{label}</span>;
 }
 
+function UploadedPdfPanel({
+  templateName,
+  fields,
+  fieldOptions,
+  uploading,
+  fileRef,
+  onUpload,
+  onRemove,
+  onMap,
+}: {
+  templateName: string | null;
+  fields: PdfMappingConfig["templateFields"];
+  fieldOptions: PdfFieldOption[];
+  uploading: boolean;
+  fileRef: RefObject<HTMLInputElement | null>;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+  onMap: (name: string, columnTitle: string) => void;
+}) {
+  const mapped = fields ?? [];
+  return (
+    <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--wsu-muted)]">Uploaded form</p>
+      <h3 className="mt-0.5 text-sm font-medium text-[color:var(--wsu-ink)]">
+        {templateName || "No PDF uploaded yet"}
+      </h3>
+      <p className="mt-1 text-xs leading-5 text-[color:var(--wsu-muted)]">
+        Use a fillable PDF. Each named box can take one form answer. Fields left blank stay empty on the finished file.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onUpload(file);
+          }}
+        />
+        <button type="button" className={primaryBtn} disabled={uploading} onClick={() => fileRef.current?.click()}>
+          {uploading ? "Working…" : templateName ? "Replace PDF" : "Upload PDF"}
+        </button>
+        {templateName ? (
+          <button type="button" className={secondaryBtn} disabled={uploading} onClick={onRemove}>
+            Remove PDF
+          </button>
+        ) : null}
+      </div>
+      {mapped.length ? (
+        <ul className="mt-4 divide-y divide-[color:var(--wsu-border)] overflow-hidden rounded-lg border border-[color:var(--wsu-border)]">
+          {mapped.map((field) => (
+            <li key={field.name} className="grid gap-2 bg-white px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[color:var(--wsu-ink)]">{field.name}</p>
+                <p className="text-[11px] uppercase tracking-wide text-[color:var(--wsu-muted)]">{field.kind}</p>
+              </div>
+              <label className="block text-xs text-[color:var(--wsu-muted)]">
+                Form field
+                <select
+                  className={inputClass}
+                  value={field.columnTitle}
+                  onChange={(event) => onMap(field.name, event.target.value)}
+                >
+                  <option value="">Leave blank</option>
+                  {fieldOptions.map((option) => (
+                    <option key={option.columnTitle} value={option.columnTitle}>
+                      {option.label?.trim() || option.columnTitle}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-[color:var(--wsu-border)] px-3 py-6 text-center text-sm text-[color:var(--wsu-muted)]">
+          Upload a fillable PDF to see its fields.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle, formDescription }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -263,6 +347,9 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [mobilePane, setMobilePane] = useState<"edit" | "preview">("edit");
+  const [templateName, setTemplateName] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const previewSeq = useRef(0);
 
   const fieldCount = items.filter((item) => item.kind === "field").length;
@@ -288,6 +375,7 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
         footerText: raw.footerText || emptyConfig(formTitle).footerText,
       };
       setConfig(next);
+      setTemplateName(typeof data.templateName === "string" ? data.templateName : null);
       setItems(seedItems(fieldOptions, next.items, layoutSeed));
       setShowDescription(Boolean(plainText(next.description || "")));
       setDirty(false);
@@ -393,6 +481,55 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
     }
   }, [draftConfig, fieldOptions, formTitle, layoutSeed, sheetId]);
 
+  async function uploadTemplate(file: File) {
+    setUploading(true);
+    setMessage(null);
+    try {
+      const body = new FormData();
+      body.set("sheetId", sheetId);
+      body.set("file", file);
+      body.set(
+        "columns",
+        JSON.stringify(fieldOptions.map((option) => ({ columnTitle: option.columnTitle, label: option.label }))),
+      );
+      const response = await fetch("/api/forms/builder/pdf-mapping/template", { method: "POST", body });
+      const data = await parseJson(response);
+      if (!response.ok) throw new Error(String(data.error || "Could not upload that PDF."));
+      const saved = (data.config as PdfMappingConfig) ?? config;
+      setConfig({ ...emptyConfig(formTitle), ...saved, source: "uploaded" });
+      setTemplateName(typeof data.templateName === "string" ? data.templateName : file.name);
+      setItems(seedItems(fieldOptions, saved.items, layoutSeed));
+      setDirty(false);
+      setMessage({ ok: true, text: "PDF saved. Map any unmatched fields, then save if you change them." });
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof Error ? err.message : "Could not upload that PDF." });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function removeTemplate() {
+    setUploading(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/forms/builder/pdf-mapping/template?sheetId=${encodeURIComponent(sheetId)}`, {
+        method: "DELETE",
+      });
+      const data = await parseJson(response);
+      if (!response.ok) throw new Error(String(data.error || "Could not remove the PDF."));
+      const saved = (data.config as PdfMappingConfig) ?? { ...config, source: "designed" as const, templateFields: null };
+      setConfig({ ...emptyConfig(formTitle), ...saved, source: "designed" });
+      setTemplateName(null);
+      setDirty(false);
+      setMessage({ ok: true, text: "Uploaded PDF removed. Submissions use the designed layout." });
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof Error ? err.message : "Could not remove the PDF." });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
@@ -493,7 +630,9 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
           </div>
           <p className="mt-1 text-xs text-[color:var(--wsu-muted)]">
             {config.enabled
-              ? "A PDF is created automatically when someone submits this form."
+              ? config.source === "uploaded"
+                ? "Submissions fill the uploaded PDF and attach that file."
+                : "Submissions attach a PDF designed in this builder."
               : "Turn this on when you want a PDF attached to each submission."}
           </p>
         </div>
@@ -535,6 +674,44 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.95fr)]">
         <div className={`min-h-0 space-y-4 overflow-y-auto pr-1 ${mobilePane === "edit" ? "" : "hidden lg:block"}`}>
+          <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--wsu-muted)]">Format</p>
+            <h3 className="mt-0.5 text-sm font-medium text-[color:var(--wsu-ink)]">Where the PDF comes from</h3>
+            <div className="mt-3">
+              <Segmented
+                value={config.source === "uploaded" ? "uploaded" : "designed"}
+                options={[
+                  { value: "designed", label: "Design in the app" },
+                  { value: "uploaded", label: "Upload a PDF" },
+                ]}
+                onChange={(source) => patch({ source })}
+              />
+            </div>
+            <p className="mt-2 text-xs leading-5 text-[color:var(--wsu-muted)]">
+              {config.source === "uploaded"
+                ? "Upload a fillable PDF. Map each box to a form field. Submissions, preview, and the student PDF use that file."
+                : "Build the layout here. The same design is used for submissions, preview, and the student PDF."}
+            </p>
+          </section>
+          {config.source === "uploaded" ? (
+            <UploadedPdfPanel
+              templateName={templateName}
+              fields={config.templateFields ?? []}
+              fieldOptions={fieldOptions}
+              uploading={uploading}
+              fileRef={fileRef}
+              onUpload={(file) => void uploadTemplate(file)}
+              onRemove={() => void removeTemplate()}
+              onMap={(name, columnTitle) =>
+                patch({
+                  templateFields: (config.templateFields ?? []).map((field) =>
+                    field.name === name ? { ...field, columnTitle } : field,
+                  ),
+                })
+              }
+            />
+          ) : (
+          <>
           <section className="rounded-xl border border-[color:var(--wsu-border)] bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--wsu-muted)]">Step 1</p>
             <h3 className="mt-0.5 text-sm font-medium text-[color:var(--wsu-ink)]">Choose a look</h3>
@@ -839,6 +1016,8 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
               )}
             </ul>
           </section>
+          </>
+          )}
         </div>
 
         <aside className={`min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 ${mobilePane === "preview" ? "flex" : "hidden lg:flex"}`}>

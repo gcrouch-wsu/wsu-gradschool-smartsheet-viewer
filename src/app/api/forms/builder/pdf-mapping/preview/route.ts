@@ -3,7 +3,7 @@ import { expandColumnsWithCheckboxGroups, fieldMetaFromConfig } from "@/lib/form
 import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
 import { ensureBootstrapped } from "@/lib/forms/init";
-import { applyPdfCustomization, buildSubmissionPdf } from "@/lib/forms/pdf-mapping";
+import { applyPdfCustomization, PdfMappingError, renderConfiguredPdf } from "@/lib/forms/pdf-mapping";
 import {
   normalizePdfMappingConfig,
   type PdfFieldEntry,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/forms/pdf-mapping-types";
 import * as registry from "@/lib/forms/registry";
 import { loadFormFields } from "@/lib/forms/store/field-config";
-import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
+import { loadPdfMapping, loadPdfTemplateBytes } from "@/lib/forms/store/pdf-mapping";
 import * as ss from "@/lib/forms/smartsheet-api";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,12 +89,19 @@ async function generatePreviewPdf(sheetId: string, config: PdfMappingConfig) {
   const filtered = applyPdfCustomization(entries, config);
   const formTitle = fieldConfig?.formTitle?.trim() || String(sheet.name ?? "Form");
   const formDescription = fieldConfig?.formDescription ?? "";
+  const valuesByColumnTitle: Record<string, string> = {};
+  for (const column of columns) {
+    valuesByColumnTitle[column.title] = sampleValueForTitle(column.title, column.type);
+  }
+  const templateBytes = config.source === "uploaded" ? await loadPdfTemplateBytes(sheetId) : null;
 
-  const pdfBytes = await buildSubmissionPdf({
+  const pdfBytes = await renderConfiguredPdf({
     formTitle,
     formDescription,
     sheetName: String(sheet.name ?? "Form"),
     entries: filtered,
+    valuesByColumnTitle,
+    templateBytes,
     config,
     logoSrc: config.showLogo === false ? null : fieldConfig?.headerLogoDataUrl,
   });
@@ -127,6 +134,9 @@ export async function GET(request: Request) {
     const config = normalizePdfMappingConfig(mapping?.config ?? {});
     return await generatePreviewPdf(sheetId, config);
   } catch (err) {
+    if (err instanceof PdfMappingError) {
+      return Response.json({ error: err.message }, { status: err.status });
+    }
     console.error("[pdf-mapping preview GET]", err);
     return Response.json({ error: "Failed to generate PDF preview." }, { status: 500 });
   }
@@ -151,6 +161,9 @@ export async function POST(request: Request) {
     });
     return await generatePreviewPdf(sheetId, config);
   } catch (err) {
+    if (err instanceof PdfMappingError) {
+      return Response.json({ error: err.message }, { status: err.status });
+    }
     console.error("[pdf-mapping preview POST]", err);
     return Response.json({ error: "Failed to generate PDF preview." }, { status: 500 });
   }

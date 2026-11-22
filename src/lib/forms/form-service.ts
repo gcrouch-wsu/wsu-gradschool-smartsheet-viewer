@@ -5,12 +5,12 @@ import { isLayoutFormItem } from "@/lib/forms/form-field-config";
 import { resolveFormColumns } from "@/lib/forms/form-fields";
 import {
   applyPdfCustomization,
-  buildSubmissionPdf,
   formatPdfCellValue,
+  renderConfiguredPdf,
 } from "@/lib/forms/pdf-mapping";
 import type { PdfFieldEntry } from "@/lib/forms/pdf-mapping-types";
 import { loadFormFields } from "@/lib/forms/store/field-config";
-import { loadPdfMapping } from "@/lib/forms/store/pdf-mapping";
+import { loadPdfMapping, loadPdfTemplateBytes } from "@/lib/forms/store/pdf-mapping";
 import * as ss from "@/lib/forms/smartsheet-api";
 import { resolveFormsHeaderLogo } from "@/lib/header-logo";
 import { validateSubmission, type SubmissionCell } from "@/lib/forms/validation";
@@ -244,16 +244,24 @@ async function attachGeneratedPdfIfConfigured(
   }
 
   const filtered = applyPdfCustomization(entries, mapping.config);
-  if (!filtered.some((e) => !e.kind || e.kind === "field")) return;
+  const uploaded = mapping.config.source === "uploaded";
+  if (!uploaded && !filtered.some((e) => !e.kind || e.kind === "field")) return;
 
   const formTitle = richTextPlainText(fieldConfig?.formTitle ?? "") || sheetName;
   const formDescription = richTextPlainText(fieldConfig?.formDescription ?? "");
+  const valuesByColumnTitle: Record<string, string> = {};
+  for (const column of columns) {
+    valuesByColumnTitle[column.title] = formatPdfCellValue(values[String(column.id)] ?? values[column.title] ?? "");
+  }
+  const templateBytes = uploaded ? await loadPdfTemplateBytes(sheetId) : null;
 
-  const pdfBytes = await buildSubmissionPdf({
+  const pdfBytes = await renderConfiguredPdf({
     formTitle,
     formDescription,
     sheetName,
     entries: filtered,
+    valuesByColumnTitle,
+    templateBytes,
     config: mapping.config,
     logoSrc: mapping.config.showLogo === false ? null : fieldConfig?.headerLogoDataUrl,
   });

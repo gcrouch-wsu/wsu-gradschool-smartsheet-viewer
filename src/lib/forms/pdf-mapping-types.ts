@@ -1,3 +1,15 @@
+export type PdfSource = "designed" | "uploaded";
+export type PdfTemplateFieldKind = "text" | "checkbox" | "choice";
+
+export type PdfTemplateField = {
+  /** AcroForm field name on the uploaded PDF. */
+  name: string;
+  kind: PdfTemplateFieldKind;
+  options?: string[];
+  /** Sheet column whose answer is written into this PDF field. Empty leaves it blank. */
+  columnTitle: string;
+};
+
 export type PdfLayoutMode = "stacked" | "twoColumn";
 export type PdfDensity = "compact" | "comfortable";
 export type PdfTheme = "wsu" | "simple" | "official";
@@ -51,6 +63,10 @@ export type PdfMappingConfig = {
   fieldStyle?: PdfFieldDisplay;
   bannerText?: string;
   showDraftWatermark?: boolean;
+  /** `uploaded` fills a saved fillable PDF. `designed` draws the in-app layout. */
+  source?: PdfSource;
+  /** Field map for an uploaded fillable PDF. */
+  templateFields?: PdfTemplateField[] | null;
 };
 
 export type PdfMappingRecord = {
@@ -82,6 +98,8 @@ export function defaultPdfMappingConfig(): PdfMappingConfig {
     fieldStyle: "inline",
     bannerText: DEFAULT_PDF_DRAFT_BANNER,
     showDraftWatermark: true,
+    source: "designed",
+    templateFields: null,
   };
 }
 
@@ -130,6 +148,23 @@ export function normalizePdfCustomItem(raw: unknown, index: number): PdfCustomIt
     return { id: String(data.id ?? newItemId("divider")), kind: "divider" };
   }
   return null;
+}
+
+function normalizeTemplateField(raw: unknown): PdfTemplateField | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  const name = String(data.name ?? "").trim();
+  if (!name) return null;
+  const kind = data.kind === "checkbox" || data.kind === "choice" ? data.kind : "text";
+  const options = Array.isArray(data.options)
+    ? data.options.map((option) => String(option ?? "").trim()).filter(Boolean)
+    : undefined;
+  return {
+    name,
+    kind,
+    options: options?.length ? options : undefined,
+    columnTitle: String(data.columnTitle ?? "").trim(),
+  };
 }
 
 export function normalizePdfMappingConfig(raw: unknown): PdfMappingConfig {
@@ -204,5 +239,11 @@ export function normalizePdfMappingConfig(raw: unknown): PdfMappingConfig {
     bannerText: asString(data.bannerText),
     showDraftWatermark:
       theme === "official" ? data.showDraftWatermark !== false : Boolean(data.showDraftWatermark),
+    source: data.source === "uploaded" ? "uploaded" : "designed",
+    templateFields: Array.isArray(data.templateFields)
+      ? data.templateFields
+          .map((field) => normalizeTemplateField(field))
+          .filter((field): field is PdfTemplateField => Boolean(field))
+      : null,
   };
 }

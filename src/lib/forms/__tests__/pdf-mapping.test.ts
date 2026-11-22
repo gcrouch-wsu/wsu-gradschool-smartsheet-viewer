@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSubmissionPdf,
+  fillUploadedPdf,
   filterEntriesByInclude,
   formatPdfCellValue,
+  inspectPdfTemplate,
 } from "@/lib/forms/pdf-mapping";
 import { normalizePdfMappingConfig } from "@/lib/forms/pdf-mapping-types";
 import { PDFDocument } from "pdf-lib";
@@ -104,5 +106,36 @@ describe("normalizePdfMappingConfig", () => {
     expect(cfg.layout).toBe("twoColumn");
     expect(cfg.fieldStyle).toBe("inline");
     expect(cfg.showDraftWatermark).toBe(true);
+  });
+
+  it("keeps an uploaded field map", () => {
+    const cfg = normalizePdfMappingConfig({
+      source: "uploaded",
+      templateFields: [{ name: "Student", kind: "text", columnTitle: "Full Name" }],
+    });
+    expect(cfg.source).toBe("uploaded");
+    expect(cfg.templateFields?.[0]).toMatchObject({ name: "Student", columnTitle: "Full Name" });
+  });
+});
+
+describe("uploaded fillable PDF", () => {
+  it("reads fields and writes a mapped answer", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage();
+    const form = doc.getForm();
+    const field = form.createTextField("Full Name");
+    field.addToPage(page, { x: 50, y: 700, width: 200, height: 24 });
+    const bytes = await doc.save();
+
+    const detected = await inspectPdfTemplate(bytes);
+    expect(detected.map((item) => item.name)).toEqual(["Full Name"]);
+
+    const filled = await fillUploadedPdf(
+      bytes,
+      [{ name: "Full Name", kind: "text", columnTitle: "Full Name" }],
+      { "Full Name": "Ada Lovelace" },
+    );
+    const loaded = await PDFDocument.load(filled);
+    expect(loaded.getPageCount()).toBe(1);
   });
 });

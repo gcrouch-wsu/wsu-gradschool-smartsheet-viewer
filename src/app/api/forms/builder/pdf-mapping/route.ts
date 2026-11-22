@@ -37,6 +37,8 @@ export async function GET(request: Request) {
     return Response.json({
       sheetId,
       config: record?.config ?? null,
+      templateName: record?.templateName ?? null,
+      hasTemplate: Boolean(record?.hasTemplate),
     });
   } catch (err) {
     console.error("[pdf-mapping GET]", err);
