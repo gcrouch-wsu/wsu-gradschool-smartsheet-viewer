@@ -150,6 +150,13 @@ export function ProductNav({ items, variant = "global", label }: ProductNavProps
             role="tab"
             aria-selected={active}
             aria-current={active ? "page" : undefined}
+            data-tour={
+              item.href === "/admin/activity"
+                ? "nav-activity"
+                : item.href === "/admin/notifications"
+                  ? "nav-notifications"
+                  : undefined
+            }
             className={[
               "flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-medium transition",
               active

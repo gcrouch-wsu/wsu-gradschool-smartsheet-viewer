@@ -230,6 +230,22 @@ export default async function ContributorInstructionsPage() {
                 </p>
               </section>
 
+              <section aria-labelledby="s-alerts" className="py-6 sm:py-7">
+                <h2 id="s-alerts" className="font-serif text-lg font-medium tracking-[-0.01em] text-ink sm:text-xl">
+                  Workflow alerts
+                </h2>
+                <p className="mt-2.5 max-w-[68ch] text-[13px] leading-6 text-sub sm:text-sm">
+                  Some sheets send alerts, update requests, or approval requests. Those arrive in{" "}
+                  <strong className="font-semibold text-ink">Notifications</strong>, not in this editor.
+                </p>
+                <ul className="mt-3 max-w-[68ch] list-disc space-y-1.5 pl-5 text-[13px] leading-6 text-sub sm:text-sm">
+                  <li>Open a notification and choose View Details to read the message and included fields.</li>
+                  <li>An approval request asks you to approve or decline from that detail.</li>
+                  <li>All notifications keeps older alerts. Unread notifications shows only what you have not opened.</li>
+                  <li>Mark all as read clears the unread mark. It does not delete the alerts.</li>
+                </ul>
+              </section>
+
               <section aria-labelledby="s-reset" className="py-6 sm:py-7">
                 <h2 id="s-reset" className="font-serif text-lg font-medium tracking-[-0.01em] text-ink sm:text-xl">
                   Cannot sign in

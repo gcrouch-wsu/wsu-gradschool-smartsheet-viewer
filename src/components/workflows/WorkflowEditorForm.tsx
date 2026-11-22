@@ -122,6 +122,8 @@ export function WorkflowEditorForm({
   const canEnable = isRunnableTemplateKind(draft.templateKind);
   const step = STEPS[activeIndex] ?? STEPS[0];
   const lastIndex = STEPS.length - 1;
+  const templateTitle = getWorkflowTemplate(draft.templateKind)?.title ?? draft.templateKind;
+  const eyebrow = draft.id ? "Editing" : "New workflow";
 
   useEffect(() => {
     if (skipFocus.current) return;
@@ -142,20 +144,41 @@ export function WorkflowEditorForm({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white shadow-sm">
-      <div className="md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
-        <div className="border-b border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/25 md:sticky md:top-4 md:self-start md:border-r md:border-b-0">
-          <WorkflowStepRail steps={STEPS} activeIndex={activeIndex} onSelect={selectStep} />
+      <div className="border-b border-[color:var(--wsu-border)] bg-[color-mix(in_srgb,var(--wsu-stone)_45%,white)] lg:hidden">
+        <p className="px-4 pt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-crimson)]">
+          {eyebrow}
+        </p>
+        <p className="mt-1 truncate px-4 font-serif text-lg leading-snug text-[color:var(--wsu-ink)]">
+          {draft.name.trim() || "Untitled workflow"}
+        </p>
+        <p className="mt-0.5 truncate px-4 pb-1 text-xs text-[color:var(--wsu-muted)]">{templateTitle}</p>
+        <WorkflowStepRail
+          steps={STEPS}
+          activeIndex={activeIndex}
+          onSelect={selectStep}
+          eyebrow={eyebrow}
+          name={draft.name}
+          templateTitle={templateTitle}
+        />
+      </div>
+      <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <div className="hidden bg-[color-mix(in_srgb,var(--wsu-stone)_55%,white)] lg:sticky lg:top-0 lg:block lg:self-start lg:border-r lg:border-[color:var(--wsu-border)]">
+          <WorkflowStepRail
+            steps={STEPS}
+            activeIndex={activeIndex}
+            onSelect={selectStep}
+            eyebrow={eyebrow}
+            name={draft.name}
+            templateTitle={templateTitle}
+          />
         </div>
 
         <div className="flex min-w-0 flex-col">
           <div className="px-5 py-6 sm:px-7">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
-              {draft.id ? "Editing workflow" : "New workflow"}
-            </p>
             <h2
               ref={headingRef}
               tabIndex={-1}
-              className="mt-2 text-2xl font-medium tracking-tight text-[color:var(--wsu-ink)] outline-none"
+              className="font-serif text-2xl leading-tight tracking-tight text-[color:var(--wsu-ink)] outline-none"
             >
               {step.heading}
               {step.optional ? (

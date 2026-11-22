@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { UnderlineTabs } from "@/components/ui/UnderlineTabs";
 
 const TABS = [
-  { id: "audit" as const, label: "Audit trail" },
-  { id: "email" as const, label: "Email delivery" },
-  { id: "runs" as const, label: "Failed runs" },
+  { id: "audit" as const, label: "Audit trail", dataTour: "aa-tab-audit" },
+  { id: "email" as const, label: "Email delivery", dataTour: "aa-tab-email" },
+  { id: "runs" as const, label: "Failed runs", dataTour: "aa-tab-runs" },
 ];
 
 export function ActivitySectionTabs({ tab }: { tab: "audit" | "email" | "runs" }) {
@@ -20,5 +20,9 @@ export function ActivitySectionTabs({ tab }: { tab: "audit" | "email" | "runs" }
     router.push(`/admin/activity?tab=${next}`);
   }
 
-  return <UnderlineTabs items={TABS} value={tab} onChange={select} ariaLabel="Activity sections" equalWidth={false} />;
+  return (
+    <div data-tour="aa-sections">
+      <UnderlineTabs items={TABS} value={tab} onChange={select} ariaLabel="Activity sections" equalWidth={false} />
+    </div>
+  );
 }

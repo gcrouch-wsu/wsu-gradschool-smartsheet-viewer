@@ -1,6 +1,6 @@
 import type { ProductTourStep } from "@/components/ui/ProductTour";
 
-export const FORMS_SHEET_TOUR_STORAGE_KEY = "smartsheet-view:forms-sheet-tour-seen";
+export const FORMS_SHEET_TOUR_STORAGE_KEY = "smartsheet-view:forms-sheet-tour-seen-v2";
 
 export const FORMS_SHEET_TOUR_STEPS: ProductTourStep[] = [
   {
@@ -20,6 +20,12 @@ export const FORMS_SHEET_TOUR_STEPS: ProductTourStep[] = [
     target: '[data-tour="fs-refresh"]',
     title: "Refresh live data",
     body: "Reload the grid from Smartsheet. The page also refreshes automatically when a webhook reports sheet changes.",
+  },
+  {
+    id: "workflows",
+    target: '[data-tour="fs-workflows"]',
+    title: "Sheet workflows",
+    body: "Open Workflows to notify people, request an update or approval, or change rows when this sheet changes. The count shows how many workflows are already saved.",
   },
   {
     id: "status",

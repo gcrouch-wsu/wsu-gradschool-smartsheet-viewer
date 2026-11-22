@@ -28,6 +28,28 @@ export interface NotificationListItem {
 
 type FilterId = "all" | "unread";
 
+function NotificationFilters({
+  filter,
+  unreadCount,
+  onChange,
+}: {
+  filter: FilterId;
+  unreadCount: number;
+  onChange: (next: FilterId) => void;
+}) {
+  return (
+    <UnderlineTabs
+      items={[
+        { id: "all", label: "All notifications" },
+        { id: "unread", label: unreadCount ? `Unread notifications (${unreadCount})` : "Unread notifications" },
+      ]}
+      value={filter}
+      onChange={onChange}
+      ariaLabel="Notification filters"
+    />
+  );
+}
+
 function formatExact(iso: string): string {
   const then = Date.parse(iso);
   if (!Number.isFinite(then)) return "";
@@ -89,26 +111,32 @@ export function NotificationsList() {
   }
 
   if (loading) {
-    return <AppLoading label="Loading notifications" />;
+    return (
+      <div className="space-y-5" data-tour="an-list">
+        <div data-tour="an-filters">
+          <NotificationFilters filter={filter} unreadCount={unreadCount} onChange={setFilter} />
+        </div>
+        <AppLoading label="Loading notifications" />
+      </div>
+    );
   }
 
   if (error && !items.length) {
     return (
-      <p className="rounded-xl border border-line bg-white px-4 py-8 text-center text-sm text-sub">{error}</p>
+      <div className="space-y-5" data-tour="an-list">
+        <div data-tour="an-filters">
+          <NotificationFilters filter={filter} unreadCount={unreadCount} onChange={setFilter} />
+        </div>
+        <p className="rounded-xl border border-line bg-white px-4 py-8 text-center text-sm text-sub">{error}</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <UnderlineTabs
-        items={[
-          { id: "all", label: "All notifications" },
-          { id: "unread", label: unreadCount ? `Unread notifications (${unreadCount})` : "Unread notifications" },
-        ]}
-        value={filter}
-        onChange={setFilter}
-        ariaLabel="Notification filters"
-      />
+    <div className="space-y-5" data-tour="an-list">
+      <div data-tour="an-filters">
+        <NotificationFilters filter={filter} unreadCount={unreadCount} onChange={setFilter} />
+      </div>
 
       {error ? <p className="rounded-lg bg-[color:var(--wsu-stone)] px-3 py-2 text-sm text-sub">{error}</p> : null}
 

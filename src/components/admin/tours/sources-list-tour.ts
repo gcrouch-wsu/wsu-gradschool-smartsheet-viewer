@@ -1,6 +1,6 @@
 import type { ProductTourStep } from "@/components/ui/ProductTour";
 
-export const SOURCES_LIST_TOUR_STORAGE_KEY = "smartsheet-view:sources-list-tour-seen";
+export const SOURCES_LIST_TOUR_STORAGE_KEY = "smartsheet-view:sources-list-tour-seen-v2";
 
 export const SOURCES_LIST_TOUR_STEPS: ProductTourStep[] = [
   {
@@ -31,6 +31,6 @@ export const SOURCES_LIST_TOUR_STEPS: ProductTourStep[] = [
     id: "edit",
     target: '[data-tour="as-table"]',
     title: "Edit a source",
-    body: "Open a name for identity and schema, or use row actions for sheet, builder, publish, and duplicate.",
+    body: "Open a name for identity and schema. The sheet action opens the grid, where Workflows configures alerts, approvals, and row changes for that sheet.",
   },
 ];

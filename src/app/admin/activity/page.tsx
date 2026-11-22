@@ -78,11 +78,7 @@ export default async function AdminActivityPage({
         title="Activity"
         description={description}
         dataTour="aa-heading"
-        actions={
-          tab === "audit" ? (
-            <ProductTourControls storageKey={ACTIVITY_TOUR_STORAGE_KEY} steps={ACTIVITY_TOUR_STEPS} />
-          ) : null
-        }
+        actions={<ProductTourControls storageKey={ACTIVITY_TOUR_STORAGE_KEY} steps={ACTIVITY_TOUR_STEPS} />}
       />
 
       <ActivitySectionTabs tab={tab} />

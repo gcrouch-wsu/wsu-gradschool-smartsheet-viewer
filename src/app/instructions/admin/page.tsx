@@ -5,7 +5,7 @@ import { FormBrandHeader } from "@/components/forms/submission/FormBrandHeader";
 
 export const metadata: Metadata = {
   title: "Admin guide - Smartsheet View",
-  description: "Create sources, build views, publish updates, manage contributors, and operate Smartsheet View safely.",
+  description: "Create sources, build views, publish updates, run sheet workflows, and check notifications and email delivery.",
 };
 
 function AdminIcon() {
@@ -66,8 +66,7 @@ export default function AdminInstructionsPage() {
               Admin guide
             </h1>
             <p className="mt-2 max-w-[58ch] text-sm leading-6 text-sub">
-              This guide is organized around the real builder tabs and control names so you can configure views without
-              guessing what each section does.
+              This guide follows the builder tabs, then workflows, notifications, and activity, using the same control names as the app.
             </p>
           </header>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-type AdminGuideTabId = "overview" | "sources" | "setup" | "fields" | "editing" | "publish";
+type AdminGuideTabId = "overview" | "sources" | "setup" | "fields" | "editing" | "publish" | "workflows";
 
 type AdminGuideTab = {
   id: AdminGuideTabId;
@@ -17,6 +17,7 @@ const TABS: AdminGuideTab[] = [
   { id: "fields", label: "Fields & Display" },
   { id: "editing", label: "Editing & Groups" },
   { id: "publish", label: "Preview & Publish" },
+  { id: "workflows", label: "Workflows" },
 ];
 
 function TabButton({
@@ -76,7 +77,7 @@ export function AdminGuideTabs() {
         <section id="admin-guide-panel-overview" role="tabpanel" aria-labelledby="admin-guide-tab-overview" className="space-y-6">
           <SectionTitle
             title="How to use this admin"
-            description="Smartsheet is still the source of truth. This app controls how live Smartsheet data is presented, filtered, branded, and optionally edited by contributors."
+            description="Smartsheet is still the source of truth. This app presents that data, and it can also notify people, request updates or approvals, and record what email and failed workflows did."
           />
 
           <div className="grid gap-6 lg:grid-cols-2">
@@ -88,6 +89,7 @@ export function AdminGuideTabs() {
                 <li>Configure setup, fields, filters, editing, and branding.</li>
                 <li>Preview the output.</li>
                 <li>Publish when the page looks right.</li>
+                <li>From a source sheet, open Workflows when that sheet should notify someone or change a row.</li>
               </ol>
             </div>
 
@@ -524,6 +526,59 @@ export function AdminGuideTabs() {
               <Link href="/admin/contributors" className="rounded-full border border-[color:var(--wsu-border)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--wsu-crimson)] hover:underline">
                 Contributors admin
               </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === "workflows" && (
+        <section id="admin-guide-panel-workflows" role="tabpanel" aria-labelledby="admin-guide-tab-workflows" className="space-y-6">
+          <SectionTitle
+            title="Workflows, notifications, and delivery"
+            description="Workflows watch a sheet. Notifications is where people read the result. Activity is where you check email delivery and runs that failed."
+          />
+
+          <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-muted)]">Create a workflow</h3>
+            <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
+              <li>Open a source sheet, then choose <strong className="text-[color:var(--wsu-ink)]">Workflows</strong>.</li>
+              <li>
+                <strong className="text-[color:var(--wsu-ink)]">New workflow</strong> opens the template chooser. Pick a category, then Use. The gallery does not stay on the page.
+              </li>
+              <li>The editor rail is Trigger, Conditions, Action, and Review. Any step can be opened directly.</li>
+              <li>
+                <strong className="text-[color:var(--wsu-ink)]">Save draft</strong> keeps it off. <strong className="text-[color:var(--wsu-ink)]">Save and enable</strong> turns it on.
+              </li>
+            </ol>
+          </div>
+
+          <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-muted)]">On the workflows page</h3>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
+              <li>Saved workflows are listed first. Each row shows the name, the template, and Enabled, Draft, or Failed.</li>
+              <li>Open a row to edit it. The open row is marked in crimson.</li>
+              <li><strong className="text-[color:var(--wsu-ink)]">Send preview</strong> posts a sample alert for alert workflows.</li>
+              <li><strong className="text-[color:var(--wsu-ink)]">Runs</strong> scrolls inside the row so a long history does not stretch the page. Run again retries one row.</li>
+              <li>A failed run retries after 60 seconds. The error stays on the row and under Activity → Failed runs.</li>
+            </ul>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-muted)]">Notifications</h3>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
+                <li>Alerts, update requests, and approval requests arrive in <Link href="/admin/notifications" className="font-medium text-[color:var(--wsu-crimson)] underline-offset-2 hover:underline">Notifications</Link>.</li>
+                <li>View Details shows the message and included fields. Approval requests can be approved or declined there.</li>
+                <li>All notifications keeps history. Unread notifications hides what you already opened. Mark all as read does not delete alerts.</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-white p-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-muted)]">Activity</h3>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-[color:var(--wsu-muted)] sm:text-base">
+                <li><Link href="/admin/activity" className="font-medium text-[color:var(--wsu-crimson)] underline-offset-2 hover:underline">Audit trail</Link> is staff activity: clicks, publishes, and builder saves.</li>
+                <li><Link href="/admin/activity?tab=email" className="font-medium text-[color:var(--wsu-crimson)] underline-offset-2 hover:underline">Email delivery</Link> is Amazon SES: sends, bounces, complaints, delays, and related events.</li>
+                <li><Link href="/admin/activity?tab=runs" className="font-medium text-[color:var(--wsu-crimson)] underline-offset-2 hover:underline">Failed runs</Link> lists workflow errors, the attempt count, and a link back to the workflow.</li>
+              </ul>
             </div>
           </div>
         </section>

@@ -4,10 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert } from "@/components/forms/admin/AdminCard";
 import { useConfirmDialog } from "@/components/ui/ConfirmModal";
+import { Modal } from "@/components/ui/Modal";
+import { ProductTourControls } from "@/components/ui/ProductTourHost";
+import {
+  WORKFLOWS_TOUR_STEPS,
+  WORKFLOWS_TOUR_STORAGE_KEY,
+} from "@/components/workflows/workflows-tour";
 import { WorkflowEditorForm } from "@/components/workflows/WorkflowEditorForm";
 import { WorkflowList } from "@/components/workflows/WorkflowList";
 import { WorkflowTemplatePicker } from "@/components/workflows/WorkflowTemplatePicker";
 import {
+  workflowPrimaryBtnClass,
   workflowSecondaryBtnClass,
   type WorkflowSheetColumn,
 } from "@/components/workflows/shared";
@@ -38,6 +45,7 @@ export function WorkflowsWorkspace({
   const [error, setError] = useState("");
   const [columns, setColumns] = useState<WorkflowSheetColumn[]>([]);
   const [draft, setDraft] = useState<WorkflowRecord | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
 
@@ -86,9 +94,6 @@ export function WorkflowsWorkspace({
       createdAt: "",
       updatedAt: "",
     });
-    window.requestAnimationFrame(() => {
-      document.getElementById("workflow-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }
 
   function editExisting(workflow: WorkflowRecord) {
@@ -101,9 +106,6 @@ export function WorkflowsWorkspace({
         channels: workflow.action.channels ?? ["in_app"],
         recipients: { ...workflow.action.recipients },
       },
-    });
-    window.requestAnimationFrame(() => {
-      document.getElementById("workflow-editor")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -171,75 +173,162 @@ export function WorkflowsWorkspace({
   const sheetHref = sourceId
     ? `/admin/sources/${encodeURIComponent(sourceId)}/sheet`
     : "/admin/sources";
+  const workflows = payload?.workflows ?? [];
+  const canCreate = Boolean(payload && payload.available !== false && (payload.catalog?.length ?? 0) > 0);
+
+  function openPicker() {
+    if (!canCreate) return;
+    setPickerOpen(true);
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {confirmDialog}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0" data-tour="ww-heading">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-crimson)]">
             Workflows
           </p>
-          <h1 className="mt-1 text-xl font-medium text-[color:var(--wsu-ink)]">
+          <h1 className="mt-1 truncate font-serif text-3xl leading-tight text-[color:var(--wsu-ink)]">
             {sourceLabel || sheetName || `Sheet ${sheetId}`}
           </h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[color:var(--wsu-muted)]">
+            Saved workflows live here. A failed run retries after 60 seconds, and notices land in{" "}
+            <strong className="font-medium text-[color:var(--wsu-ink)]">Notifications</strong>.
+          </p>
         </div>
-        <Link href={sheetHref} className={workflowSecondaryBtnClass}>
-          Back to sheet
-        </Link>
-      </div>
-
-      <div className="rounded-2xl border border-[color:var(--wsu-border)] bg-[color:var(--wsu-stone)]/40 px-4 py-3 text-sm text-[color:var(--wsu-muted)]">
-        Workflows notify people in the <strong className="font-medium text-[color:var(--wsu-ink)]">Notifications</strong>{" "}
-        inbox, and a failed run retries itself after 60 seconds. Open a workflow’s runs to see the error.
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <ProductTourControls storageKey={WORKFLOWS_TOUR_STORAGE_KEY} steps={WORKFLOWS_TOUR_STEPS} />
+          <Link href={sheetHref} className={workflowSecondaryBtnClass}>
+            Back to sheet
+          </Link>
+          <button type="button" className={workflowPrimaryBtnClass} data-tour="ww-new" disabled={!canCreate} onClick={openPicker}>
+            New workflow
+          </button>
+        </div>
       </div>
 
       {error ? <Alert text={error} /> : null}
       {notice ? <Alert ok text={notice} /> : null}
       {payload && payload.available === false ? <Alert text={payload.notice || "Workflows need Postgres."} /> : null}
 
-      {draft ? (
-        <div id="workflow-editor">
-          <WorkflowEditorForm
-            draft={draft}
-            columns={columns}
-            contactColumns={contactColumns}
-            people={people}
-            saving={saving}
-            onChange={setDraft}
-            onCancel={() => setDraft(null)}
-            onSaveDraft={() => void save(false)}
-            onSaveAndEnable={() => void save(true)}
-          />
-        </div>
-      ) : (
-        <>
-          <section className="space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--wsu-crimson)]">
-                Create
-              </p>
-              <h2 className="mt-1 text-lg font-medium text-[color:var(--wsu-ink)]">Choose a template</h2>
-              <p className="mt-1 text-sm text-[color:var(--wsu-muted)]">
-                Options and steps stay on this page. Enabled workflows run when their trigger matches.
-              </p>
+      <div className="lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-5">
+        <section className={draft ? "hidden lg:block" : undefined} aria-label="Workflows on this sheet" data-tour="ww-list">
+          <div className="overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-[color:var(--wsu-border)] bg-[color-mix(in_srgb,var(--wsu-stone)_55%,white)] px-4 py-3">
+              <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">On this sheet</h2>
+              <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[color:var(--wsu-muted)]">
+                {workflows.length}
+              </span>
             </div>
-            <WorkflowTemplatePicker catalog={payload?.catalog ?? []} onUse={startFromTemplate} />
-          </section>
+            <div className="p-2">
+              {payload ? (
+                <WorkflowList
+                  workflows={workflows}
+                  failures={payload.failures ?? []}
+                  selectedId={draft?.id || null}
+                  onEdit={editExisting}
+                  onPreview={(id) => void preview(id)}
+                  onDelete={(id) => void remove(id)}
+                  onChanged={() => void load().catch(() => undefined)}
+                />
+              ) : (
+                <p className="px-3 py-10 text-center text-sm text-[color:var(--wsu-muted)]">Loading workflows…</p>
+              )}
+            </div>
+          </div>
+        </section>
 
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium text-[color:var(--wsu-ink)]">Workflows on this sheet</h2>
-            <WorkflowList
-              workflows={payload?.workflows ?? []}
-              failures={payload?.failures ?? []}
-              onEdit={editExisting}
-              onPreview={(id) => void preview(id)}
-              onDelete={(id) => void remove(id)}
-              onChanged={() => void load().catch(() => undefined)}
+        <section className={draft ? undefined : "hidden lg:block"} aria-label="Workflow editor" data-tour="ww-editor">
+          {draft ? (
+            <div id="workflow-editor">
+              <button
+                type="button"
+                className="mb-3 inline-flex items-center text-sm font-medium text-[color:var(--wsu-crimson)] lg:hidden"
+                onClick={() => setDraft(null)}
+              >
+                Back to workflows
+              </button>
+              <WorkflowEditorForm
+                draft={draft}
+                columns={columns}
+                contactColumns={contactColumns}
+                people={people}
+                saving={saving}
+                onChange={setDraft}
+                onCancel={() => setDraft(null)}
+                onSaveDraft={() => void save(false)}
+                onSaveAndEnable={() => void save(true)}
+              />
+            </div>
+          ) : (
+            <StudioStage
+              hasWorkflows={workflows.length > 0}
+              loading={!payload && !error}
+              disabled={!canCreate}
+              onNew={openPicker}
             />
-          </section>
-        </>
-      )}
+          )}
+        </section>
+      </div>
+
+      <Modal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Choose a template"
+        description="The template opens in the editor. Nothing runs until you save and enable it."
+        size="lg"
+      >
+        <WorkflowTemplatePicker
+          catalog={payload?.catalog ?? []}
+          onUse={(template) => {
+            setPickerOpen(false);
+            startFromTemplate(template);
+          }}
+        />
+      </Modal>
+    </div>
+  );
+}
+
+function StudioStage({
+  hasWorkflows,
+  loading,
+  disabled,
+  onNew,
+}: {
+  hasWorkflows: boolean;
+  loading: boolean;
+  disabled: boolean;
+  onNew: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex min-h-[28rem] items-center rounded-2xl border border-[color:var(--wsu-border)] bg-white px-8 shadow-sm">
+        <p className="text-sm text-[color:var(--wsu-muted)]">Loading workflows…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[28rem] flex-col overflow-hidden rounded-2xl border border-[color:var(--wsu-border)] bg-white shadow-sm">
+      <div className="h-1.5 bg-[color:var(--wsu-crimson)]" aria-hidden />
+      <div className="flex flex-1 flex-col justify-center px-8 py-12 sm:px-12">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--wsu-crimson)]">
+          {hasWorkflows ? "Editor" : "Start here"}
+        </p>
+        <h2 className="mt-3 max-w-md font-serif text-4xl leading-[1.15] text-[color:var(--wsu-ink)]">
+          {hasWorkflows ? "Open a workflow from the list." : "Build the first workflow for this sheet."}
+        </h2>
+        <p className="mt-4 max-w-sm text-sm leading-6 text-[color:var(--wsu-muted)]">
+          {hasWorkflows
+            ? "Steps stay beside the form. Templates stay in the chooser until you need another one."
+            : "Pick a template, set the trigger, and save a draft. Nothing runs until you enable it."}
+        </p>
+        <button type="button" className={`${workflowPrimaryBtnClass} mt-8 self-start`} disabled={disabled} onClick={onNew}>
+          New workflow
+        </button>
+      </div>
     </div>
   );
 }
