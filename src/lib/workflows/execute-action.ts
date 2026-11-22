@@ -63,7 +63,7 @@ async function notify(input: {
   fields: Array<{ title: string; value: string }>;
   rowId: string | number | null;
   decision?: "pending";
-}): Promise<"sent" | "failed"> {
+}): Promise<"sent" | "failed" | "pending"> {
   const href = await sheetHref(input.workflow.sheetId, input.rowId);
   const delivered = await deliverWorkflowNotifications({
     emails: input.emails,
@@ -86,8 +86,21 @@ async function notify(input: {
   if (!inAppOk && delivered.emailFailed > 0) {
     throw new Error(delivered.emailError || "Email is not configured.");
   }
-  if (delivered.inAppCreated > 0 || delivered.inAppAlready > 0 || delivered.emailQueued > 0) return "sent";
+  if (delivered.channels.includes("email") && delivered.emailQueued > 0) return "pending";
+  if (delivered.inAppCreated > 0 || delivered.inAppAlready > 0) return "sent";
   return "failed";
+}
+
+async function finishNotify(runId: string, outcome: "sent" | "failed" | "pending", approval: boolean) {
+  if (outcome === "pending") {
+    await updateWorkflowRun(runId, "pending");
+    return;
+  }
+  if (outcome === "failed") {
+    await updateWorkflowRun(runId, "skipped", "No notifications delivered.");
+    return;
+  }
+  await updateWorkflowRun(runId, approval ? "waiting" : "sent");
 }
 
 function rendered(workflow: WorkflowRecord, columns: ColumnIndex, cells: Cell[], fallbackBody: string) {
@@ -137,11 +150,7 @@ export async function performWorkflowAction(input: {
         rowId,
         decision: kind === "request_approval" ? "pending" : undefined,
       });
-      if (outcome === "failed") {
-        await updateWorkflowRun(runId, "skipped", "No notifications delivered.");
-        return;
-      }
-      await updateWorkflowRun(runId, kind === "request_approval" ? "waiting" : "sent");
+      await finishNotify(runId, outcome, kind === "request_approval");
       return;
     }
 
@@ -238,11 +247,7 @@ export async function notifyGroupedRows(input: {
       rowId: input.rows[0]?.rowId ?? null,
       decision: input.workflow.templateKind === "request_approval" ? "pending" : undefined,
     });
-    if (outcome === "failed") {
-      await updateWorkflowRun(input.runId, "skipped", "No notifications delivered.");
-      return;
-    }
-    await updateWorkflowRun(input.runId, input.workflow.templateKind === "request_approval" ? "waiting" : "sent");
+    await finishNotify(input.runId, outcome, input.workflow.templateKind === "request_approval");
   } catch (error) {
     await markWorkflowRunFailed(input.runId, input.attemptCount, error instanceof Error ? error.message : "Workflow failed.");
   }

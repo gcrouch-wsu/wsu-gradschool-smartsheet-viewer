@@ -5,7 +5,7 @@ import {
   sesEventKind,
   type SesEventKind,
 } from "@/lib/ses/events";
-import type { ParsedSesEvent } from "@/lib/ses/parse";
+import { sesCorrelationIds, type ParsedSesEvent } from "@/lib/ses/parse";
 
 export interface SesEventRecord {
   id: string;
@@ -105,6 +105,47 @@ export async function insertSesEvents(events: ParsedSesEvent[]): Promise<number>
     inserted += result.rowCount;
   }
   return inserted;
+}
+
+export interface DeliverySesNotice {
+  messageId: string;
+  eventType: string;
+  bounceType: string | null;
+  recipientEmail: string;
+  outcome: string;
+  occurredAt: string;
+  correlationIds: string[];
+}
+
+/** SES notifications whose message id or headers match a workflow email. */
+export async function listSesNoticesForIds(ids: string[]): Promise<DeliverySesNotice[]> {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (!unique.length || !isDatabaseConfigEnabled()) return [];
+  await ensureConfigTables();
+  const { rows } = await queryConfigDb<SesEventRow>(
+    `SELECT id, message_id, event_type, bounce_type, recipient_email, sender_email, subject, outcome, occurred_at, payload
+     FROM ses_events
+     WHERE message_id = ANY($1::text[])
+        OR EXISTS (
+          SELECT 1 FROM unnest($1::text[]) AS needle
+          WHERE strpos(payload::text, needle) > 0
+        )
+     ORDER BY occurred_at ASC
+     LIMIT 100`,
+    [unique],
+  );
+  return rows.map((row) => {
+    const mapped = mapRow(row);
+    return {
+      messageId: mapped.messageId,
+      eventType: mapped.eventType,
+      bounceType: mapped.bounceType,
+      recipientEmail: mapped.recipientEmail,
+      outcome: mapped.outcome,
+      occurredAt: mapped.occurredAt,
+      correlationIds: sesCorrelationIds(mapped.payload),
+    };
+  });
 }
 
 export async function listSesEvents(input: { kind?: string | null; query?: string | null }): Promise<SesEventList> {

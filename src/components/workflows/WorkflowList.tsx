@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { EmailTraceDrawer } from "@/components/workflows/EmailTraceDrawer";
+import type { EmailTraceNotice } from "@/lib/workflows/email-trace";
 import type { WorkflowDeliveryRecord, WorkflowRecord, WorkflowRunRecord } from "@/lib/workflows/types";
 import { workflowSecondaryBtnClass } from "@/components/workflows/shared";
+
+type RunDelivery = WorkflowDeliveryRecord & { sesNotices?: EmailTraceNotice[] };
 
 function retryLabel(run: WorkflowRunRecord): string {
   if (run.status !== "failed") return run.status;
@@ -95,7 +99,8 @@ export function WorkflowList({
 function RunHistory({ workflowId, onChanged }: { workflowId: string; onChanged: () => void }) {
   const [open, setOpen] = useState(false);
   const [runs, setRuns] = useState<WorkflowRunRecord[] | null>(null);
-  const [deliveries, setDeliveries] = useState<WorkflowDeliveryRecord[]>([]);
+  const [deliveries, setDeliveries] = useState<RunDelivery[]>([]);
+  const [trace, setTrace] = useState<RunDelivery | null>(null);
   const [error, setError] = useState("");
   const [busyRow, setBusyRow] = useState<string | null>(null);
 
@@ -103,7 +108,7 @@ function RunHistory({ workflowId, onChanged }: { workflowId: string; onChanged: 
     const res = await fetch(`/api/forms/workflows/${workflowId}/runs`, { cache: "no-store" });
     const data = (await res.json()) as {
       runs?: WorkflowRunRecord[];
-      deliveries?: WorkflowDeliveryRecord[];
+      deliveries?: RunDelivery[];
       error?: string;
     };
     if (!res.ok) throw new Error(data.error || "Could not load runs.");
@@ -166,7 +171,18 @@ function RunHistory({ workflowId, onChanged }: { workflowId: string; onChanged: 
                   <ul className="mt-1 space-y-0.5 text-[color:var(--wsu-muted)]">
                     {lines.map((line) => (
                       <li key={line.id}>
-                        {line.channel} · {line.recipientEmail} · {line.status}
+                        {line.channel} · {line.recipientEmail} ·{" "}
+                        {line.channel === "email" ? (
+                          <button
+                            type="button"
+                            className="font-medium text-[color:var(--wsu-crimson)] underline"
+                            onClick={() => setTrace(line)}
+                          >
+                            {line.status === "pending" ? "waiting for SES" : line.status}
+                          </button>
+                        ) : (
+                          line.status
+                        )}
                         {line.error ? ` · ${line.error}` : ""}
                       </li>
                     ))}
@@ -187,6 +203,7 @@ function RunHistory({ workflowId, onChanged }: { workflowId: string; onChanged: 
           })}
         </div>
       ) : null}
+      <EmailTraceDrawer delivery={trace} onClose={() => setTrace(null)} />
     </div>
   );
 }

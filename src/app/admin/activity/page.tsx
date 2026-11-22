@@ -6,6 +6,7 @@ import {
 import { ActivityFilters } from "@/components/admin/ActivityFilters";
 import { ActivitySectionTabs } from "@/components/admin/ActivitySectionTabs";
 import { EmailDeliveryPanel } from "@/components/admin/EmailDeliveryPanel";
+import { FailedRunsPanel } from "@/components/admin/FailedRunsPanel";
 import {
   ACTIVITY_TOUR_STEPS,
   ACTIVITY_TOUR_STORAGE_KEY,
@@ -18,6 +19,7 @@ import { listAuditEvents } from "@/lib/audit";
 import { getPublicOrigin } from "@/lib/request-ip";
 import { isSesEventKind } from "@/lib/ses/events";
 import { listSesEvents } from "@/lib/ses/store";
+import { listActivityFailures } from "@/lib/workflows/activity-failures";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,7 @@ export default async function AdminActivityPage({
 }) {
   await requireAdminPageAccess("/admin/activity");
   const params = await searchParams;
-  const tab = params.tab === "email" ? "email" : "audit";
+  const tab = params.tab === "email" ? "email" : params.tab === "runs" ? "runs" : "audit";
   const actorId = typeof params.actorId === "string" ? params.actorId : "";
   const resourceType = typeof params.resourceType === "string" ? params.resourceType : "";
   const kind = typeof params.kind === "string" && isSesEventKind(params.kind) ? params.kind : null;
@@ -60,17 +62,21 @@ export default async function AdminActivityPage({
   const basePath = activityBasePath(actorId, resourceType);
   const email = tab === "email" ? await listSesEvents({ kind, query }) : null;
   const emailPage = email ? resolveAdminTablePage(params.page, email.events.length) : 1;
+  const failures = tab === "runs" ? await listActivityFailures() : null;
+  const failurePage = failures ? resolveAdminTablePage(params.page, failures.runs.length) : 1;
+  const description =
+    tab === "email"
+      ? "Sends, deliveries, bounces, complaints, delays, rejects, rendering failures, and subscription changes reported by Amazon SES."
+      : tab === "runs"
+        ? "Workflow runs that failed. Each one retries after 60 seconds, up to three times."
+        : "Audit trail for admin clicks and page views, user and student preview access, form/source/view changes, publish actions, and related staff activity.";
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Admin builder"
         title="Activity"
-        description={
-          tab === "email"
-            ? "Sends, deliveries, bounces, complaints, delays, rejects, rendering failures, and subscription changes reported by Amazon SES."
-            : "Audit trail for admin clicks and page views, user and student preview access, form/source/view changes, publish actions, and related staff activity."
-        }
+        description={description}
         dataTour="aa-heading"
         actions={
           tab === "audit" ? (
@@ -91,6 +97,8 @@ export default async function AdminActivityPage({
           available={email.available}
           webhookUrl={webhookUrlFrom(await headers())}
         />
+      ) : tab === "runs" && failures ? (
+        <FailedRunsPanel runs={failures.runs} page={failurePage} available={failures.available} />
       ) : (
         <>
       <ActivityFilters actorId={actorId} resourceType={resourceType} />

@@ -289,6 +289,7 @@ export async function listRunDeliveries(runIds: string[]): Promise<WorkflowDeliv
       channel: string;
       status: string;
       error: string | null;
+      message_ids?: string[] | null;
       created_at: Date | string;
     };
     return {
@@ -298,6 +299,7 @@ export async function listRunDeliveries(runIds: string[]): Promise<WorkflowDeliv
       channel: entry.channel,
       status: entry.status,
       error: entry.error,
+      messageIds: Array.isArray(entry.message_ids) ? entry.message_ids.filter((id) => typeof id === "string") : [],
       createdAt: new Date(entry.created_at).toISOString(),
     };
   });
@@ -309,14 +311,55 @@ export async function insertWorkflowDeliveries(input: {
   channel: string;
   status: string;
   error?: string | null;
+  messageIds?: string[];
 }): Promise<void> {
   await ensureFormsTables();
   for (const email of input.emails) {
     await queryFormsDb(
-      `INSERT INTO workflow_deliveries (run_id, recipient_email, channel, status, error)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [input.runId, email, input.channel, input.status, input.error ?? null],
+      `INSERT INTO workflow_deliveries (run_id, recipient_email, channel, status, error, message_ids)
+       VALUES ($1, $2, $3, $4, $5, $6::text[])`,
+      [input.runId, email, input.channel, input.status, input.error ?? null, input.messageIds ?? []],
     );
+  }
+}
+
+/** Mark email rows from an SES notification, then close runs that were waiting on those rows. */
+export async function applySesOutcomeToDeliveries(input: {
+  recipientEmail: string;
+  messageIds: string[];
+  status: "sent" | "failed";
+  error?: string | null;
+}): Promise<void> {
+  if (!input.messageIds.length) return;
+  await ensureFormsTables();
+  const { rows } = await queryFormsDb(
+    `UPDATE workflow_deliveries
+     SET status = $3, error = $4
+     WHERE channel = 'email'
+       AND status = 'pending'
+       AND lower(recipient_email) = lower($1)
+       AND message_ids && $2::text[]
+     RETURNING run_id`,
+    [input.recipientEmail, input.messageIds, input.status, input.status === "sent" ? null : input.error ?? null],
+  );
+  const runIds = [...new Set(rows.map((row) => String((row as { run_id: string }).run_id)))];
+  for (const runId of runIds) await settleRunAfterEmailOutcome(runId);
+}
+
+async function settleRunAfterEmailOutcome(runId: string): Promise<void> {
+  const run = await getWorkflowRun(runId);
+  if (!run || run.status !== "pending") return;
+  const deliveries = await listRunDeliveries([runId]);
+  const email = deliveries.filter((delivery) => delivery.channel === "email");
+  if (!email.length || email.some((delivery) => delivery.status === "pending")) return;
+  const failed = email.find((delivery) => delivery.status === "failed");
+  if (failed) {
+    await updateWorkflowRun(runId, "failed", failed.error || "Amazon SES did not deliver the email.");
+    return;
+  }
+  if (email.every((delivery) => delivery.status === "sent")) {
+    const workflow = await getWorkflow(run.workflowId);
+    await updateWorkflowRun(runId, workflow?.templateKind === "request_approval" ? "waiting" : "sent");
   }
 }
 
@@ -330,6 +373,29 @@ export async function listOpenFailures(sheetId: string): Promise<WorkflowRunReco
     [sheetId],
   );
   return rows.map((row) => mapRun(row as never));
+}
+
+export interface FailedWorkflowRun extends WorkflowRunRecord {
+  workflowName: string;
+}
+
+/** Recent failed runs across every sheet, including ones still waiting to retry. */
+export async function listFailedWorkflowRuns(limit = 100): Promise<FailedWorkflowRun[]> {
+  if (!isFormsDatabaseEnabled()) return [];
+  await ensureFormsTables();
+  const { rows } = await queryFormsDb(
+    `SELECT r.*, w.name AS workflow_name
+     FROM workflow_runs r
+     JOIN workflows w ON w.id = r.workflow_id
+     WHERE r.status = 'failed'
+     ORDER BY r.created_at DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows.map((row) => {
+    const entry = row as { workflow_name?: string };
+    return { ...mapRun(row as never), workflowName: entry.workflow_name?.trim() || "Untitled workflow" };
+  });
 }
 
 export async function listAllEnabledWorkflows(): Promise<WorkflowRecord[]> {

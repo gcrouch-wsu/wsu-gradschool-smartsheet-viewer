@@ -129,6 +129,7 @@ export interface WorkflowDeliveryRecord {
   channel: string;
   status: string;
   error: string | null;
+  messageIds: string[];
   createdAt: string;
 }
 

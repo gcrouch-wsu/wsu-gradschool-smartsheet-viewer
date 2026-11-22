@@ -3,6 +3,7 @@ import { requireWorkflowAuthorAccess } from "@/lib/forms/forms-api";
 import { isFormsDatabaseEnabled } from "@/lib/forms/db";
 import { getWorkflow } from "@/lib/workflows/store";
 import { deliverWorkflowNotifications } from "@/lib/workflows/deliver";
+import { resolveRecipients } from "@/lib/workflows/execute-action";
 import { insertWorkflowRun, updateWorkflowRun } from "@/lib/workflows/store";
 import { normalizeEmail } from "@/lib/workflows/recipients";
 import { fieldsFromCells, loadAlertRow, renderAlertCopy } from "@/lib/workflows/alert-content";
@@ -28,10 +29,13 @@ export async function POST(
     return Response.json({ error: "Preview is only available for Alert workflows." }, { status: 400 });
   }
 
-  const email = normalizeEmail(access.user.email);
-  if (!email) {
+  const loaded = await loadAlertRow(workflow.sheetId, null).catch(() => null);
+  const configured = resolveRecipients(workflow, loaded?.cells ?? []);
+  const fallback = normalizeEmail(access.user.email);
+  const emails = configured.length ? configured : fallback ? [fallback] : [];
+  if (!emails.length) {
     return Response.json(
-      { error: "Your account username is not an email, so a preview cannot be delivered to this inbox." },
+      { error: "Add a recipient on the workflow, or sign in with an email address, before sending a preview." },
       { status: 400 },
     );
   }
@@ -45,7 +49,6 @@ export async function POST(
   });
   if (!run) return Response.json({ error: "Could not record preview." }, { status: 500 });
 
-  const loaded = await loadAlertRow(workflow.sheetId, null).catch(() => null);
   const fields = loaded ? fieldsFromCells(loaded.columns, loaded.cells) : [];
   const rendered = renderAlertCopy({
     titleTemplate: workflow.action.title || workflow.name,
@@ -62,8 +65,8 @@ export async function POST(
     (entry) => entry.sourceType === "sheet" && String(entry.smartsheetId) === String(workflow.sheetId),
   );
 
-  await deliverWorkflowNotifications({
-    emails: [email],
+  const delivered = await deliverWorkflowNotifications({
+    emails,
     title: rendered.title,
     body: rendered.body,
     payload: {
@@ -77,10 +80,19 @@ export async function POST(
     runId: run.id,
     channels: workflow.action.channels ?? ["in_app"],
   });
-  await updateWorkflowRun(run.id, "sent");
+  if (delivered.channels.includes("email") && delivered.emailQueued > 0) {
+    await updateWorkflowRun(run.id, "pending");
+  } else if (delivered.emailFailed > 0) {
+    await updateWorkflowRun(run.id, "failed", delivered.emailError);
+  } else {
+    await updateWorkflowRun(run.id, "sent");
+  }
+  const waitingForSes = delivered.channels.includes("email") && delivered.emailQueued > 0;
   return Response.json({
     ok: true,
-    email,
-    message: "Preview delivered to Notifications. Email delivery will use the same path when enabled.",
+    email: emails.join(", "),
+    message: waitingForSes
+      ? `Preview handed to Amazon SES for ${emails.join(", ")}. The run shows sent after SES reports delivery.`
+      : `Preview sent to ${emails.join(", ")}.`,
   });
 }

@@ -1,7 +1,7 @@
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { sesEventKind } from "@/lib/ses/events";
-import { parseSesEvents } from "@/lib/ses/parse";
+import { parseSesEvents, sesCorrelationIds, workflowStatusForSesEvent } from "@/lib/ses/parse";
 import {
   isAllowedSnsCertUrl,
   isAllowedSnsSubscribeUrl,
@@ -44,6 +44,21 @@ describe("parseSesEvents", () => {
     const [event] = parseSesEvents({ eventType: "Reject", mail: mail(), reject: { reason: "Bad content" } });
     expect(sesEventKind(event!.eventType, null)).toBe("reject");
     expect(event?.outcome).toBe("Bad content");
+  });
+
+  it("treats delivery as sent and a hard bounce as failed", () => {
+    expect(workflowStatusForSesEvent({ eventType: "Delivery", bounceType: null })).toBe("sent");
+    expect(workflowStatusForSesEvent({ eventType: "Send", bounceType: null })).toBeNull();
+    expect(workflowStatusForSesEvent({ eventType: "Bounce", bounceType: "Permanent" })).toBe("failed");
+    expect(workflowStatusForSesEvent({ eventType: "Bounce", bounceType: "Transient" })).toBeNull();
+    const payload = {
+      mail: {
+        messageId: "0100018ses",
+        commonHeaders: { messageId: "<client@wsu.edu>" },
+        headers: [{ name: "X-Workflow-Message-Id", value: "workflow-token" }],
+      },
+    };
+    expect(sesCorrelationIds(payload)).toEqual(["0100018ses", "client@wsu.edu", "workflow-token"]);
   });
 
   it("records a delivery", () => {

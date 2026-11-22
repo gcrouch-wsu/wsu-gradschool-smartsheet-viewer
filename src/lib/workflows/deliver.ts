@@ -27,7 +27,7 @@ export type DeliverWorkflowNotificationsInput = {
 export type DeliverWorkflowNotificationsResult = {
   channels: NotificationChannel[];
   inAppCreated: number;
-  /** Recipients whose SES message was accepted. */
+  /** Recipients accepted by SMTP and still waiting for an SES delivery notification. */
   emailQueued: number;
   emailFailed: number;
   emailError: string | null;
@@ -60,7 +60,7 @@ export async function deliverWorkflowNotifications(
   let emailError: string | null = null;
   const sentEmail = new Set(
     prior
-      .filter((delivery) => delivery.channel === "email" && delivery.status === "sent")
+      .filter((delivery) => delivery.channel === "email" && (delivery.status === "sent" || delivery.status === "pending"))
       .map((delivery) => delivery.recipientEmail.toLowerCase()),
   );
   const inAppAlready = input.emails.filter((email) => already.has(`in_app:${email}`)).length;
@@ -93,15 +93,16 @@ export async function deliverWorkflowNotifications(
         workflowId: input.workflowId,
         runId: input.runId,
       });
-      emailQueued = result.sent.length;
+      emailQueued = result.accepted.length;
       emailFailed = result.failed.length;
       emailError = result.failed[0]?.error ?? null;
-      if (result.sent.length) {
+      for (const accepted of result.accepted) {
         await insertWorkflowDeliveries({
           runId: input.runId,
-          emails: result.sent,
+          emails: [accepted.email],
           channel: "email",
-          status: "sent",
+          status: "pending",
+          messageIds: accepted.messageIds,
         });
       }
       for (const failure of result.failed) {

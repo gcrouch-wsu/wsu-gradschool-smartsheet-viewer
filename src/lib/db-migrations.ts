@@ -13,7 +13,7 @@ import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 const BASELINE = "001_platform_schema.sql";
 
 /** Applied after the baseline on every migrate (idempotent SQL). */
-const FOLLOW_ON = ["009_text_resource_ids.sql", "010_workflow_execution.sql", "011_ses_events.sql"] as const;
+const FOLLOW_ON = ["009_text_resource_ids.sql", "010_workflow_execution.sql", "011_ses_events.sql", "012_workflow_delivery_message.sql"] as const;
 
 /** Former incremental migration ids — recorded so history stays consistent. */
 const SUPERSEDED = [

@@ -150,6 +150,37 @@ function occurredAtFor(event: Record<string, unknown>, eventType: string): strin
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
+function addMessageId(ids: Set<string>, value: string | null) {
+  if (!value) return;
+  const normalized = value.trim().replace(/^<|>$/g, "");
+  if (normalized) ids.add(normalized);
+}
+
+/** Ids that can match the message this app handed to SES. */
+export function sesCorrelationIds(payload: unknown): string[] {
+  const event = asRecord(payload);
+  const mail = asRecord(event?.mail);
+  const ids = new Set<string>();
+  addMessageId(ids, asString(mail?.messageId));
+  addMessageId(ids, asString(asRecord(mail?.commonHeaders)?.messageId));
+  if (Array.isArray(mail?.headers)) {
+    for (const header of mail.headers) {
+      const record = asRecord(header);
+      const name = asString(record?.name)?.toLowerCase();
+      if (name === "x-workflow-message-id" || name === "message-id") addMessageId(ids, asString(record?.value));
+    }
+  }
+  return [...ids];
+}
+
+/** Delivery is the only SES event that means the recipient's mail server accepted the message. */
+export function workflowStatusForSesEvent(event: { eventType: string; bounceType: string | null }): "sent" | "failed" | null {
+  if (event.eventType === "Delivery") return "sent";
+  if (event.eventType === "Reject" || event.eventType === "Complaint" || event.eventType === "Rendering Failure") return "failed";
+  if (event.eventType === "Bounce" && event.bounceType !== "Transient") return "failed";
+  return null;
+}
+
 /** Split one SES notification into one record per recipient. */
 export function parseSesEvents(payload: unknown): ParsedSesEvent[] {
   const event = asRecord(payload);

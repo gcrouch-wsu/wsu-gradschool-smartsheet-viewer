@@ -23,7 +23,7 @@ describe("sendWorkflowEmail", () => {
     );
     expect(send).not.toHaveBeenCalled();
     expect(result.configured).toBe(false);
-    expect(result.sent).toEqual([]);
+    expect(result.accepted).toEqual([]);
     expect(result.failed).toEqual([{ email: "ada@wsu.edu", error: "Email is not configured." }]);
   });
 
@@ -35,15 +35,16 @@ describe("sendWorkflowEmail", () => {
         env: configured,
         transport: transport(async (message) => {
           sent.push({ to: message.to, headers: message.headers });
+          return { messageId: `<${message.to}>`, response: "250 Ok 0100018example" };
         }),
       },
     );
-    expect(result.sent).toEqual(["ada@wsu.edu", "busola@wsu.edu"]);
+    expect(result.accepted.map((entry) => entry.email)).toEqual(["ada@wsu.edu", "busola@wsu.edu"]);
+    expect(result.accepted[0]?.messageIds).toContain("0100018example");
     expect(result.failed).toEqual([]);
-    expect(sent).toEqual([
-      { to: "ada@wsu.edu", headers: { "X-SES-CONFIGURATION-SET": "workflow-events" } },
-      { to: "busola@wsu.edu", headers: { "X-SES-CONFIGURATION-SET": "workflow-events" } },
-    ]);
+    expect(sent.map((entry) => entry.to)).toEqual(["ada@wsu.edu", "busola@wsu.edu"]);
+    expect(sent[0]?.headers?.["X-SES-CONFIGURATION-SET"]).toBe("workflow-events");
+    expect(sent[0]?.headers?.["X-Workflow-Message-Id"]).toBeTruthy();
   });
 
   it("keeps a successful recipient when another address is rejected", async () => {
@@ -53,11 +54,12 @@ describe("sendWorkflowEmail", () => {
         env: configured,
         transport: transport(async (message) => {
           if (message.to === "gone@wsu.edu") throw new Error("550 user unknown");
+          return { messageId: null, response: null };
         }),
       },
     );
     expect(result.configured).toBe(true);
-    expect(result.sent).toEqual(["ada@wsu.edu"]);
+    expect(result.accepted.map((entry) => entry.email)).toEqual(["ada@wsu.edu"]);
     expect(result.failed).toEqual([{ email: "gone@wsu.edu", error: "550 user unknown" }]);
   });
 });

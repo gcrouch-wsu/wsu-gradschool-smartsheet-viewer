@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
+
+export const WORKFLOW_MESSAGE_HEADER = "X-Workflow-Message-Id";
 
 export interface MailerConfig {
   host: string;
@@ -17,14 +20,45 @@ export interface WorkflowEmailMessage {
   headers?: Record<string, string>;
 }
 
+export interface SentWorkflowEmail {
+  messageId: string | null;
+  response: string | null;
+}
+
 export interface MailTransport {
-  send(message: WorkflowEmailMessage): Promise<void>;
+  send(message: WorkflowEmailMessage): Promise<SentWorkflowEmail>;
+}
+
+export interface AcceptedWorkflowEmail {
+  email: string;
+  messageIds: string[];
 }
 
 export interface WorkflowEmailResult {
   configured: boolean;
-  sent: string[];
+  /** SMTP accepted these addresses. SES has not confirmed delivery yet. */
+  accepted: AcceptedWorkflowEmail[];
   failed: Array<{ email: string; error: string }>;
+}
+
+export function normalizeMessageId(value: string): string {
+  return value.trim().replace(/^<|>$/g, "");
+}
+
+/** SES puts its message id at the end of a successful SMTP reply. */
+export function sesIdFromSmtpResponse(response: string | null): string | null {
+  if (!response) return null;
+  const last = response.trim().split(/\s+/).pop();
+  if (!last || last.length < 8 || /^(ok|queued)$/i.test(last)) return null;
+  return normalizeMessageId(last);
+}
+
+export function messageIdsForAcceptedMail(token: string, sent: SentWorkflowEmail): string[] {
+  const ids = new Set<string>([token]);
+  if (sent.messageId) ids.add(normalizeMessageId(sent.messageId));
+  const smtpId = sesIdFromSmtpResponse(sent.response);
+  if (smtpId) ids.add(smtpId);
+  return [...ids];
 }
 
 function required(env: Record<string, string | undefined>, key: string): string | null {
@@ -61,13 +95,17 @@ export function createSmtpTransport(config: MailerConfig): MailTransport {
   });
   return {
     async send(message) {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: message.from,
         to: message.to,
         subject: message.subject,
         text: message.text,
         headers: message.headers,
       });
+      return {
+        messageId: typeof info.messageId === "string" ? info.messageId : null,
+        response: typeof info.response === "string" ? info.response : null,
+      };
     },
   };
 }
@@ -87,30 +125,30 @@ export async function sendWorkflowEmail(
   if (!config) {
     return {
       configured: false,
-      sent: [],
+      accepted: [],
       failed: emails.map((email) => ({ email, error: "Email is not configured." })),
     };
   }
 
   const transport = options?.transport ?? createSmtpTransport(config);
-  const headers = config.configurationSet
-    ? { "X-SES-CONFIGURATION-SET": config.configurationSet }
-    : undefined;
-  const sent: string[] = [];
+  const accepted: AcceptedWorkflowEmail[] = [];
   const failed: Array<{ email: string; error: string }> = [];
   for (const email of emails) {
+    const token = randomUUID();
+    const headers: Record<string, string> = { [WORKFLOW_MESSAGE_HEADER]: token };
+    if (config.configurationSet) headers["X-SES-CONFIGURATION-SET"] = config.configurationSet;
     try {
-      await transport.send({
+      const sent = await transport.send({
         from: config.from,
         to: email,
         subject: input.subject,
         text: input.text,
         headers,
       });
-      sent.push(email);
+      accepted.push({ email, messageIds: messageIdsForAcceptedMail(token, sent) });
     } catch (error) {
       failed.push({ email, error: failureMessage(error) });
     }
   }
-  return { configured: true, sent, failed };
+  return { configured: true, accepted, failed };
 }

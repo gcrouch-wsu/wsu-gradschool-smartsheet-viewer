@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { parseSesEvents } from "@/lib/ses/parse";
+import { parseSesEvents, sesCorrelationIds, workflowStatusForSesEvent } from "@/lib/ses/parse";
 import { confirmSnsSubscription, fetchSnsCertificate, readSnsEnvelope, verifySnsSignature } from "@/lib/ses/sns";
 import { insertSesEvents } from "@/lib/ses/store";
+import { applySesOutcomeToDeliveries } from "@/lib/workflows/store";
 
 export const dynamic = "force-dynamic";
 
@@ -58,5 +59,15 @@ export async function POST(request: Request) {
 
   const events = parseSesEvents(message);
   const received = await insertSesEvents(events);
+  for (const event of events) {
+    const status = workflowStatusForSesEvent(event);
+    if (!status) continue;
+    await applySesOutcomeToDeliveries({
+      recipientEmail: event.recipientEmail,
+      messageIds: sesCorrelationIds(event.payload),
+      status,
+      error: event.outcome,
+    });
+  }
   return NextResponse.json({ received });
 }
