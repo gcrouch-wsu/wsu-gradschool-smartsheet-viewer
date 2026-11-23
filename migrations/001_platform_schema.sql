@@ -572,3 +572,148 @@ CREATE TABLE IF NOT EXISTS id_counters (
 
 INSERT INTO id_counters (kind, next_id) VALUES ('sheet', -1), ('row', -1), ('attachment', -1), ('discussion', -1)
 ON CONFLICT (kind) DO NOTHING;
+
+-- Former 009: allow local UUID v4 ids alongside imported Smartsheet numeric ids (stored as text).
+-- Idempotent: safe if columns are already text.
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sheets' AND column_name = 'sheet_id'
+      AND data_type = 'bigint'
+  ) THEN
+    ALTER TABLE IF EXISTS rows DROP CONSTRAINT IF EXISTS rows_sheet_id_fkey;
+    ALTER TABLE IF EXISTS report_rows DROP CONSTRAINT IF EXISTS report_rows_report_id_fkey;
+
+    ALTER TABLE sheets ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+    ALTER TABLE rows ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+    ALTER TABLE rows ALTER COLUMN row_id TYPE TEXT USING row_id::text;
+
+    ALTER TABLE reports ALTER COLUMN report_id TYPE TEXT USING report_id::text;
+    ALTER TABLE report_rows ALTER COLUMN report_id TYPE TEXT USING report_id::text;
+    ALTER TABLE report_rows ALTER COLUMN row_id TYPE TEXT USING row_id::text;
+    ALTER TABLE report_rows ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+
+    ALTER TABLE attachments ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+    ALTER TABLE attachments ALTER COLUMN attachment_id TYPE TEXT USING attachment_id::text;
+    ALTER TABLE attachments ALTER COLUMN row_id TYPE TEXT USING row_id::text;
+
+    ALTER TABLE discussions ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+    ALTER TABLE discussions ALTER COLUMN discussion_id TYPE TEXT USING discussion_id::text;
+    ALTER TABLE discussions ALTER COLUMN row_id TYPE TEXT USING row_id::text;
+
+    ALTER TABLE sheet_automations ALTER COLUMN sheet_id TYPE TEXT USING sheet_id::text;
+
+    ALTER TABLE rows
+      ADD CONSTRAINT rows_sheet_id_fkey
+      FOREIGN KEY (sheet_id) REFERENCES sheets(sheet_id) ON DELETE CASCADE;
+    ALTER TABLE report_rows
+      ADD CONSTRAINT report_rows_report_id_fkey
+      FOREIGN KEY (report_id) REFERENCES reports(report_id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+-- Remove duplicate names before unique index (keep lowest sheet_id).
+DELETE FROM sheets
+WHERE sheet_id IN (
+  SELECT sheet_id FROM (
+    SELECT sheet_id,
+           ROW_NUMBER() OVER (PARTITION BY lower(trim(name)) ORDER BY sheet_id) AS rn
+    FROM sheets
+  ) ranked
+  WHERE rn > 1
+);
+
+-- Workflow runs may reference local UUID row ids.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'workflow_runs' AND column_name = 'row_id'
+      AND data_type = 'bigint'
+  ) THEN
+    ALTER TABLE workflow_runs ALTER COLUMN row_id TYPE TEXT USING row_id::text;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sheets_name_lower ON sheets (lower(trim(name)));
+
+-- Former 010: run history, per-recipient delivery, approval decisions, and batched row queues.
+
+ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'webhook';
+ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS attempt_count INT NOT NULL DEFAULT 1;
+ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS next_retry_at TIMESTAMPTZ;
+ALTER TABLE workflow_runs ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_workflow_runs_retry
+  ON workflow_runs (next_retry_at)
+  WHERE next_retry_at IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS workflow_deliveries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_id UUID NOT NULL REFERENCES workflow_runs(id) ON DELETE CASCADE,
+  recipient_email TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  status TEXT NOT NULL,
+  error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_deliveries_run
+  ON workflow_deliveries (run_id, created_at);
+
+CREATE TABLE IF NOT EXISTS workflow_decisions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_id UUID NOT NULL REFERENCES workflow_runs(id) ON DELETE CASCADE,
+  decision TEXT NOT NULL,
+  decided_by TEXT,
+  comment TEXT,
+  decided_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_decisions_run
+  ON workflow_decisions (run_id, decided_at DESC);
+
+CREATE TABLE IF NOT EXISTS workflow_pending (
+  workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+  row_id TEXT NOT NULL,
+  queued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (workflow_id, row_id)
+);
+
+CREATE TABLE IF NOT EXISTS workflow_row_locks (
+  sheet_id TEXT NOT NULL,
+  row_id TEXT NOT NULL,
+  locked BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (sheet_id, row_id)
+);
+
+-- Former 011: Amazon SES event notifications received from SNS.
+
+CREATE TABLE IF NOT EXISTS ses_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  bounce_type TEXT,
+  recipient_email TEXT NOT NULL,
+  sender_email TEXT,
+  subject TEXT,
+  outcome TEXT NOT NULL DEFAULT '',
+  occurred_at TIMESTAMPTZ NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (message_id, event_type, recipient_email)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ses_events_occurred
+  ON ses_events (occurred_at DESC);
+
+-- Former 012: tie a workflow email row to the SES message so status can follow the delivery notification.
+
+ALTER TABLE workflow_deliveries
+  ADD COLUMN IF NOT EXISTS message_ids TEXT[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX IF NOT EXISTS idx_workflow_deliveries_message_ids
+  ON workflow_deliveries USING GIN (message_ids);

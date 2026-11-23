@@ -2,7 +2,8 @@
  * Versioned SQL migrations. Applied on first DB access when DATABASE_URL is set.
  * File-store mode (no DATABASE_URL) skips migrations entirely.
  *
- * Only `001_platform_schema.sql` exists; it is always re-applied (idempotent).
+ * Only `001_platform_schema.sql` exists. It is always re-applied (idempotent).
+ * Former 002–012 files are recorded in schema_migrations and are not run separately.
  */
 import { access, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -11,9 +12,6 @@ import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
 import { ensureCurrentAppRoleRls } from "@/lib/db-rls";
 
 const BASELINE = "001_platform_schema.sql";
-
-/** Applied after the baseline on every migrate (idempotent SQL). */
-const FOLLOW_ON = ["009_text_resource_ids.sql", "010_workflow_execution.sql", "011_ses_events.sql", "012_workflow_delivery_message.sql"] as const;
 
 /** Former incremental migration ids — recorded so history stays consistent. */
 const SUPERSEDED = [
@@ -29,6 +27,10 @@ const SUPERSEDED = [
   "006_app_settings.sql",
   "007_local_sheets.sql",
   "008_rename_local_sheets_to_sheets.sql",
+  "009_text_resource_ids.sql",
+  "010_workflow_execution.sql",
+  "011_ses_events.sql",
+  "012_workflow_delivery_message.sql",
 ] as const;
 
 const RLS_TABLES = [
@@ -126,19 +128,6 @@ export async function runDatabaseMigrations(): Promise<void> {
         BASELINE,
       ]);
       for (const file of SUPERSEDED) {
-        await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
-          file,
-        ]);
-      }
-      const dir = await migrationsDir();
-      for (const file of FOLLOW_ON) {
-        const { rows } = await queryConfigDb<{ id: string }>(
-          `SELECT id FROM schema_migrations WHERE id = $1`,
-          [file],
-        );
-        if (rows.length) continue;
-        const followSql = await readFile(join(dir, file), "utf8");
-        await queryConfigDb(followSql);
         await queryConfigDb("INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", [
           file,
         ]);
