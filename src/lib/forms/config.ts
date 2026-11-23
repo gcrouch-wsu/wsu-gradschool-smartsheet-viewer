@@ -1,9 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import type { ConditionalRule } from "@/lib/forms/types";
-
-const root = process.cwd();
-
 const token = (process.env.SMARTSHEET_TOKEN ?? process.env.SMARTSHEET_API_TOKEN ?? "").trim();
 
 const smartsheetBaseUrl = (process.env.SMARTSHEET_API_BASE_URL ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
@@ -46,34 +40,6 @@ export function defaultWorkflow(): Workflow {
     declinedValues: ["Declined", "Rejected"],
     excludeFromForm: ["Status"],
   };
-}
-
-/** Synchronous file fallback when async store is unavailable. */
-export function syncLoadWorkflow(): Workflow {
-  const fallback = defaultWorkflow();
-  try {
-    const raw = readFileSync(resolve(root, "config/forms/workflow.json"), "utf8");
-    return { ...fallback, ...JSON.parse(raw) };
-  } catch {
-    return fallback;
-  }
-}
-
-/** Synchronous file fallback when async store is unavailable. */
-export function syncLoadConditionalLogic(): ConditionalRule[] {
-  try {
-    const raw = readFileSync(resolve(root, "config/forms/conditional-logic.json"), "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-/** @deprecated Prefer per-sheet workflow from store modules. */
-export function formExcludeSet(): Set<string> {
-  const wf = syncLoadWorkflow();
-  return new Set([...wf.approvalStages, wf.overallColumn, ...wf.excludeFromForm].map((s) => s.toLowerCase()));
 }
 
 export { loadWorkflow, saveWorkflow } from "@/lib/forms/store/workflow-config";

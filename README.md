@@ -169,6 +169,4 @@ Track optional hardening, operational follow-ups, and product ideas in your issu
 - `src/app/` - Next.js App Router (public views and admin API)
 - `src/components/` - UI components (public layouts and admin builder)
 - `src/lib/` - Business logic (Smartsheet client, transforms, filters)
-- Sources are stored in Postgres (`config_sources`), not in `config/`
-- `config/views/` - View configuration files (JSON fallback when DB is not used)
-- `config/themes/` - Custom theme preset files (JSON)
+- Sources, views, forms, and the audit log are stored in Postgres (`DATABASE_URL`)

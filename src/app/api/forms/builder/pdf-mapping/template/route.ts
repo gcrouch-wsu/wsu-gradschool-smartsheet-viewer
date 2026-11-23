@@ -4,7 +4,7 @@ import { ensureBootstrapped } from "@/lib/forms/init";
 import { inspectPdfTemplate, PdfMappingError } from "@/lib/forms/pdf-mapping";
 import { normalizePdfMappingConfig, type PdfTemplateField } from "@/lib/forms/pdf-mapping-types";
 import * as registry from "@/lib/forms/registry";
-import { clearPdfTemplate, loadPdfMapping, savePdfTemplate } from "@/lib/forms/store/pdf-mapping";
+import { clearPdfTemplate, loadPdfMapping, loadPdfTemplateBytes, savePdfTemplate } from "@/lib/forms/store/pdf-mapping";
 import { resolveAdminPrincipal } from "@/lib/identity";
 
 export const runtime = "nodejs";
@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       ...(existing?.config ?? {}),
       source: "uploaded",
       templateFields,
+      placements: null,
       enabled: existing?.config.enabled ?? true,
     });
     const record = await savePdfTemplate(sheetId, bytes, file.name || "template.pdf", config);
@@ -103,6 +104,32 @@ export async function POST(request: Request) {
     }
     console.error("[pdf-mapping template POST]", err);
     return Response.json({ error: "Could not save that PDF." }, { status: 500 });
+  }
+}
+
+export async function GET(request: Request) {
+  const access = await requireFormsAdminAccess();
+  if ("response" in access) return access.response;
+
+  await ensureBootstrapped();
+  const sheetId = new URL(request.url).searchParams.get("sheetId")?.trim() || (await registry.activeSheetId());
+  if (!sheetId) {
+    return Response.json({ error: "No form selected yet." }, { status: 409 });
+  }
+  try {
+    const bytes = await loadPdfTemplateBytes(sheetId);
+    if (!bytes?.length) {
+      return Response.json({ error: "No PDF uploaded yet." }, { status: 404 });
+    }
+    return new Response(new Uint8Array(bytes), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    console.error("[pdf-mapping template GET]", err);
+    return Response.json({ error: "Could not open the uploaded PDF." }, { status: 500 });
   }
 }
 

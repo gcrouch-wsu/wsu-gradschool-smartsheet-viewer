@@ -1,7 +1,19 @@
-import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
-import { readWebhookState, writeWebhookState, type WebhookState } from "@/lib/forms/store/file-store";
+import { ensureFormsTables, queryFormsDb } from "@/lib/forms/db";
 import { publishWebhookEvent } from "@/lib/forms/webhook-bus";
 import { randomBytes } from "node:crypto";
+
+export interface WebhookState {
+  lastEventId?: string;
+  lastWebhookAt?: string;
+  webhookId?: number;
+  /** Sheet id this app last registered a webhook for. */
+  sheetId?: string;
+  /** Auto-generated or admin-managed secret for callback auth (env FORM_WEBHOOK_SECRET overrides). */
+  webhookSecret?: string;
+  /** Last registered Smartsheet callback URL (secret may be present as query param). */
+  callbackUrl?: string;
+  recentEvents: { at: string; type: string; objectId: number; sheetId?: number }[];
+}
 
 export type SyncState = WebhookState;
 
@@ -39,20 +51,11 @@ async function saveStateToDb(sheetKey: string, state: SyncState): Promise<void> 
 }
 
 async function loadState(sheetId?: string | number): Promise<SyncState> {
-  const sheetKey = normalizeSheetKey(sheetId);
-  if (isFormsDatabaseEnabled()) {
-    return loadStateFromDb(sheetKey);
-  }
-  return readWebhookState(sheetKey);
+  return loadStateFromDb(normalizeSheetKey(sheetId));
 }
 
 async function saveState(sheetId: string | number | undefined, state: SyncState): Promise<void> {
-  const sheetKey = normalizeSheetKey(sheetId);
-  if (isFormsDatabaseEnabled()) {
-    await saveStateToDb(sheetKey, state);
-    return;
-  }
-  await writeWebhookState(state, sheetKey);
+  await saveStateToDb(normalizeSheetKey(sheetId), state);
 }
 
 async function insertWebhookEvent(
@@ -85,10 +88,7 @@ export async function recordWebhookEvent(sheetId: number, eventType: string, obj
     ].slice(0, MAX_RECENT_EVENTS),
   };
 
-  if (isFormsDatabaseEnabled()) {
-    await insertWebhookEvent(sheetKey, eventType, objectId);
-  }
-
+  await insertWebhookEvent(sheetKey, eventType, objectId);
   await saveState(sheetId, next);
   publishWebhookEvent({ at, sheetId, eventType, objectId });
 }

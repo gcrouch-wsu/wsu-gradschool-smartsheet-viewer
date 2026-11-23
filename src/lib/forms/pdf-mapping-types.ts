@@ -10,6 +10,18 @@ export type PdfTemplateField = {
   columnTitle: string;
 };
 
+/** Answer drawn onto an uploaded PDF page. Coordinates are PDF points, origin bottom-left. */
+export type PdfPlacement = {
+  id: string;
+  columnTitle: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontSize: number;
+};
+
 export type PdfLayoutMode = "stacked" | "twoColumn";
 export type PdfDensity = "compact" | "comfortable";
 export type PdfTheme = "wsu" | "simple" | "official";
@@ -63,10 +75,12 @@ export type PdfMappingConfig = {
   fieldStyle?: PdfFieldDisplay;
   bannerText?: string;
   showDraftWatermark?: boolean;
-  /** `uploaded` fills a saved fillable PDF. `designed` draws the in-app layout. */
+  /** `uploaded` uses a saved PDF. `designed` draws the in-app layout. */
   source?: PdfSource;
-  /** Field map for an uploaded fillable PDF. */
+  /** Field map for an uploaded PDF that already has fillable boxes. */
   templateFields?: PdfTemplateField[] | null;
+  /** Answers placed by clicking the uploaded PDF. One box per form field. */
+  placements?: PdfPlacement[] | null;
 };
 
 export type PdfMappingRecord = {
@@ -100,6 +114,7 @@ export function defaultPdfMappingConfig(): PdfMappingConfig {
     showDraftWatermark: true,
     source: "designed",
     templateFields: null,
+    placements: null,
   };
 }
 
@@ -165,6 +180,41 @@ function normalizeTemplateField(raw: unknown): PdfTemplateField | null {
     options: options?.length ? options : undefined,
     columnTitle: String(data.columnTitle ?? "").trim(),
   };
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+export function normalizePdfPlacement(raw: unknown): PdfPlacement | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  const columnTitle = String(data.columnTitle ?? "").trim();
+  if (!columnTitle) return null;
+  const width = Math.min(500, Math.max(24, finiteNumber(data.width, 160)));
+  const height = Math.min(240, Math.max(12, finiteNumber(data.height, 16)));
+  return {
+    id: String(data.id ?? "").trim() || `place:${columnTitle}`,
+    columnTitle,
+    page: Math.max(0, Math.floor(finiteNumber(data.page, 0))),
+    x: finiteNumber(data.x, 0),
+    y: finiteNumber(data.y, 0),
+    width,
+    height,
+    fontSize: Math.min(24, Math.max(6, finiteNumber(data.fontSize, 10))),
+  };
+}
+
+function normalizePlacements(raw: unknown): PdfPlacement[] | null {
+  if (!Array.isArray(raw)) return null;
+  const byColumn = new Map<string, PdfPlacement>();
+  for (const item of raw) {
+    const next = normalizePdfPlacement(item);
+    if (next) byColumn.set(next.columnTitle, next);
+  }
+  const placements = [...byColumn.values()];
+  return placements.length ? placements : null;
 }
 
 export function normalizePdfMappingConfig(raw: unknown): PdfMappingConfig {
@@ -245,5 +295,6 @@ export function normalizePdfMappingConfig(raw: unknown): PdfMappingConfig {
           .map((field) => normalizeTemplateField(field))
           .filter((field): field is PdfTemplateField => Boolean(field))
       : null,
+    placements: normalizePlacements(data.placements),
   };
 }

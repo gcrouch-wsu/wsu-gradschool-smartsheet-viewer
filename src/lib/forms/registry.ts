@@ -7,17 +7,33 @@ import { saveSourceConfig } from "@/lib/config/admin-store";
 import { getSourceConfigById, listSourceConfigs } from "@/lib/config/store";
 import type { FormProvenance, SourceConfig } from "@/lib/config/types";
 import { validateSourceConfig } from "@/lib/config/validation";
-import { ensureFormsTables, isFormsDatabaseEnabled, queryFormsDb } from "@/lib/forms/db";
+import { ensureFormsTables, queryFormsDb } from "@/lib/forms/db";
 import { normalizeFormSlug, slugFromFormName } from "@/lib/forms/slug";
-import {
-  readRegistry,
-  writeRegistry,
-  type FormEntry,
-  type RegistryShape,
-} from "@/lib/forms/store/file-store";
 import { slugify } from "@/lib/utils";
 
-export type { FormEntry };
+export interface FormEntry {
+  id: string;
+  name: string;
+  createdAt: string;
+  source: "template" | "scratch" | "imported" | "sample" | "excel";
+  /** Public path segment for `/f/[slug]`. */
+  slug?: string;
+  /** When true, anonymous users may load/submit via the public URL. Independent of activeSheetId. */
+  public?: boolean;
+  publishedAt?: string;
+  /** Unified catalog: Admin source slug when backed by SourceConfig. */
+  sourceConfigId?: string;
+}
+
+export interface RegistryShape {
+  /** Preferred: Admin source id (slug) for the Forms workspace. */
+  activeSourceId?: string;
+  /** Legacy: Smartsheet sheet id string. Used as fallback until migration. */
+  activeSheetId: string;
+  /** Legacy forms list — read for migration; new writes keep this empty after migrate. */
+  forms: FormEntry[];
+  migratedToSourcesAt?: string;
+}
 
 const REGISTRY_ROW_ID = "registry";
 
@@ -56,24 +72,21 @@ function ensureFormEntryDefaults(form: FormEntry): FormEntry {
 }
 
 async function readPreferenceRaw(): Promise<RegistryShape> {
-  if (isFormsDatabaseEnabled()) {
-    await ensureFormsTables();
-    const { rows } = await queryFormsDb<{ data: RegistryShape }>(
-      "SELECT data FROM form_registry WHERE id = $1",
-      [REGISTRY_ROW_ID],
-    );
-    const row = rows[0];
-    if (row?.data) {
-      return {
-        activeSourceId: row.data.activeSourceId ?? "",
-        activeSheetId: row.data.activeSheetId ?? "",
-        forms: Array.isArray(row.data.forms) ? row.data.forms : [],
-        migratedToSourcesAt: row.data.migratedToSourcesAt,
-      };
-    }
-    return { activeSheetId: "", forms: [] };
+  await ensureFormsTables();
+  const { rows } = await queryFormsDb<{ data: RegistryShape }>(
+    "SELECT data FROM form_registry WHERE id = $1",
+    [REGISTRY_ROW_ID],
+  );
+  const row = rows[0];
+  if (row?.data) {
+    return {
+      activeSourceId: row.data.activeSourceId ?? "",
+      activeSheetId: row.data.activeSheetId ?? "",
+      forms: Array.isArray(row.data.forms) ? row.data.forms : [],
+      migratedToSourcesAt: row.data.migratedToSourcesAt,
+    };
   }
-  return readRegistry();
+  return { activeSheetId: "", forms: [] };
 }
 
 async function writePreference(preference: RegistryShape): Promise<void> {
@@ -83,16 +96,12 @@ async function writePreference(preference: RegistryShape): Promise<void> {
     forms: preference.forms ?? [],
     migratedToSourcesAt: preference.migratedToSourcesAt,
   };
-  if (isFormsDatabaseEnabled()) {
-    await ensureFormsTables();
-    await queryFormsDb(
-      `INSERT INTO form_registry (id, data) VALUES ($1, $2)
-       ON CONFLICT (id) DO UPDATE SET data = $2`,
-      [REGISTRY_ROW_ID, JSON.stringify(next)],
-    );
-    return;
-  }
-  await writeRegistry(next);
+  await ensureFormsTables();
+  await queryFormsDb(
+    `INSERT INTO form_registry (id, data) VALUES ($1, $2)
+     ON CONFLICT (id) DO UPDATE SET data = $2`,
+    [REGISTRY_ROW_ID, JSON.stringify(next)],
+  );
 }
 
 async function uniqueSourceId(baseLabel: string, sheetId: string, existingIds: Set<string>): Promise<string> {

@@ -16,6 +16,7 @@ import type {
   PdfFieldDisplay,
   PdfFieldEntry,
   PdfMappingConfig,
+  PdfPlacement,
   PdfTemplateField,
   PdfTheme,
 } from "@/lib/forms/pdf-mapping-types";
@@ -1041,7 +1042,7 @@ function classifyPdfField(field: { getName(): string }): PdfTemplateField {
   return { name, kind: "text", columnTitle: "" };
 }
 
-/** Read fillable field names from an uploaded PDF. Rejects files that cannot be filled. */
+/** Read fillable field names from an uploaded PDF. A readable PDF with none is still valid. */
 export async function inspectPdfTemplate(bytes: Uint8Array | Buffer): Promise<PdfTemplateField[]> {
   let doc: PDFDocument;
   try {
@@ -1055,11 +1056,6 @@ export async function inspectPdfTemplate(bytes: Uint8Array | Buffer): Promise<Pd
   } catch {
     fields = [];
   }
-  if (!fields.length) {
-    throw new PdfMappingError(
-      "This PDF has no fillable fields. Design the PDF in the app, or upload a fillable form.",
-    );
-  }
   const seen = new Set<string>();
   const out: PdfTemplateField[] = [];
   for (const field of fields) {
@@ -1068,19 +1064,92 @@ export async function inspectPdfTemplate(bytes: Uint8Array | Buffer): Promise<Pd
     seen.add(next.name);
     out.push(next);
   }
-  if (!out.length) {
-    throw new PdfMappingError(
-      "This PDF has no fillable fields. Design the PDF in the app, or upload a fillable form.",
-    );
-  }
   return out;
 }
 
-/** Write column answers into a saved fillable PDF and flatten it. */
+function wrapPlacementLine(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines: string[] = [];
+  let current = "";
+  const push = (line: string) => {
+    if (line) lines.push(line);
+  };
+  for (const word of words) {
+    let piece = "";
+    const chunks: string[] = [];
+    for (const char of word) {
+      const next = piece + char;
+      if (piece && font.widthOfTextAtSize(next, size) > maxWidth) {
+        chunks.push(piece);
+        piece = char;
+      } else {
+        piece = next;
+      }
+    }
+    if (piece) chunks.push(piece);
+    for (const chunk of chunks) {
+      const next = current ? `${current} ${chunk}` : chunk;
+      if (current && font.widthOfTextAtSize(next, size) > maxWidth) {
+        push(current);
+        current = chunk;
+      } else {
+        current = next;
+      }
+    }
+  }
+  push(current);
+  return lines;
+}
+
+function drawPlacementLine(page: PDFPage, line: string, x: number, y: number, size: number, font: PDFFont) {
+  try {
+    page.drawText(line, { x, y, size, font, color: INK });
+  } catch {
+    const ascii = line.replace(/[^\x20-\x7E]/g, "");
+    if (!ascii) return;
+    page.drawText(ascii, { x, y, size, font, color: INK });
+  }
+}
+
+async function stampPlacements(
+  doc: PDFDocument,
+  placements: PdfPlacement[],
+  valuesByColumnTitle: Record<string, string>,
+) {
+  if (!placements.length) return;
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  for (const placement of placements) {
+    const page = pages[placement.page];
+    const value = (valuesByColumnTitle[placement.columnTitle] ?? "").trim();
+    if (!page || !value) continue;
+    try {
+      const size = placement.fontSize || 10;
+      const maxWidth = Math.max(12, placement.width);
+      const lines = value
+        .split(/\r?\n/)
+        .flatMap((paragraph) => wrapPlacementLine(paragraph, font, size, maxWidth));
+      const leading = size * 1.15;
+      const maxLines = Math.max(1, Math.floor(placement.height / leading));
+      let y = placement.y + placement.height - size;
+      for (const line of lines.slice(0, maxLines)) {
+        if (y < placement.y - 1) break;
+        drawPlacementLine(page, line, placement.x, y, size, font);
+        y -= leading;
+      }
+    } catch {
+      // Skip a placement the standard font cannot draw.
+    }
+  }
+}
+
+/** Write mapped answers and clicked placements onto a saved PDF. */
 export async function fillUploadedPdf(
   bytes: Uint8Array | Buffer,
   fields: PdfTemplateField[],
   valuesByColumnTitle: Record<string, string>,
+  placements: PdfPlacement[] = [],
 ): Promise<Uint8Array> {
   let doc: PDFDocument;
   try {
@@ -1088,6 +1157,22 @@ export async function fillUploadedPdf(
   } catch {
     throw new PdfMappingError("The saved PDF could not be opened.");
   }
+  if (fields.some((field) => field.columnTitle)) {
+    try {
+      await fillAcroFormFields(doc, fields, valuesByColumnTitle);
+    } catch {
+      // A PDF with no form still receives placed answers.
+    }
+  }
+  await stampPlacements(doc, placements, valuesByColumnTitle);
+  return doc.save();
+}
+
+async function fillAcroFormFields(
+  doc: PDFDocument,
+  fields: PdfTemplateField[],
+  valuesByColumnTitle: Record<string, string>,
+) {
   const form = doc.getForm();
   for (const field of fields) {
     if (!field.columnTitle) continue;
@@ -1131,7 +1216,6 @@ export async function fillUploadedPdf(
   } catch {
     // Keep the filled fields if this PDF cannot be flattened.
   }
-  return doc.save();
 }
 
 export async function renderConfiguredPdf(options: {
@@ -1147,14 +1231,19 @@ export async function renderConfiguredPdf(options: {
   const useUpload = options.config.source === "uploaded";
   if (useUpload) {
     if (!options.templateBytes?.length) {
-      throw new PdfMappingError("Upload a fillable PDF before using this layout.");
+      throw new PdfMappingError("Upload a PDF before using this layout.");
     }
     const values = { ...(options.valuesByColumnTitle ?? {}) };
     for (const entry of options.entries) {
       if (entry.kind && entry.kind !== "field") continue;
       if (!(entry.columnTitle in values)) values[entry.columnTitle] = entry.value;
     }
-    return fillUploadedPdf(options.templateBytes, options.config.templateFields ?? [], values);
+    return fillUploadedPdf(
+      options.templateBytes,
+      options.config.templateFields ?? [],
+      values,
+      options.config.placements ?? [],
+    );
   }
   return buildSubmissionPdf({
     formTitle: options.formTitle,
@@ -1172,7 +1261,7 @@ export async function fillPdfFromRow(
   valuesByColumnTitle: Record<string, string>,
 ): Promise<Uint8Array> {
   if (mapping.source === "uploaded") {
-    return fillUploadedPdf(bytes, mapping.templateFields ?? [], valuesByColumnTitle);
+    return fillUploadedPdf(bytes, mapping.templateFields ?? [], valuesByColumnTitle, mapping.placements ?? []);
   }
   const entries: PdfFieldEntry[] = Object.entries(valuesByColumnTitle).map(([columnTitle, value]) => ({
     label: mapping.fieldLabels?.[columnTitle] || columnTitle,

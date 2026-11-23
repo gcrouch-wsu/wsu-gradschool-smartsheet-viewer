@@ -1,9 +1,7 @@
 /**
  * Audit trail for critical admin/forms actions and admin UI activity.
- * Uses Postgres when DATABASE_URL is set; otherwise appends to config/audit/events.jsonl.
+ * Stored in Postgres (`audit_events`). A missing database does not fail the action being audited.
  */
-import { appendFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
 import type { AdminPrincipal } from "@/lib/admin-users";
 import { isDatabaseConfigEnabled, queryConfigDb } from "@/lib/config/config-db";
 import { adminPrincipalToPrincipal, type Principal } from "@/lib/identity";
@@ -23,38 +21,24 @@ export interface AuditEvent extends AuditEventInput {
   createdAt: string;
 }
 
-function fileAuditPath() {
-  return join(process.cwd(), "config", "audit", "events.jsonl");
-}
-
 export async function recordAuditEvent(input: AuditEventInput): Promise<void> {
   try {
-    if (isDatabaseConfigEnabled()) {
-      const { runDatabaseMigrations } = await import("@/lib/db-migrations");
-      await runDatabaseMigrations();
-      await queryConfigDb(
-        `INSERT INTO audit_events (actor_kind, actor_id, actor_label, action, resource_type, resource_id, metadata)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          input.actorKind,
-          input.actorId,
-          input.actorLabel ?? null,
-          input.action,
-          input.resourceType,
-          input.resourceId ?? null,
-          input.metadata ? JSON.stringify(input.metadata) : null,
-        ],
-      );
-      return;
-    }
-
-    await mkdir(join(process.cwd(), "config", "audit"), { recursive: true });
-    const event: AuditEvent = {
-      ...input,
-      id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: new Date().toISOString(),
-    };
-    await appendFile(fileAuditPath(), `${JSON.stringify(event)}\n`, "utf8");
+    if (!isDatabaseConfigEnabled()) return;
+    const { runDatabaseMigrations } = await import("@/lib/db-migrations");
+    await runDatabaseMigrations();
+    await queryConfigDb(
+      `INSERT INTO audit_events (actor_kind, actor_id, actor_label, action, resource_type, resource_id, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        input.actorKind,
+        input.actorId,
+        input.actorLabel ?? null,
+        input.action,
+        input.resourceType,
+        input.resourceId ?? null,
+        input.metadata ? JSON.stringify(input.metadata) : null,
+      ],
+    );
   } catch {
     // Audit must never break the primary action.
   }
@@ -165,23 +149,5 @@ export async function listAuditEvents(options?: {
     }));
   }
 
-  try {
-    const { readFile } = await import("node:fs/promises");
-    const raw = await readFile(fileAuditPath(), "utf8");
-    const events = raw
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => JSON.parse(line) as AuditEvent)
-      .reverse();
-    return events
-      .filter((e) => {
-        if (options?.actorId && e.actorId !== options.actorId) return false;
-        if (options?.resourceType && e.resourceType !== options.resourceType) return false;
-        if (options?.resourceId && e.resourceId !== options.resourceId) return false;
-        return true;
-      })
-      .slice(0, limit);
-  } catch {
-    return [];
-  }
+  return [];
 }

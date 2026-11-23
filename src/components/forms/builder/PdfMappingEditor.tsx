@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { PdfCustomItem, PdfFieldDisplay, PdfMappingConfig, PdfTheme } from "@/lib/forms/pdf-mapping-types";
+import type { PdfCustomItem, PdfFieldDisplay, PdfMappingConfig, PdfPlacement, PdfTheme } from "@/lib/forms/pdf-mapping-types";
+import { PdfPlacementCanvas } from "@/components/forms/builder/PdfPlacementCanvas";
 import {
   DEFAULT_PDF_DRAFT_BANNER,
   DEFAULT_PDF_OUTPUT_FILENAME,
@@ -249,23 +250,31 @@ function KindBadge({ kind }: { kind: PdfCustomItem["kind"] }) {
 }
 
 function UploadedPdfPanel({
+  sheetId,
+  templateKey,
   templateName,
   fields,
+  placements,
   fieldOptions,
   uploading,
   fileRef,
   onUpload,
   onRemove,
   onMap,
+  onPlacements,
 }: {
+  sheetId: string;
+  templateKey: number;
   templateName: string | null;
   fields: PdfMappingConfig["templateFields"];
+  placements: PdfPlacement[];
   fieldOptions: PdfFieldOption[];
   uploading: boolean;
   fileRef: RefObject<HTMLInputElement | null>;
   onUpload: (file: File) => void;
   onRemove: () => void;
   onMap: (name: string, columnTitle: string) => void;
+  onPlacements: (placements: PdfPlacement[]) => void;
 }) {
   const mapped = fields ?? [];
   return (
@@ -275,7 +284,7 @@ function UploadedPdfPanel({
         {templateName || "No PDF uploaded yet"}
       </h3>
       <p className="mt-1 text-xs leading-5 text-[color:var(--wsu-muted)]">
-        Use a fillable PDF. Each named box can take one form answer. Fields left blank stay empty on the finished file.
+        Upload any PDF. Click the page to place each form answer. Submissions, preview, and the student PDF write those answers on this file.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input
@@ -323,9 +332,18 @@ function UploadedPdfPanel({
             </li>
           ))}
         </ul>
+      ) : null}
+      {templateName ? (
+        <PdfPlacementCanvas
+          sheetId={sheetId}
+          templateKey={templateKey}
+          fieldOptions={fieldOptions}
+          placements={placements}
+          onChange={onPlacements}
+        />
       ) : (
         <p className="mt-4 rounded-lg border border-dashed border-[color:var(--wsu-border)] px-3 py-6 text-center text-sm text-[color:var(--wsu-muted)]">
-          Upload a fillable PDF to see its fields.
+          Upload a PDF, then click the page to place each answer.
         </p>
       )}
     </section>
@@ -348,6 +366,7 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
   const [query, setQuery] = useState("");
   const [mobilePane, setMobilePane] = useState<"edit" | "preview">("edit");
   const [templateName, setTemplateName] = useState<string | null>(null);
+  const [templateKey, setTemplateKey] = useState(0);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewSeq = useRef(0);
@@ -376,6 +395,7 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
       };
       setConfig(next);
       setTemplateName(typeof data.templateName === "string" ? data.templateName : null);
+      setTemplateKey((key) => key + 1);
       setItems(seedItems(fieldOptions, next.items, layoutSeed));
       setShowDescription(Boolean(plainText(next.description || "")));
       setDirty(false);
@@ -498,9 +518,16 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
       const saved = (data.config as PdfMappingConfig) ?? config;
       setConfig({ ...emptyConfig(formTitle), ...saved, source: "uploaded" });
       setTemplateName(typeof data.templateName === "string" ? data.templateName : file.name);
+      setTemplateKey((key) => key + 1);
       setItems(seedItems(fieldOptions, saved.items, layoutSeed));
       setDirty(false);
-      setMessage({ ok: true, text: "PDF saved. Map any unmatched fields, then save if you change them." });
+      const placed = Array.isArray(saved.templateFields) ? saved.templateFields.length : 0;
+      setMessage({
+        ok: true,
+        text: placed
+          ? "PDF saved. Map named boxes or click the page to place answers, then save."
+          : "PDF saved. Click the page to place each answer, then save.",
+      });
     } catch (err) {
       setMessage({ ok: false, text: err instanceof Error ? err.message : "Could not upload that PDF." });
     } finally {
@@ -521,6 +548,7 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
       const saved = (data.config as PdfMappingConfig) ?? { ...config, source: "designed" as const, templateFields: null };
       setConfig({ ...emptyConfig(formTitle), ...saved, source: "designed" });
       setTemplateName(null);
+      setTemplateKey((key) => key + 1);
       setDirty(false);
       setMessage({ ok: true, text: "Uploaded PDF removed. Submissions use the designed layout." });
     } catch (err) {
@@ -689,14 +717,17 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
             </div>
             <p className="mt-2 text-xs leading-5 text-[color:var(--wsu-muted)]">
               {config.source === "uploaded"
-                ? "Upload a fillable PDF. Map each box to a form field. Submissions, preview, and the student PDF use that file."
+                ? "Upload any PDF, then click where each answer should appear. Submissions, preview, and the student PDF use that file."
                 : "Build the layout here. The same design is used for submissions, preview, and the student PDF."}
             </p>
           </section>
           {config.source === "uploaded" ? (
             <UploadedPdfPanel
+              sheetId={sheetId}
+              templateKey={templateKey}
               templateName={templateName}
               fields={config.templateFields ?? []}
+              placements={config.placements ?? []}
               fieldOptions={fieldOptions}
               uploading={uploading}
               fileRef={fileRef}
@@ -709,6 +740,7 @@ export function PdfMappingEditor({ sheetId, fieldOptions, layoutSeed, formTitle,
                   ),
                 })
               }
+              onPlacements={(placements) => patch({ placements })}
             />
           ) : (
           <>

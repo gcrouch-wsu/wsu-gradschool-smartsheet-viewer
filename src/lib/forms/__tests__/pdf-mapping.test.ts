@@ -116,6 +116,18 @@ describe("normalizePdfMappingConfig", () => {
     expect(cfg.source).toBe("uploaded");
     expect(cfg.templateFields?.[0]).toMatchObject({ name: "Student", columnTitle: "Full Name" });
   });
+
+  it("keeps one placement per form field", () => {
+    const cfg = normalizePdfMappingConfig({
+      source: "uploaded",
+      placements: [
+        { id: "a", columnTitle: "Name", page: 0, x: 10, y: 20, width: 100, height: 16, fontSize: 10 },
+        { id: "b", columnTitle: "Name", page: 1, x: 30, y: 40, width: 120, height: 16, fontSize: 11 },
+      ],
+    });
+    expect(cfg.placements).toHaveLength(1);
+    expect(cfg.placements?.[0]).toMatchObject({ columnTitle: "Name", page: 1, x: 30 });
+  });
 });
 
 describe("uploaded fillable PDF", () => {
@@ -134,6 +146,23 @@ describe("uploaded fillable PDF", () => {
       bytes,
       [{ name: "Full Name", kind: "text", columnTitle: "Full Name" }],
       { "Full Name": "Ada Lovelace" },
+    );
+    const loaded = await PDFDocument.load(filled);
+    expect(loaded.getPageCount()).toBe(1);
+  });
+
+  it("accepts a PDF with no fillable fields and stamps a placed answer", async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage();
+    const bytes = await doc.save();
+
+    await expect(inspectPdfTemplate(bytes)).resolves.toEqual([]);
+
+    const filled = await fillUploadedPdf(
+      bytes,
+      [],
+      { Name: "Ada Lovelace" },
+      [{ id: "place:Name", columnTitle: "Name", page: 0, x: 72, y: 700, width: 200, height: 18, fontSize: 12 }],
     );
     const loaded = await PDFDocument.load(filled);
     expect(loaded.getPageCount()).toBe(1);

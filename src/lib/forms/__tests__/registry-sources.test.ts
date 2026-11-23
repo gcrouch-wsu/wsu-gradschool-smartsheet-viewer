@@ -77,7 +77,7 @@ describe("forms sources unification", () => {
       ),
     ).rejects.toThrow(/DATABASE_URL/);
     expect(await sourceFiles()).toEqual([]);
-    expect(await registry.listForms()).toEqual([]);
+    await expect(registry.listForms()).rejects.toThrow(/DATABASE_URL/);
   });
 
   it("does not write config/sources for a UUID sheet id without Postgres", async () => {
@@ -100,6 +100,7 @@ describe("forms sources unification", () => {
       ),
     ).rejects.toThrow(/DATABASE_URL/);
     expect(await sourceFiles()).toEqual([]);
+    await expect(registry.listForms()).rejects.toThrow(/DATABASE_URL/);
   });
 
   it("rejects publishing a report source as a form via validation", async () => {

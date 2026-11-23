@@ -72,7 +72,7 @@ export const FORM_BUILDER_TOUR_STEPS: FormBuilderTourStep[] = [
     mode: "pdf",
     target: '[data-tour="fb-pdf"]',
     title: "PDF mapping",
-    body: "Design the PDF in the app, or upload a fillable PDF and map its boxes to form fields. Preview uses the same file submissions and the student PDF will use. Save separately from the field layout.",
+    body: "Design the PDF in the app, or upload any PDF and click the page to place each answer. Preview uses the same file submissions and the student PDF will use. Save separately from the field layout.",
   },
   {
     id: "save",
